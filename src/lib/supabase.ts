@@ -22,6 +22,7 @@ export type User = {
   display_name: string;
   username: string;
   avatar_url?: string;
+  banner_url?: string;
   bio?: string;
   phone?: string;
   city?: string;

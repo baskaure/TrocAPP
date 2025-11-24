@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { MapPin, Mail, Phone, Calendar, Edit2, X, Check } from 'lucide-react';
+import { useState, useEffect, ChangeEvent } from 'react';
+import { MapPin, Mail, Phone, Calendar, Edit2, X, Check, Camera, ImageUp, Loader2 } from 'lucide-react';
 import { useAuth } from '../../lib/auth-context';
 import { supabase } from '../../lib/supabase';
 
@@ -9,6 +9,10 @@ export function ProfilePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [mediaUploading, setMediaUploading] = useState({
+    avatar: false,
+    banner: false,
+  });
 
   const [formData, setFormData] = useState({
     display_name: '',
@@ -17,6 +21,7 @@ export function ProfilePage() {
     phone: '',
     city: '',
     avatar_url: '',
+    banner_url: '',
   });
 
   useEffect(() => {
@@ -28,9 +33,61 @@ export function ProfilePage() {
         phone: user.phone || '',
         city: user.city || '',
         avatar_url: user.avatar_url || '',
+        banner_url: user.banner_url || '',
       });
     }
   }, [user]);
+
+  const uploadProfileMedia = async (file: File, type: 'avatar' | 'banner') => {
+    if (!user) return;
+
+    setMediaUploading((prev) => ({ ...prev, [type]: true }));
+    setError('');
+
+    try {
+      const folder = type === 'avatar' ? 'avatars' : 'banners';
+      const fileExt = file.name.split('.').pop() || 'bin';
+      const fileName = `${folder}/${user.id}-${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('profile-media')
+        .upload(fileName, file, {
+          upsert: true,
+          contentType: file.type,
+          cacheControl: '3600',
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage.from('profile-media').getPublicUrl(fileName);
+      if (!data?.publicUrl) {
+        throw new Error('Impossible de récupérer le lien de l’image');
+      }
+
+      if (type === 'avatar') {
+        setFormData((prev) => ({ ...prev, avatar_url: data.publicUrl }));
+      } else {
+        setFormData((prev) => ({ ...prev, banner_url: data.publicUrl }));
+      }
+    } catch (err) {
+      console.error(err);
+      if (err && typeof err === 'object' && 'message' in err) {
+        setError(String(err.message));
+      } else {
+        setError('Erreur lors du téléversement de l’image');
+      }
+    } finally {
+      setMediaUploading((prev) => ({ ...prev, [type]: false }));
+    }
+  };
+
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>, type: 'avatar' | 'banner') => {
+    const file = event.target.files?.[0];
+    if (file) {
+      void uploadProfileMedia(file, type);
+      event.target.value = '';
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,6 +107,7 @@ export function ProfilePage() {
           phone: formData.phone,
           city: formData.city,
           avatar_url: formData.avatar_url,
+          banner_url: formData.banner_url,
         })
         .eq('id', user.id);
 
@@ -61,7 +119,12 @@ export function ProfilePage() {
 
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erreur lors de la mise à jour');
+      console.error(err);
+      if (err && typeof err === 'object' && 'message' in err) {
+        setError(String(err.message));
+      } else {
+        setError('Erreur lors de la mise à jour');
+      }
     } finally {
       setLoading(false);
     }
@@ -88,22 +151,64 @@ export function ProfilePage() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 h-32"></div>
+        <div className="relative h-40 bg-gradient-to-r from-blue-600 to-blue-700">
+          {formData.banner_url && (
+            <img
+              src={formData.banner_url}
+              alt="Bannière du profil"
+              className="w-full h-full object-cover"
+            />
+          )}
+          {isEditing && (
+            <label className="absolute top-3 right-3 inline-flex items-center space-x-2 bg-black/60 text-white text-sm px-4 py-1.5 rounded-full cursor-pointer hover:bg-black/70 transition-colors">
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(event) => handleFileChange(event, 'banner')}
+              />
+              {mediaUploading.banner ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <ImageUp className="w-4 h-4" />
+              )}
+              <span>{mediaUploading.banner ? 'Téléversement...' : 'Changer la bannière'}</span>
+            </label>
+          )}
+        </div>
 
         <div className="px-6 pb-6">
-          <div className="flex justify-between items-start -mt-16 mb-4">
+          <div className="flex justify-between items-start mb-4">
             <div className="flex items-end space-x-4">
-              {formData.avatar_url ? (
-                <img
-                  src={formData.avatar_url}
-                  alt={formData.display_name}
-                  className="w-32 h-32 rounded-full border-4 border-white shadow-lg"
-                />
-              ) : (
-                <div className="w-32 h-32 bg-gray-300 text-gray-600 rounded-full border-4 border-white shadow-lg flex items-center justify-center text-4xl font-bold">
-                  {formData.display_name[0]?.toUpperCase() || 'U'}
-                </div>
-              )}
+              <div className="relative w-32 h-32 -mt-20">
+                {formData.avatar_url ? (
+                  <img
+                    src={formData.avatar_url}
+                    alt={formData.display_name}
+                    className="w-32 h-32 rounded-full border-4 border-white shadow-lg object-cover"
+                  />
+                ) : (
+                  <div className="w-32 h-32 bg-gray-300 text-gray-600 rounded-full border-4 border-white shadow-lg flex items-center justify-center text-4xl font-bold">
+                    {formData.display_name[0]?.toUpperCase() || 'U'}
+                  </div>
+                )}
+
+                {isEditing && (
+                  <label className="absolute bottom-2 right-2 inline-flex items-center justify-center bg-blue-600 text-white rounded-full p-2 cursor-pointer hover:bg-blue-700 transition-colors shadow">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(event) => handleFileChange(event, 'avatar')}
+                    />
+                    {mediaUploading.avatar ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Camera className="w-4 h-4" />
+                    )}
+                  </label>
+                )}
+              </div>
 
               <div className="pb-2">
                 <h1 className="text-2xl font-bold text-gray-900">{formData.display_name}</h1>
@@ -114,7 +219,7 @@ export function ProfilePage() {
             {!isEditing ? (
               <button
                 onClick={() => setIsEditing(true)}
-                className="mt-16 flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                className="mt-6 flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
               >
                 <Edit2 className="w-4 h-4" />
                 <span>Modifier</span>
@@ -198,17 +303,48 @@ export function ProfilePage() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  URL de l'avatar
+              <div className="border border-dashed border-gray-300 rounded-lg p-4 bg-gray-50">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Photos du profil
                 </label>
-                <input
-                  type="url"
-                  value={formData.avatar_url}
-                  onChange={(e) => setFormData({ ...formData, avatar_url: e.target.value })}
-                  placeholder="https://example.com/avatar.jpg"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+                <p className="text-sm text-gray-500 mb-4">
+                  Téléversez directement vos images (PNG, JPG ou WEBP). Elles sont enregistrées dans votre espace Supabase.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <label className="flex flex-col items-center justify-center text-center px-3 py-4 border border-gray-200 rounded-lg bg-white hover:bg-gray-50 cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(event) => handleFileChange(event, 'avatar')}
+                    />
+                    {mediaUploading.avatar ? (
+                      <Loader2 className="w-5 h-5 text-blue-600 animate-spin mb-2" />
+                    ) : (
+                      <Camera className="w-5 h-5 text-blue-600 mb-2" />
+                    )}
+                    <span className="text-sm font-medium text-gray-700">
+                      {mediaUploading.avatar ? 'Téléversement...' : 'Mettre à jour l’avatar'}
+                    </span>
+                  </label>
+
+                  <label className="flex flex-col items-center justify-center text-center px-3 py-4 border border-gray-200 rounded-lg bg-white hover:bg-gray-50 cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(event) => handleFileChange(event, 'banner')}
+                    />
+                    {mediaUploading.banner ? (
+                      <Loader2 className="w-5 h-5 text-blue-600 animate-spin mb-2" />
+                    ) : (
+                      <ImageUp className="w-5 h-5 text-blue-600 mb-2" />
+                    )}
+                    <span className="text-sm font-medium text-gray-700">
+                      {mediaUploading.banner ? 'Téléversement...' : 'Mettre à jour la bannière'}
+                    </span>
+                  </label>
+                </div>
               </div>
 
               <div>
