@@ -57,9 +57,18 @@ export function ListingCard({ listing, onClick }: ListingCardProps) {
 
       <div className="p-6">
         <div className="flex items-center gap-3 mb-4">
+        {listing.user?.avatar_url ? (
+          <img
+            src={listing.user.avatar_url}
+            alt={listing.user.display_name}
+            className="w-11 h-11 rounded-full object-cover"
+          />
+        ) : (
           <div className="w-11 h-11 rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-600 flex items-center justify-center text-white font-bold text-sm shadow-md">
             {listing.user?.display_name?.[0]?.toUpperCase() || '?'}
           </div>
+        )}
+
           <div className="flex-1 min-w-0">
             <div className="font-semibold text-slate-900 truncate">{listing.user?.display_name || 'Utilisateur'}</div>
             <div className="text-sm text-slate-500 flex items-center gap-1">
