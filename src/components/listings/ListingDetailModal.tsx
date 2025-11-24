@@ -31,16 +31,31 @@ export function ListingDetailModal({ listing, onClose, onProposalSuccess }: List
     setLoading(true);
 
     try {
-      const { error: insertError } = await supabase.from('proposals').insert({
+      console.log('Creating proposal:', {
         listing_id: listing.id,
         from_user_id: user.id,
         to_user_id: listing.user_id,
-        message: proposalMessage,
-        offer_payload: { description: proposalOffer },
-        status: 'pending',
       });
 
-      if (insertError) throw insertError;
+      const { data, error: insertError } = await supabase
+        .from('proposals')
+        .insert({
+          listing_id: listing.id,
+          from_user_id: user.id,
+          to_user_id: listing.user_id,
+          message: proposalMessage,
+          offer_payload: { description: proposalOffer },
+          status: 'pending',
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('Error creating proposal:', insertError);
+        throw insertError;
+      }
+
+      console.log('Proposal created successfully:', data);
 
       setProposalMessage('');
       setProposalOffer('');
@@ -48,7 +63,9 @@ export function ListingDetailModal({ listing, onClose, onProposalSuccess }: List
       onProposalSuccess();
       onClose();
     } catch (err: any) {
-      setError(err.message || 'Une erreur est survenue');
+      console.error('Error in handleSubmitProposal:', err);
+      const errorMessage = err?.message || err?.error_description || 'Une erreur est survenue lors de la création de la proposition';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

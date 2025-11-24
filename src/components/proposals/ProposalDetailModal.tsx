@@ -17,6 +17,7 @@ export function ProposalDetailModal({ proposal, onClose, onUpdate }: ProposalDet
   const [counterMessage, setCounterMessage] = useState('');
   const [counterOffer, setCounterOffer] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   if (!proposal) return null;
 
@@ -24,27 +25,59 @@ export function ProposalDetailModal({ proposal, onClose, onUpdate }: ProposalDet
   const otherUser = isReceiver ? proposal.from_user : proposal.to_user;
 
   const handleAccept = async () => {
+    setError('');
     setLoading(true);
     try {
-      const { error } = await supabase
+      console.log('Accepting proposal:', proposal.id);
+
+      const { error: updateError } = await supabase
         .from('proposals')
         .update({ status: 'accepted' })
         .eq('id', proposal.id);
 
-      if (error) throw error;
+      if (updateError) {
+        console.error('Error updating proposal:', updateError);
+        throw updateError;
+      }
 
-      const { error: contractError } = await supabase.from('contracts').insert({
-        proposal_id: proposal.id,
-        html_content: generateContractHTML(proposal),
-        status: 'awaiting_signatures',
+      console.log('Proposal updated to accepted, creating contract...');
+
+      const { data: contract, error: contractError } = await supabase
+        .from('contracts')
+        .insert({
+          proposal_id: proposal.id,
+          html_content: generateContractHTML(proposal),
+          status: 'awaiting_signatures',
+        })
+        .select()
+        .single();
+
+      if (contractError || !contract) {
+        console.error('Error creating contract:', contractError);
+        throw contractError || new Error('Contract not created');
+      }
+
+      console.log('Contract created:', contract.id, 'Creating exchange...');
+
+      const { error: exchangeError } = await supabase.from('exchanges').insert({
+        contract_id: contract.id,
+        status: 'not_started',
+        due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       });
 
-      if (contractError) throw contractError;
+      if (exchangeError) {
+        console.error('Error creating exchange:', exchangeError);
+        throw exchangeError;
+      }
+
+      console.log('Exchange created successfully!');
 
       onUpdate();
       onClose();
-    } catch (error) {
-      console.error('Error accepting proposal:', error);
+    } catch (err: any) {
+      console.error('Error accepting proposal:', err);
+      const errorMessage = err?.message || err?.error_description || 'Une erreur est survenue lors de l\'acceptation';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -172,6 +205,12 @@ export function ProposalDetailModal({ proposal, onClose, onUpdate }: ProposalDet
               </div>
             )}
           </div>
+
+          {error && (
+            <div className="mb-4 text-sm text-red-600 bg-red-50 p-3 rounded-md">
+              {error}
+            </div>
+          )}
 
           {!showChat && !showCounterForm && proposal.status === 'pending' && isReceiver && (
             <div className="flex space-x-3 mb-4">
