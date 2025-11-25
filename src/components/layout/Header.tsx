@@ -1,25 +1,18 @@
 import { useState } from 'react';
 import { Plus, User, LogOut, Settings, Search, Package } from 'lucide-react';
 import { useAuth } from '../../lib/auth-context';
-import { AuthModal } from '../auth/AuthModal';
 
 type HeaderProps = {
   onCreateListing: () => void;
   onSearch: (query: string) => void;
   onNavigate?: (view: 'listings' | 'proposals' | 'profile' | 'settings' | 'exchanges') => void;
+  onRequestAuth?: (mode: 'login' | 'register') => void;
 };
 
-export function Header({ onCreateListing, onSearch, onNavigate }: HeaderProps) {
+export function Header({ onCreateListing, onSearch, onNavigate, onRequestAuth }: HeaderProps) {
   const { user, signOut } = useAuth();
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-
-  const handleAuth = (mode: 'login' | 'register') => {
-    setAuthMode(mode);
-    setShowAuthModal(true);
-  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -124,13 +117,13 @@ export function Header({ onCreateListing, onSearch, onNavigate }: HeaderProps) {
               ) : (
                 <div className="flex items-center space-x-3">
                   <button
-                    onClick={() => handleAuth('login')}
+                    onClick={() => onRequestAuth?.('login')}
                     className="text-gray-700 hover:text-gray-900 font-medium"
                   >
                     Connexion
                   </button>
                   <button
-                    onClick={() => handleAuth('register')}
+                    onClick={() => onRequestAuth?.('register')}
                     className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
                   >
                     S'inscrire
@@ -141,12 +134,6 @@ export function Header({ onCreateListing, onSearch, onNavigate }: HeaderProps) {
           </div>
         </div>
       </header>
-
-      <AuthModal
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-        initialMode={authMode}
-      />
     </>
   );
 }

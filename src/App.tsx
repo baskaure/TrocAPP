@@ -12,6 +12,7 @@ import { SettingsPage } from './components/settings/SettingsPage';
 import { ExchangesPage } from './components/exchanges/ExchangesPage';
 import { LandingPage } from './components/home/LandingPage';
 import { Filter, Grid, List } from 'lucide-react';
+import { AuthModal } from './components/auth/AuthModal';
 
 function AppContent() {
   console.log('AppContent rendering...');
@@ -27,6 +28,8 @@ function AppContent() {
   const [filterType, setFilterType] = useState<'all' | 'service' | 'product'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
 
   useEffect(() => {
     loadCategories();
@@ -77,6 +80,11 @@ function AppContent() {
     setSearchQuery(query);
   };
 
+  const handleRequestAuth = (mode: 'login' | 'register' = 'login') => {
+    setAuthModalMode(mode);
+    setShowAuthModal(true);
+  };
+
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -102,6 +110,7 @@ function AppContent() {
         onCreateListing={() => setShowCreateModal(true)}
         onSearch={handleSearch}
         onNavigate={setView}
+        onRequestAuth={handleRequestAuth}
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -266,12 +275,19 @@ function AppContent() {
         listing={selectedListing}
         onClose={() => setSelectedListing(null)}
         onProposalSuccess={loadListings}
+        onRequestAuth={handleRequestAuth}
       />
 
       <ProposalDetailModal
         proposal={selectedProposal}
         onClose={() => setSelectedProposal(null)}
         onUpdate={loadListings}
+      />
+
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        initialMode={authModalMode}
       />
     </div>
   );

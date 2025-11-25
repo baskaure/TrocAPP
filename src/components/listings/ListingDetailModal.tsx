@@ -7,9 +7,10 @@ type ListingDetailModalProps = {
   listing: Listing | null;
   onClose: () => void;
   onProposalSuccess: () => void;
+  onRequestAuth?: (mode: 'login' | 'register') => void;
 };
 
-export function ListingDetailModal({ listing, onClose, onProposalSuccess }: ListingDetailModalProps) {
+export function ListingDetailModal({ listing, onClose, onProposalSuccess, onRequestAuth }: ListingDetailModalProps) {
   const { user } = useAuth();
   const [showProposalForm, setShowProposalForm] = useState(false);
   const [proposalMessage, setProposalMessage] = useState('');
@@ -199,7 +200,7 @@ export function ListingDetailModal({ listing, onClose, onProposalSuccess }: List
           <X className="w-5 h-5" />
         </button>
 
-        <div className="aspect-video w-full overflow-hidden rounded-t-lg bg-gray-100">
+        <div className="w-full h-40 sm:h-48 md:h-56 overflow-hidden rounded-t-lg bg-gray-100">
           <img
             src={imageUrl}
             alt={listing.title}
@@ -513,7 +514,10 @@ export function ListingDetailModal({ listing, onClose, onProposalSuccess }: List
             <div className="border-t border-gray-200 pt-6">
               <div className="bg-gray-50 rounded-lg p-4 text-center">
                 <p className="text-gray-700 mb-3">Connectez-vous pour proposer un échange</p>
-                <button className="bg-blue-600 text-white py-2 px-6 rounded-lg hover:bg-blue-700 transition-colors">
+                <button
+                  onClick={() => onRequestAuth?.('login')}
+                  className="bg-blue-600 text-white py-2 px-6 rounded-lg hover:bg-blue-700 transition-colors"
+                >
                   Se connecter
                 </button>
               </div>
