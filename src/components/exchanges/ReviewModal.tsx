@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { X, Star, CheckCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth-context';
+import { sendTransactionalEmail } from '../../lib/notifications';
 
 type ReviewModalProps = {
   exchange: any;
@@ -37,6 +38,9 @@ export function ReviewModal({ exchange, onClose, onSuccess }: ReviewModalProps) 
   const revieweeName = proposal?.from_user_id === user?.id
     ? proposal?.to_user?.display_name
     : proposal?.from_user?.display_name;
+  const revieweeEmail = proposal?.from_user_id === user?.id
+    ? proposal?.to_user?.email
+    : proposal?.from_user?.email;
 
   const toggleTag = (tag: string) => {
     setSelectedTags(prev =>
@@ -87,6 +91,14 @@ export function ReviewModal({ exchange, onClose, onSuccess }: ReviewModalProps) 
             rating_count: existingReviews.length,
           })
           .eq('id', revieweeId);
+      }
+
+      if (revieweeEmail) {
+        sendTransactionalEmail('new_review', revieweeEmail, {
+          reviewer_name: user?.display_name,
+          rating: rating.toString(),
+          exchange_id: exchange.id,
+        });
       }
 
       setSuccess(true);

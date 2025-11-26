@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Send } from 'lucide-react';
 import { supabase, ChatMessage } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth-context';
+import { sendTransactionalEmail } from '../../lib/notifications';
 
 type ChatWindowProps = {
   proposalId: string;
@@ -14,10 +15,12 @@ export function ChatWindow({ proposalId }: ChatWindowProps) {
   const [chatId, setChatId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [recipientInfo, setRecipientInfo] = useState<{ email?: string; displayName?: string } | null>(null);
 
   useEffect(() => {
     loadChat();
-  }, [proposalId]);
+    loadProposalParticipants();
+  }, [proposalId, user?.id]);
 
   useEffect(() => {
     if (chatId) {
@@ -57,6 +60,41 @@ export function ChatWindow({ proposalId }: ChatWindowProps) {
 
     if (data) {
       setChatId(data.id);
+    } else {
+      // Créer le chat s'il n'existe pas
+      const { data: newChat, error } = await supabase
+        .from('chats')
+        .insert({ proposal_id: proposalId })
+        .select('id')
+        .single();
+
+      if (!error && newChat) {
+        setChatId(newChat.id);
+      }
+    }
+  }
+
+  async function loadProposalParticipants() {
+    if (!user) return;
+
+    const { data } = await supabase
+      .from('proposals')
+      .select(`
+        from_user_id,
+        to_user_id,
+        from_user:users!proposals_from_user_id_fkey(display_name, email),
+        to_user:users!proposals_to_user_id_fkey(display_name, email)
+      `)
+      .eq('id', proposalId)
+      .maybeSingle();
+
+    if (data) {
+      const counterpart =
+        data.from_user_id === user.id ? data.to_user : data.from_user;
+      setRecipientInfo({
+        email: counterpart?.email || undefined,
+        displayName: counterpart?.display_name || undefined,
+      });
     }
   }
 
@@ -81,18 +119,33 @@ export function ChatWindow({ proposalId }: ChatWindowProps) {
     e.preventDefault();
     if (!newMessage.trim() || !chatId || !user) return;
 
+    const messageToSend = newMessage.trim();
     setLoading(true);
+    setNewMessage('');
+
     try {
       const { error } = await supabase.from('chat_messages').insert({
         chat_id: chatId,
         sender_id: user.id,
-        body: newMessage.trim(),
+        body: messageToSend,
       });
 
       if (error) throw error;
-      setNewMessage('');
+
+      // Recharger immédiatement les messages
+      await loadMessages();
+
+      // Envoyer l'e-mail de notification
+      if (recipientInfo?.email) {
+        sendTransactionalEmail('new_chat_message', recipientInfo.email, {
+          proposal_id: proposalId,
+          sender_name: user.display_name,
+          recipient_name: recipientInfo.displayName,
+        });
+      }
     } catch (error) {
       console.error('Error sending message:', error);
+      setNewMessage(messageToSend); // Restaurer le message en cas d'erreur
     } finally {
       setLoading(false);
     }

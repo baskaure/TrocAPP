@@ -3,6 +3,7 @@ import { X, MessageCircle, CheckCircle, XCircle, Send } from 'lucide-react';
 import { supabase, Proposal } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth-context';
 import { ChatWindow } from '../chat/ChatWindow';
+import { sendTransactionalEmail } from '../../lib/notifications';
 
 type ProposalDetailModalProps = {
   proposal: Proposal | null;
@@ -28,8 +29,6 @@ export function ProposalDetailModal({ proposal, onClose, onUpdate }: ProposalDet
     setError('');
     setLoading(true);
     try {
-      console.log('Accepting proposal:', proposal.id);
-
       const { error: updateError } = await supabase
         .from('proposals')
         .update({ status: 'accepted' })
@@ -40,37 +39,28 @@ export function ProposalDetailModal({ proposal, onClose, onUpdate }: ProposalDet
         throw updateError;
       }
 
-      console.log('Proposal updated to accepted, creating contract...');
-
-      const { data: contract, error: contractError } = await supabase
-        .from('contracts')
-        .insert({
-          proposal_id: proposal.id,
-          html_content: generateContractHTML(proposal),
-          status: 'awaiting_signatures',
-        })
-        .select()
-        .single();
-
-      if (contractError || !contract) {
-        console.error('Error creating contract:', contractError);
-        throw contractError || new Error('Contract not created');
-      }
-
-      console.log('Contract created:', contract.id, 'Creating exchange...');
-
-      const { error: exchangeError } = await supabase.from('exchanges').insert({
-        contract_id: contract.id,
-        status: 'not_started',
-        due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      const { error: contractFnError } = await supabase.functions.invoke('generate-contract-pdf', {
+        body: { proposal_id: proposal.id },
       });
 
-      if (exchangeError) {
-        console.error('Error creating exchange:', exchangeError);
-        throw exchangeError;
+      if (contractFnError) {
+        console.error('Error generating contract via edge function:', contractFnError);
+        throw contractFnError;
       }
 
-      console.log('Exchange created successfully!');
+      const listingTitle = proposal.listing?.title || 'Votre échange';
+      sendTransactionalEmail('contract_ready', proposal.from_user?.email, {
+        listing_title: listingTitle,
+        proposal_id: proposal.id,
+        counterpart_name: proposal.to_user?.display_name,
+      });
+      if (proposal.to_user?.email && proposal.to_user.email !== proposal.from_user?.email) {
+        sendTransactionalEmail('contract_ready', proposal.to_user.email, {
+          listing_title: listingTitle,
+          proposal_id: proposal.id,
+          counterpart_name: proposal.from_user?.display_name,
+        });
+      }
 
       onUpdate();
       onClose();
@@ -130,20 +120,6 @@ export function ProposalDetailModal({ proposal, onClose, onUpdate }: ProposalDet
     } finally {
       setLoading(false);
     }
-  };
-
-  const generateContractHTML = (proposal: Proposal) => {
-    return `
-      <h1>Contrat d'Échange</h1>
-      <p>Date: ${new Date().toLocaleDateString('fr-FR')}</p>
-      <h2>Parties</h2>
-      <p>Entre: ${proposal.from_user?.display_name}</p>
-      <p>Et: ${proposal.to_user?.display_name}</p>
-      <h2>Objet de l'échange</h2>
-      <p>${proposal.message}</p>
-      <h2>Conditions</h2>
-      <p>Les parties s'engagent à réaliser l'échange tel que décrit ci-dessus.</p>
-    `;
   };
 
   return (

@@ -1,7 +1,11 @@
 import { useState, useEffect, ChangeEvent } from 'react';
-import { MapPin, Mail, Phone, Calendar, Edit2, X, Check, Camera, ImageUp, Loader2 } from 'lucide-react';
+import { MapPin, Mail, Phone, Calendar, Edit2, X, Check, Camera, ImageUp, Loader2, Star } from 'lucide-react';
 import { useAuth } from '../../lib/auth-context';
-import { supabase } from '../../lib/supabase';
+import { supabase, Review } from '../../lib/supabase';
+
+type ReviewWithReviewer = Review & {
+  reviewer?: { display_name: string; avatar_url?: string };
+};
 
 export function ProfilePage() {
   const { user, refreshUser } = useAuth();
@@ -9,6 +13,9 @@ export function ProfilePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [reviews, setReviews] = useState<ReviewWithReviewer[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [listingsCount, setListingsCount] = useState(0);
   const [mediaUploading, setMediaUploading] = useState({
     avatar: false,
     banner: false,
@@ -35,8 +42,49 @@ export function ProfilePage() {
         avatar_url: user.avatar_url || '',
         banner_url: user.banner_url || '',
       });
+      loadReviews();
+      loadListingsCount();
     }
   }, [user]);
+
+  async function loadListingsCount() {
+    if (!user) return;
+    try {
+      const { count, error } = await supabase
+        .from('listings')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('status', 'published');
+
+      if (!error && count !== null) {
+        setListingsCount(count);
+      }
+    } catch (err) {
+      console.error('Error loading listings count:', err);
+    }
+  }
+
+  async function loadReviews() {
+    if (!user) return;
+    setReviewsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('reviews')
+        .select(`
+          *,
+          reviewer:users!reviews_reviewer_id_fkey(display_name, avatar_url)
+        `)
+        .eq('reviewee_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setReviews(data || []);
+    } catch (err) {
+      console.error('Error loading reviews:', err);
+    } finally {
+      setReviewsLoading(false);
+    }
+  }
 
   const uploadProfileMedia = async (file: File, type: 'avatar' | 'banner') => {
     if (!user) return;
@@ -410,18 +458,93 @@ export function ProfilePage() {
                 <h3 className="text-lg font-semibold mb-4">Statistiques</h3>
                 <div className="grid grid-cols-3 gap-4 text-center">
                   <div className="bg-gray-50 p-4 rounded-lg">
-                    <div className="text-2xl font-bold text-blue-600">0</div>
+                    <div className="text-2xl font-bold text-blue-600">{listingsCount}</div>
                     <div className="text-sm text-gray-600">Annonces</div>
                   </div>
                   <div className="bg-gray-50 p-4 rounded-lg">
-                    <div className="text-2xl font-bold text-blue-600">0</div>
-                    <div className="text-sm text-gray-600">Échanges</div>
+                    <div className="text-2xl font-bold text-blue-600">{reviews.length}</div>
+                    <div className="text-sm text-gray-600">Avis reçus</div>
                   </div>
                   <div className="bg-gray-50 p-4 rounded-lg">
-                    <div className="text-2xl font-bold text-blue-600">5.0</div>
-                    <div className="text-sm text-gray-600">Note</div>
+                    <div className="text-2xl font-bold text-blue-600 flex items-center justify-center space-x-1">
+                      {reviews.length > 0 ? (
+                        <>
+                          <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                          <span>{(reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)}</span>
+                        </>
+                      ) : (
+                        <span>-</span>
+                      )}
+                    </div>
+                    <div className="text-sm text-gray-600">Note moyenne</div>
                   </div>
                 </div>
+              </div>
+
+              <div className="border-t pt-6">
+                <h3 className="text-lg font-semibold mb-4">Avis reçus ({reviews.length})</h3>
+                {reviewsLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+                  </div>
+                ) : reviews.length === 0 ? (
+                  <p className="text-gray-500 text-center py-8">Aucun avis pour le moment</p>
+                ) : (
+                  <div className="space-y-4">
+                    {reviews.map((review) => (
+                      <div key={review.id} className="bg-gray-50 rounded-lg p-4">
+                        <div className="flex items-start space-x-3">
+                          {review.reviewer?.avatar_url ? (
+                            <img
+                              src={review.reviewer.avatar_url}
+                              alt={review.reviewer.display_name}
+                              className="w-10 h-10 rounded-full"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-medium">
+                              {review.reviewer?.display_name?.[0]?.toUpperCase() || '?'}
+                            </div>
+                          )}
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium">{review.reviewer?.display_name}</span>
+                              <div className="flex items-center space-x-1">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <Star
+                                    key={star}
+                                    className={`w-4 h-4 ${
+                                      star <= review.rating
+                                        ? 'fill-yellow-400 text-yellow-400'
+                                        : 'text-gray-300'
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                            {review.comment && (
+                              <p className="text-gray-700 mt-2">{review.comment}</p>
+                            )}
+                            {review.tags && review.tags.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-2">
+                                {review.tags.map((tag) => (
+                                  <span
+                                    key={tag}
+                                    className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full"
+                                  >
+                                    {tag}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                            <p className="text-xs text-gray-500 mt-2">
+                              {new Date(review.created_at).toLocaleDateString('fr-FR')}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}

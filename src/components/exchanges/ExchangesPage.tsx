@@ -42,8 +42,8 @@ export function ExchangesPage() {
             *,
             proposal:proposals(
               *,
-              from_user:users!proposals_from_user_id_fkey(display_name, avatar_url),
-              to_user:users!proposals_to_user_id_fkey(display_name, avatar_url),
+              from_user:users!proposals_from_user_id_fkey(display_name, avatar_url, email),
+              to_user:users!proposals_to_user_id_fkey(display_name, avatar_url, email),
               listing:listings(title, type)
             )
           )
@@ -121,7 +121,7 @@ export function ExchangesPage() {
     : exchanges.filter(ex => ex.status === filterStatus);
 
   const canLeaveReview = (exchange: ExchangeWithDetails) => {
-    return exchange.status === 'confirmed' && !exchange.delivered_at;
+    return exchange.status === 'confirmed';
   };
 
   if (!user) {

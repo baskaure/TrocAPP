@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { X, MapPin, Calendar, MessageCircle, Star, CheckCircle, Pencil, Trash2 } from 'lucide-react';
 import { Listing, supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth-context';
+import { sendTransactionalEmail } from '../../lib/notifications';
 
 type ListingDetailModalProps = {
   listing: Listing | null;
@@ -95,6 +96,13 @@ export function ListingDetailModal({ listing, onClose, onProposalSuccess, onRequ
       setProposalMessage('');
       setProposalOffer('');
       setShowProposalForm(false);
+      if (listing.user?.email) {
+        sendTransactionalEmail('new_proposal', listing.user.email, {
+          listing_title: listing.title,
+          proposer_name: user?.display_name,
+          proposal_id: data.id,
+        });
+      }
       onProposalSuccess();
       onClose();
     } catch (err: any) {

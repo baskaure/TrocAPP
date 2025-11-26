@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase, User } from './supabase';
+import { sendTransactionalEmail } from './notifications';
 import type { Session } from '@supabase/supabase-js';
 
 type AuthContextType = {
@@ -81,6 +82,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
     if (error) throw error;
+
+    sendTransactionalEmail('welcome', email, {
+      display_name: displayName,
+      username,
+    });
   }
 
   async function signOut() {

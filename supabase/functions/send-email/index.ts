@@ -20,11 +20,11 @@ Deno.serve(async (req: Request) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const resendApiKey = Deno.env.get('RESEND_API_KEY');
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const { template_name, recipient, variables }: EmailRequest = await req.json();
 
-    // Récupérer le template
     const { data: template, error: templateError } = await supabase
       .from('email_templates')
       .select('*')
@@ -36,7 +36,6 @@ Deno.serve(async (req: Request) => {
       throw new Error(`Template not found: ${template_name}`);
     }
 
-    // Remplacer les variables dans le sujet et le body
     let subject = template.subject;
     let html_body = template.html_body;
     let text_body = template.text_body || '';
@@ -48,53 +47,53 @@ Deno.serve(async (req: Request) => {
       text_body = text_body.replace(regex, value);
     }
 
-    // En MVP, on log juste l'email (pas d'envoi réel)
-    // Plus tard: intégrer Resend/Sendgrid/Postmark
-    console.log('📧 EMAIL TO SEND:', {
-      to: recipient,
-      subject,
-      html_preview: html_body.substring(0, 100) + '...',
-    });
+    let emailStatus = 'sent';
+    let errorMessage = null;
 
-    // Enregistrer dans email_logs
-    const { error: logError } = await supabase
-      .from('email_logs')
-      .insert({
-        template_name,
-        recipient,
-        subject,
-        status: 'sent', // En MVP on marque comme envoyé même si juste loggé
-        sent_at: new Date().toISOString(),
-      });
-
-    if (logError) {
-      console.error('Failed to log email:', logError);
-    }
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: 'Email logged successfully (MVP mode)',
-        email: { subject, recipient },
-      }),
-      {
+    if (resendApiKey) {
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
         headers: {
-          ...corsHeaders,
+          'Authorization': `Bearer ${resendApiKey}`,
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          from: 'TrocHub <onboarding@resend.dev>',
+          to: recipient,
+          subject,
+          html: html_body,
+          text: text_body,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.text();
+        console.error('Resend error:', err);
+        emailStatus = 'failed';
+        errorMessage = err;
       }
+    } else {
+      console.log('📧 EMAIL (no SMTP):', { to: recipient, subject });
+    }
+
+    await supabase.from('email_logs').insert({
+      template_name,
+      recipient,
+      subject,
+      status: emailStatus,
+      error_message: errorMessage,
+      sent_at: new Date().toISOString(),
+    });
+
+    return new Response(
+      JSON.stringify({ success: emailStatus === 'sent', email: { subject, recipient } }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     console.error('Error:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      {
-        status: 500,
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json',
-        },
-      }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
