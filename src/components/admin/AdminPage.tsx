@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Shield, Users, FileText, Flag, AlertTriangle, Loader2, Trash2, CheckCircle, XCircle, Eye } from 'lucide-react';
+import { Shield, Users, FileText, Flag, AlertTriangle, Loader2, Trash2, CheckCircle, XCircle, Eye, BarChart3, Download } from 'lucide-react';
 import { supabase, User } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth-context';
 
-type Tab = 'reports' | 'users' | 'verification' | 'banned-words';
+type Tab = 'reports' | 'users' | 'verification' | 'banned-words' | 'stats';
 
 type Report = {
   id: string;
@@ -16,6 +16,7 @@ type Report = {
   created_at: string;
   reporter?: { display_name: string };
   reported_user?: { display_name: string };
+  listing?: { id: string; title: string; status: string };
 };
 
 type VerificationRequest = User & {
@@ -42,13 +43,84 @@ export function AdminPage() {
   const [bannedWords, setBannedWords] = useState<{ id: string; word: string; severity: string }[]>([]);
   const [newWord, setNewWord] = useState('');
   const [newSeverity, setNewSeverity] = useState<'warning' | 'block'>('warning');
+  
+  // Viewing
+  const [viewingListingId, setViewingListingId] = useState<string | null>(null);
+  const [viewingListing, setViewingListing] = useState<any>(null);
+
+  // Stats
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    totalListings: 0,
+    totalProposals: 0,
+    totalExchanges: 0,
+    acceptedProposals: 0,
+    confirmedExchanges: 0,
+  });
 
   useEffect(() => {
     if (tab === 'reports') loadReports();
     if (tab === 'users') loadUsers();
     if (tab === 'verification') loadVerificationRequests();
     if (tab === 'banned-words') loadBannedWords();
+    if (tab === 'stats') loadStats();
   }, [tab]);
+
+  useEffect(() => {
+    if (viewingListingId) {
+      loadListingDetail(viewingListingId);
+    } else {
+      setViewingListing(null);
+    }
+  }, [viewingListingId]);
+
+  async function loadListingDetail(id: string) {
+    const { data } = await supabase
+      .from('listings')
+      .select(`*, user:users(display_name, email), media:listing_media(url)`)
+      .eq('id', id)
+      .single();
+    setViewingListing(data);
+  }
+
+  async function loadStats() {
+    setLoading(true);
+    const [usersRes, listingsRes, proposalsRes, exchangesRes, acceptedRes, confirmedRes] = await Promise.all([
+      supabase.from('users').select('*', { count: 'exact', head: true }),
+      supabase.from('listings').select('*', { count: 'exact', head: true }),
+      supabase.from('proposals').select('*', { count: 'exact', head: true }),
+      supabase.from('exchanges').select('*', { count: 'exact', head: true }),
+      supabase.from('proposals').select('*', { count: 'exact', head: true }).eq('status', 'accepted'),
+      supabase.from('exchanges').select('*', { count: 'exact', head: true }).eq('status', 'confirmed'),
+    ]);
+    setStats({
+      totalUsers: usersRes.count || 0,
+      totalListings: listingsRes.count || 0,
+      totalProposals: proposalsRes.count || 0,
+      totalExchanges: exchangesRes.count || 0,
+      acceptedProposals: acceptedRes.count || 0,
+      confirmedExchanges: confirmedRes.count || 0,
+    });
+    setLoading(false);
+  }
+
+  async function exportCSV(table: string) {
+    const { data } = await supabase.from(table).select('*');
+    if (!data || data.length === 0) return;
+    
+    const headers = Object.keys(data[0]);
+    const csv = [
+      headers.join(','),
+      ...data.map(row => headers.map(h => JSON.stringify(row[h] ?? '')).join(','))
+    ].join('\n');
+    
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${table}_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+  }
 
   async function loadReports() {
     setLoading(true);
@@ -57,11 +129,37 @@ export function AdminPage() {
       .select(`
         *,
         reporter:users!reports_reporter_id_fkey(display_name),
-        reported_user:users!reports_reported_user_id_fkey(display_name)
+        reported_user:users!reports_reported_user_id_fkey(display_name),
+        listing:listings(id, title, status)
       `)
       .order('created_at', { ascending: false });
     if (data) setReports(data);
     setLoading(false);
+  }
+
+  async function deleteListing(listingId: string, reportId: string) {
+    if (!confirm('Supprimer cette annonce définitivement ?')) return;
+    const { error, count } = await supabase.from('listings').delete().eq('id', listingId).select();
+    console.log('Delete listing:', listingId, 'error:', error, 'count:', count);
+    if (!error && reportId) {
+      await handleReportStatus(reportId, 'resolved');
+    }
+    loadReports();
+  }
+
+  async function suspendListing(listingId: string) {
+    const { error, data } = await supabase.from('listings').update({ status: 'suspended' }).eq('id', listingId).select();
+    console.log('Suspend listing:', listingId, 'error:', error, 'data:', data);
+    loadReports();
+  }
+
+  async function banUser(userId: string, reportId: string) {
+    if (!confirm('Bannir cet utilisateur ? Il ne pourra plus se connecter.')) return;
+    const { error } = await supabase.from('users').update({ role: 'banned' }).eq('id', userId);
+    console.log('Ban user:', userId, error);
+    if (!error) {
+      await handleReportStatus(reportId, 'resolved');
+    }
   }
 
   async function loadUsers() {
@@ -175,6 +273,13 @@ export function AdminPage() {
           <AlertTriangle className="w-4 h-4 inline mr-2" />
           Mots bannis
         </button>
+        <button
+          onClick={() => setTab('stats')}
+          className={`px-4 py-2 font-medium border-b-2 -mb-px ${tab === 'stats' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500'}`}
+        >
+          <BarChart3 className="w-4 h-4 inline mr-2" />
+          Statistiques
+        </button>
       </div>
 
       {loading ? (
@@ -192,37 +297,103 @@ export function AdminPage() {
                 reports.map((report) => (
                   <div key={report.id} className="bg-white rounded-lg shadow p-4">
                     <div className="flex justify-between items-start">
-                      <div>
-                        <span className={`inline-block px-2 py-1 rounded text-xs font-medium mb-2 ${
-                          report.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                          report.status === 'resolved' ? 'bg-green-100 text-green-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {report.status}
-                        </span>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
+                            report.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                            report.status === 'resolved' ? 'bg-green-100 text-green-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {report.status}
+                          </span>
+                          {report.listing_id && <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">Annonce</span>}
+                          {report.reported_user_id && !report.listing_id && <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">Utilisateur</span>}
+                        </div>
+                        
                         <p className="font-medium">{report.reason}</p>
                         {report.details && <p className="text-sm text-gray-600 mt-1">{report.details}</p>}
+                        
+                        {report.listing && (
+                          <div className={`mt-3 p-3 rounded-lg flex items-center justify-between ${
+                            report.listing.status === 'suspended' ? 'bg-yellow-50 border border-yellow-200' :
+                            report.listing.status === 'published' ? 'bg-gray-50' : 'bg-red-50 border border-red-200'
+                          }`}>
+                            <div>
+                              <p className="text-sm font-medium">Annonce : {report.listing.title}</p>
+                              <p className={`text-xs font-medium ${
+                                report.listing.status === 'suspended' ? 'text-yellow-600' :
+                                report.listing.status === 'published' ? 'text-gray-500' : 'text-red-600'
+                              }`}>
+                                Statut : {report.listing.status === 'suspended' ? '⚠️ Suspendue' : 
+                                         report.listing.status === 'published' ? '✓ Publiée' : '❌ ' + report.listing.status}
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => setViewingListingId(report.listing_id!)}
+                              className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200 flex items-center gap-1"
+                            >
+                              <Eye className="w-4 h-4" />
+                              Voir
+                            </button>
+                          </div>
+                        )}
+                        {report.listing_id && !report.listing && (
+                          <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                            <p className="text-sm font-medium text-red-600">🗑️ Annonce supprimée</p>
+                          </div>
+                        )}
+                        
                         <p className="text-xs text-gray-400 mt-2">
                           Par {report.reporter?.display_name} • {new Date(report.created_at).toLocaleDateString('fr-FR')}
                           {report.reported_user && ` • Contre ${report.reported_user.display_name}`}
                         </p>
                       </div>
+                      
                       {report.status === 'pending' && (
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleReportStatus(report.id, 'resolved')}
-                            className="p-2 text-green-600 hover:bg-green-50 rounded"
-                            title="Résolu"
-                          >
-                            <CheckCircle className="w-5 h-5" />
-                          </button>
-                          <button
-                            onClick={() => handleReportStatus(report.id, 'dismissed')}
-                            className="p-2 text-gray-600 hover:bg-gray-50 rounded"
-                            title="Rejeter"
-                          >
-                            <XCircle className="w-5 h-5" />
-                          </button>
+                        <div className="flex flex-col gap-2 ml-4">
+                          {report.listing_id && (
+                            <>
+                              <button
+                                onClick={() => suspendListing(report.listing_id!)}
+                                className="px-3 py-1 text-sm bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200"
+                                title="Suspendre l'annonce"
+                              >
+                                Suspendre
+                              </button>
+                              <button
+                                onClick={() => deleteListing(report.listing_id!, report.id)}
+                                className="px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200"
+                                title="Supprimer l'annonce"
+                              >
+                                Supprimer
+                              </button>
+                            </>
+                          )}
+                          {report.reported_user_id && (
+                            <button
+                              onClick={() => banUser(report.reported_user_id!, report.id)}
+                              className="px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200"
+                              title="Bannir l'utilisateur"
+                            >
+                              Bannir
+                            </button>
+                          )}
+                          <div className="flex gap-1 mt-2">
+                            <button
+                              onClick={() => handleReportStatus(report.id, 'resolved')}
+                              className="p-2 text-green-600 hover:bg-green-50 rounded"
+                              title="Marquer résolu"
+                            >
+                              <CheckCircle className="w-5 h-5" />
+                            </button>
+                            <button
+                              onClick={() => handleReportStatus(report.id, 'dismissed')}
+                              className="p-2 text-gray-600 hover:bg-gray-50 rounded"
+                              title="Rejeter"
+                            >
+                              <XCircle className="w-5 h-5" />
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -256,15 +427,25 @@ export function AdminPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         {req.verification_document_url && (
-                          <a
-                            href={req.verification_document_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                          <button
+                            onClick={async () => {
+                              // Extraire le chemin du fichier depuis l'URL
+                              const url = new URL(req.verification_document_url!);
+                              const path = url.pathname.split('/verification-documents/')[1];
+                              if (path) {
+                                const { data } = await supabase.storage
+                                  .from('verification-documents')
+                                  .createSignedUrl(decodeURIComponent(path), 300); // 5 minutes
+                                if (data?.signedUrl) {
+                                  window.open(data.signedUrl, '_blank');
+                                }
+                              }
+                            }}
                             className="p-2 text-blue-600 hover:bg-blue-50 rounded"
                             title="Voir le document"
                           >
                             <Eye className="w-5 h-5" />
-                          </a>
+                          </button>
                         )}
                         <button
                           onClick={() => handleVerification(req.id, 'verified')}
@@ -395,7 +576,129 @@ export function AdminPage() {
               </div>
             </div>
           )}
+
+          {/* Stats Tab */}
+          {tab === 'stats' && (
+            <div>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                <div className="bg-white rounded-lg shadow p-6 text-center">
+                  <div className="text-3xl font-bold text-blue-600">{stats.totalUsers}</div>
+                  <div className="text-gray-500">Utilisateurs</div>
+                </div>
+                <div className="bg-white rounded-lg shadow p-6 text-center">
+                  <div className="text-3xl font-bold text-blue-600">{stats.totalListings}</div>
+                  <div className="text-gray-500">Annonces</div>
+                </div>
+                <div className="bg-white rounded-lg shadow p-6 text-center">
+                  <div className="text-3xl font-bold text-blue-600">{stats.totalProposals}</div>
+                  <div className="text-gray-500">Propositions</div>
+                </div>
+                <div className="bg-white rounded-lg shadow p-6 text-center">
+                  <div className="text-3xl font-bold text-green-600">{stats.acceptedProposals}</div>
+                  <div className="text-gray-500">Acceptées</div>
+                </div>
+                <div className="bg-white rounded-lg shadow p-6 text-center">
+                  <div className="text-3xl font-bold text-blue-600">{stats.totalExchanges}</div>
+                  <div className="text-gray-500">Échanges</div>
+                </div>
+                <div className="bg-white rounded-lg shadow p-6 text-center">
+                  <div className="text-3xl font-bold text-green-600">{stats.confirmedExchanges}</div>
+                  <div className="text-gray-500">Confirmés</div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg shadow p-6">
+                <h3 className="font-semibold mb-4">Exporter les données (CSV)</h3>
+                <div className="flex flex-wrap gap-2">
+                  <button onClick={() => exportCSV('users')} className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200">
+                    <Download className="w-4 h-4" /> Utilisateurs
+                  </button>
+                  <button onClick={() => exportCSV('listings')} className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200">
+                    <Download className="w-4 h-4" /> Annonces
+                  </button>
+                  <button onClick={() => exportCSV('proposals')} className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200">
+                    <Download className="w-4 h-4" /> Propositions
+                  </button>
+                  <button onClick={() => exportCSV('exchanges')} className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200">
+                    <Download className="w-4 h-4" /> Échanges
+                  </button>
+                  <button onClick={() => exportCSV('reviews')} className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200">
+                    <Download className="w-4 h-4" /> Avis
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </>
+      )}
+
+      {/* Modal Voir Annonce */}
+      {viewingListing && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-4">
+                <h3 className="text-xl font-bold">{viewingListing.title}</h3>
+                <button onClick={() => setViewingListingId(null)} className="text-gray-400 hover:text-gray-600">
+                  <XCircle className="w-6 h-6" />
+                </button>
+              </div>
+
+              {viewingListing.media && viewingListing.media.length > 0 && (
+                <div className="mb-4">
+                  <img src={viewingListing.media[0].url} alt="" className="w-full h-48 object-cover rounded-lg" />
+                </div>
+              )}
+
+              <div className="space-y-3">
+                <div className="flex gap-2">
+                  <span className={`px-2 py-1 rounded text-xs ${viewingListing.type === 'service' ? 'bg-purple-100 text-purple-700' : 'bg-pink-100 text-pink-700'}`}>
+                    {viewingListing.type}
+                  </span>
+                  <span className={`px-2 py-1 rounded text-xs ${
+                    viewingListing.status === 'published' ? 'bg-green-100 text-green-700' :
+                    viewingListing.status === 'suspended' ? 'bg-red-100 text-red-700' :
+                    'bg-gray-100 text-gray-700'
+                  }`}>
+                    {viewingListing.status}
+                  </span>
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Créateur</p>
+                  <p>{viewingListing.user?.display_name} ({viewingListing.user?.email})</p>
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium text-gray-500">Description</p>
+                  <p className="text-gray-700">{viewingListing.description_offer}</p>
+                </div>
+
+                {viewingListing.description_need && (
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Recherche</p>
+                    <p className="text-gray-700">{viewingListing.description_need}</p>
+                  </div>
+                )}
+
+                <div className="flex gap-2 pt-4 border-t">
+                  <button
+                    onClick={() => { suspendListing(viewingListing.id); setViewingListingId(null); }}
+                    className="px-4 py-2 bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200"
+                  >
+                    Suspendre
+                  </button>
+                  <button
+                    onClick={() => { deleteListing(viewingListing.id, ''); setViewingListingId(null); }}
+                    className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200"
+                  >
+                    Supprimer
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

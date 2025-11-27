@@ -57,6 +57,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .maybeSingle();
 
       if (error) throw error;
+      
+      // Vérifier si l'utilisateur est banni
+      if (data?.role === 'banned') {
+        await supabase.auth.signOut();
+        setUser(null);
+        alert('Votre compte a été suspendu.');
+        return;
+      }
+      
       setUser(data);
     } catch (error) {
       console.error('Error loading user profile:', error);

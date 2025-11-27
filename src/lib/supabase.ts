@@ -35,7 +35,7 @@ export type User = {
   rating_avg: number;
   rating_count: number;
   is_verified: boolean;
-  role: 'user' | 'moderator' | 'admin';
+  role: 'user' | 'moderator' | 'admin' | 'banned';
   verification_status?: 'none' | 'pending' | 'verified' | 'rejected';
   verification_document_url?: string;
   created_at: string;
