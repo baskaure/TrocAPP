@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { X, MapPin, Calendar, MessageCircle, Star, CheckCircle, Pencil, Trash2 } from 'lucide-react';
+import { X, MapPin, Calendar, MessageCircle, Star, CheckCircle, Pencil, Trash2, Flag } from 'lucide-react';
+import { ReportModal } from '../reports/ReportModal';
 import { Listing, supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth-context';
 import { sendTransactionalEmail } from '../../lib/notifications';
@@ -9,9 +10,10 @@ type ListingDetailModalProps = {
   onClose: () => void;
   onProposalSuccess: () => void;
   onRequestAuth?: (mode: 'login' | 'register') => void;
+  onUserClick?: (userId: string) => void;
 };
 
-export function ListingDetailModal({ listing, onClose, onProposalSuccess, onRequestAuth }: ListingDetailModalProps) {
+export function ListingDetailModal({ listing, onClose, onProposalSuccess, onRequestAuth, onUserClick }: ListingDetailModalProps) {
   const { user } = useAuth();
   const [showProposalForm, setShowProposalForm] = useState(false);
   const [proposalMessage, setProposalMessage] = useState('');
@@ -23,6 +25,7 @@ export function ListingDetailModal({ listing, onClose, onProposalSuccess, onRequ
   const [editError, setEditError] = useState('');
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
   const [editForm, setEditForm] = useState({
     type: listing?.type ?? 'service',
     title: listing?.title ?? '',
@@ -232,7 +235,14 @@ export function ListingDetailModal({ listing, onClose, onProposalSuccess, onRequ
           </div>
 
           {listing.user && (
-            <div className="flex items-center space-x-3 pb-4 border-b border-gray-200 mb-6">
+            <div
+              className={`flex items-center space-x-3 pb-4 border-b border-gray-200 mb-6 ${onUserClick ? 'cursor-pointer hover:bg-gray-50 -mx-2 px-2 py-2 rounded-lg transition-colors' : ''}`}
+              onClick={() => {
+                if (onUserClick && listing.user?.id) {
+                  onUserClick(listing.user.id);
+                }
+              }}
+            >
               {listing.user.avatar_url ? (
                 <img
                   src={listing.user.avatar_url}
@@ -246,7 +256,7 @@ export function ListingDetailModal({ listing, onClose, onProposalSuccess, onRequ
               )}
               <div>
                 <div className="flex items-center space-x-2">
-                  <span className="font-semibold text-gray-900">{listing.user.display_name}</span>
+                  <span className={`font-semibold text-gray-900 ${onUserClick ? 'hover:text-blue-600' : ''}`}>{listing.user.display_name}</span>
                   {listing.user.is_verified && (
                     <CheckCircle className="w-4 h-4 text-blue-600" />
                   )}
@@ -452,13 +462,22 @@ export function ListingDetailModal({ listing, onClose, onProposalSuccess, onRequ
           {!isOwnListing && user && (
             <div className="border-t border-gray-200 pt-6">
               {!showProposalForm ? (
-                <button
-                  onClick={() => setShowProposalForm(true)}
-                  className="w-full flex items-center justify-center space-x-2 bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  <MessageCircle className="w-5 h-5" />
-                  <span>Proposer un échange</span>
-                </button>
+                <>
+                  <button
+                    onClick={() => setShowProposalForm(true)}
+                    className="w-full flex items-center justify-center space-x-2 bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <MessageCircle className="w-5 h-5" />
+                    <span>Proposer un échange</span>
+                  </button>
+                  <button
+                    onClick={() => setShowReportModal(true)}
+                    className="w-full flex items-center justify-center space-x-2 text-gray-500 hover:text-red-600 py-2 transition-colors"
+                  >
+                    <Flag className="w-4 h-4" />
+                    <span className="text-sm">Signaler cette annonce</span>
+                  </button>
+                </>
               ) : (
                 <form onSubmit={handleSubmitProposal} className="space-y-4">
                   <h3 className="text-lg font-semibold text-gray-900">Votre proposition</h3>
@@ -533,6 +552,14 @@ export function ListingDetailModal({ listing, onClose, onProposalSuccess, onRequ
           )}
         </div>
       </div>
+
+      <ReportModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        targetType="listing"
+        targetId={listing.id}
+        targetUserId={listing.user_id}
+      />
     </div>
   );
 }

@@ -13,6 +13,7 @@ import { ExchangesPage } from './components/exchanges/ExchangesPage';
 import { LandingPage } from './components/home/LandingPage';
 import { Filter, Grid, List } from 'lucide-react';
 import { AuthModal } from './components/auth/AuthModal';
+import { PublicProfilePage } from './components/profile/PublicProfilePage';
 
 function AppContent() {
   console.log('AppContent rendering...');
@@ -24,17 +25,20 @@ function AppContent() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [selectedProposal, setSelectedProposal] = useState<Proposal | null>(null);
-  const [view, setView] = useState<'landing' | 'listings' | 'proposals' | 'profile' | 'settings' | 'exchanges'>(!user ? 'landing' : 'listings');
+  const [view, setView] = useState<'landing' | 'listings' | 'proposals' | 'profile' | 'settings' | 'exchanges' | 'public-profile'>(!user ? 'landing' : 'listings');
   const [filterType, setFilterType] = useState<'all' | 'service' | 'product'>('all');
+  const [filterMode, setFilterMode] = useState<'all' | 'remote' | 'on_site' | 'both'>('all');
+  const [filterCategory, setFilterCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
+  const [viewingUserId, setViewingUserId] = useState<string | null>(null);
 
   useEffect(() => {
     loadCategories();
     loadListings();
-  }, [filterType, searchQuery]);
+  }, [filterType, filterMode, filterCategory, searchQuery]);
 
   async function loadCategories() {
     const { data } = await supabase
@@ -59,6 +63,14 @@ function AppContent() {
 
       if (filterType !== 'all') {
         query = query.eq('type', filterType);
+      }
+
+      if (filterMode !== 'all') {
+        query = query.eq('mode', filterMode);
+      }
+
+      if (filterCategory) {
+        query = query.eq('category_id', filterCategory);
       }
 
       if (searchQuery) {
@@ -194,16 +206,79 @@ function AppContent() {
                     </div>
                   </div>
 
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Mode
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => setFilterMode('all')}
+                        className={`px-4 py-2 rounded-lg transition-colors ${
+                          filterMode === 'all'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        Tous
+                      </button>
+                      <button
+                        onClick={() => setFilterMode('remote')}
+                        className={`px-4 py-2 rounded-lg transition-colors ${
+                          filterMode === 'remote'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        À distance
+                      </button>
+                      <button
+                        onClick={() => setFilterMode('on_site')}
+                        className={`px-4 py-2 rounded-lg transition-colors ${
+                          filterMode === 'on_site'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        Sur place
+                      </button>
+                      <button
+                        onClick={() => setFilterMode('both')}
+                        className={`px-4 py-2 rounded-lg transition-colors ${
+                          filterMode === 'both'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        Les deux
+                      </button>
+                    </div>
+                  </div>
+
                   {categories.length > 0 && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Catégories
                       </label>
                       <div className="flex flex-wrap gap-2">
-                        {categories.slice(0, 6).map((category) => (
+                        <button
+                          onClick={() => setFilterCategory(null)}
+                          className={`px-3 py-1 rounded-full text-sm transition-colors ${
+                            filterCategory === null
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                        >
+                          Toutes
+                        </button>
+                        {categories.map((category) => (
                           <button
                             key={category.id}
-                            className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors"
+                            onClick={() => setFilterCategory(category.id)}
+                            className={`px-3 py-1 rounded-full text-sm transition-colors ${
+                              filterCategory === category.id
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            }`}
                           >
                             {category.name}
                           </button>
@@ -246,6 +321,10 @@ function AppContent() {
                     key={listing.id}
                     listing={listing}
                     onClick={setSelectedListing}
+                    onUserClick={(userId) => {
+                      setViewingUserId(userId);
+                      setView('public-profile');
+                    }}
                   />
                 ))}
               </div>
@@ -262,6 +341,15 @@ function AppContent() {
           <SettingsPage />
         ) : view === 'exchanges' ? (
           <ExchangesPage />
+        ) : view === 'public-profile' && viewingUserId ? (
+          <PublicProfilePage
+            userId={viewingUserId}
+            onBack={() => {
+              setViewingUserId(null);
+              setView('listings');
+            }}
+            onViewListing={setSelectedListing}
+          />
         ) : null}
       </div>
 
@@ -276,6 +364,11 @@ function AppContent() {
         onClose={() => setSelectedListing(null)}
         onProposalSuccess={loadListings}
         onRequestAuth={handleRequestAuth}
+        onUserClick={(userId) => {
+          setSelectedListing(null);
+          setViewingUserId(userId);
+          setView('public-profile');
+        }}
       />
 
       <ProposalDetailModal

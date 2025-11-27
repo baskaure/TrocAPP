@@ -27,9 +27,15 @@ export function ProfilePage() {
     bio: '',
     phone: '',
     city: '',
+    country: '',
+    languages: [] as string[],
+    skills: [] as string[],
+    search_radius_km: 50,
     avatar_url: '',
     banner_url: '',
   });
+  const [newSkill, setNewSkill] = useState('');
+  const [newLanguage, setNewLanguage] = useState('');
 
   useEffect(() => {
     if (user) {
@@ -39,6 +45,10 @@ export function ProfilePage() {
         bio: user.bio || '',
         phone: user.phone || '',
         city: user.city || '',
+        country: user.country || '',
+        languages: user.languages || [],
+        skills: user.skills || [],
+        search_radius_km: user.search_radius_km || 50,
         avatar_url: user.avatar_url || '',
         banner_url: user.banner_url || '',
       });
@@ -154,6 +164,10 @@ export function ProfilePage() {
           bio: formData.bio,
           phone: formData.phone,
           city: formData.city,
+          country: formData.country,
+          languages: formData.languages,
+          skills: formData.skills,
+          search_radius_km: formData.search_radius_km,
           avatar_url: formData.avatar_url,
           banner_url: formData.banner_url,
         })
@@ -340,6 +354,18 @@ export function ProfilePage() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Pays
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.country}
+                    onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Téléphone
                   </label>
                   <input
@@ -348,6 +374,120 @@ export function ProfilePage() {
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Rayon de recherche (km)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="500"
+                    value={formData.search_radius_km}
+                    onChange={(e) => setFormData({ ...formData, search_radius_km: parseInt(e.target.value) || 50 })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Langues parlées
+                </label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {formData.languages.map((lang) => (
+                    <span key={lang} className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">
+                      {lang}
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, languages: formData.languages.filter(l => l !== lang) })}
+                        className="ml-2 text-blue-500 hover:text-blue-700"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <div className="flex space-x-2">
+                  <input
+                    type="text"
+                    value={newLanguage}
+                    onChange={(e) => setNewLanguage(e.target.value)}
+                    placeholder="Ajouter une langue"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && newLanguage.trim()) {
+                        e.preventDefault();
+                        if (!formData.languages.includes(newLanguage.trim())) {
+                          setFormData({ ...formData, languages: [...formData.languages, newLanguage.trim()] });
+                        }
+                        setNewLanguage('');
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (newLanguage.trim() && !formData.languages.includes(newLanguage.trim())) {
+                        setFormData({ ...formData, languages: [...formData.languages, newLanguage.trim()] });
+                        setNewLanguage('');
+                      }
+                    }}
+                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                  >
+                    Ajouter
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Compétences / Tags
+                </label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {formData.skills.map((skill) => (
+                    <span key={skill} className="inline-flex items-center px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
+                      {skill}
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, skills: formData.skills.filter(s => s !== skill) })}
+                        className="ml-2 text-green-500 hover:text-green-700"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <div className="flex space-x-2">
+                  <input
+                    type="text"
+                    value={newSkill}
+                    onChange={(e) => setNewSkill(e.target.value)}
+                    placeholder="Ajouter une compétence"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && newSkill.trim()) {
+                        e.preventDefault();
+                        if (!formData.skills.includes(newSkill.trim())) {
+                          setFormData({ ...formData, skills: [...formData.skills, newSkill.trim()] });
+                        }
+                        setNewSkill('');
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (newSkill.trim() && !formData.skills.includes(newSkill.trim())) {
+                        setFormData({ ...formData, skills: [...formData.skills, newSkill.trim()] });
+                        setNewSkill('');
+                      }
+                    }}
+                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                  >
+                    Ajouter
+                  </button>
                 </div>
               </div>
 
@@ -434,10 +574,10 @@ export function ProfilePage() {
                   <span>{user.email}</span>
                 </div>
 
-                {formData.city && (
+                {(formData.city || formData.country) && (
                   <div className="flex items-center space-x-3 text-gray-600">
                     <MapPin className="w-5 h-5" />
-                    <span>{formData.city}</span>
+                    <span>{[formData.city, formData.country].filter(Boolean).join(', ')}</span>
                   </div>
                 )}
 
@@ -453,6 +593,32 @@ export function ProfilePage() {
                   <span>Membre depuis {formatDate(user.created_at)}</span>
                 </div>
               </div>
+
+              {formData.languages.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500 mb-2">Langues</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {formData.languages.map((lang) => (
+                      <span key={lang} className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">
+                        {lang}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {formData.skills.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500 mb-2">Compétences</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {formData.skills.map((skill) => (
+                      <span key={skill} className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="border-t pt-6">
                 <h3 className="text-lg font-semibold mb-4">Statistiques</h3>

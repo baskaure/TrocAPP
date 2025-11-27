@@ -30,6 +30,8 @@ export type User = {
   geo_lat?: number;
   geo_lng?: number;
   languages?: string[];
+  skills?: string[];
+  search_radius_km?: number;
   rating_avg: number;
   rating_count: number;
   is_verified: boolean;
