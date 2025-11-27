@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { Send } from 'lucide-react';
+import { Send, AlertTriangle } from 'lucide-react';
 import { supabase, ChatMessage } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth-context';
 import { sendTransactionalEmail } from '../../lib/notifications';
+import { checkContent } from '../../lib/moderation';
 
 type ChatWindowProps = {
   proposalId: string;
@@ -16,6 +17,7 @@ export function ChatWindow({ proposalId }: ChatWindowProps) {
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [recipientInfo, setRecipientInfo] = useState<{ email?: string; displayName?: string } | null>(null);
+  const [contentWarning, setContentWarning] = useState<string | null>(null);
 
   useEffect(() => {
     loadChat();
@@ -120,6 +122,20 @@ export function ChatWindow({ proposalId }: ChatWindowProps) {
     if (!newMessage.trim() || !chatId || !user) return;
 
     const messageToSend = newMessage.trim();
+    setContentWarning(null);
+
+    // Vérifier les mots bannis
+    const { hasWarning, hasBlock, detectedWords } = await checkContent(messageToSend, user.id);
+    
+    if (hasBlock) {
+      setContentWarning('Ce message contient du contenu interdit et ne peut pas être envoyé.');
+      return;
+    }
+    
+    if (hasWarning) {
+      setContentWarning(`Attention : votre message contient des termes sensibles (${detectedWords.join(', ')}). Restez vigilant face aux arnaques.`);
+    }
+
     setLoading(true);
     setNewMessage('');
 
@@ -196,6 +212,13 @@ export function ChatWindow({ proposalId }: ChatWindowProps) {
           </div>
         )}
       </div>
+
+      {contentWarning && (
+        <div className="flex items-start gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800 mb-2">
+          <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+          <span>{contentWarning}</span>
+        </div>
+      )}
 
       <form onSubmit={handleSend} className="flex space-x-2">
         <input

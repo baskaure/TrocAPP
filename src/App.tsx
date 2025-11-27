@@ -14,6 +14,7 @@ import { LandingPage } from './components/home/LandingPage';
 import { Filter, Grid, List } from 'lucide-react';
 import { AuthModal } from './components/auth/AuthModal';
 import { PublicProfilePage } from './components/profile/PublicProfilePage';
+import { AdminPage } from './components/admin/AdminPage';
 
 function AppContent() {
   console.log('AppContent rendering...');
@@ -25,7 +26,7 @@ function AppContent() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [selectedProposal, setSelectedProposal] = useState<Proposal | null>(null);
-  const [view, setView] = useState<'landing' | 'listings' | 'proposals' | 'profile' | 'settings' | 'exchanges' | 'public-profile'>(!user ? 'landing' : 'listings');
+  const [view, setView] = useState<'landing' | 'listings' | 'proposals' | 'profile' | 'settings' | 'exchanges' | 'public-profile' | 'admin'>(!user ? 'landing' : 'listings');
   const [filterType, setFilterType] = useState<'all' | 'service' | 'product'>('all');
   const [filterMode, setFilterMode] = useState<'all' | 'remote' | 'on_site' | 'both'>('all');
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
@@ -350,6 +351,8 @@ function AppContent() {
             }}
             onViewListing={setSelectedListing}
           />
+        ) : view === 'admin' ? (
+          <AdminPage />
         ) : null}
       </div>
 

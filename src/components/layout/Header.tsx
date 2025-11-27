@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { Plus, User, LogOut, Settings, Search, Package } from 'lucide-react';
+import { Plus, User, LogOut, Settings, Search, Package, Shield } from 'lucide-react';
 import { useAuth } from '../../lib/auth-context';
 
 type HeaderProps = {
   onCreateListing: () => void;
   onSearch: (query: string) => void;
-  onNavigate?: (view: 'listings' | 'proposals' | 'profile' | 'settings' | 'exchanges') => void;
+  onNavigate?: (view: 'listings' | 'proposals' | 'profile' | 'settings' | 'exchanges' | 'admin') => void;
   onRequestAuth?: (mode: 'login' | 'register') => void;
 };
 
@@ -103,6 +103,18 @@ export function Header({ onCreateListing, onSearch, onNavigate, onRequestAuth }:
                           <Settings className="w-4 h-4" />
                           <span>Paramètres</span>
                         </button>
+                        {user && ['admin', 'moderator'].includes(user.role) && (
+                          <button
+                            onClick={() => {
+                              onNavigate?.('admin');
+                              setShowUserMenu(false);
+                            }}
+                            className="flex items-center space-x-2 px-4 py-2 hover:bg-gray-100 w-full text-left text-purple-600"
+                          >
+                            <Shield className="w-4 h-4" />
+                            <span>Administration</span>
+                          </button>
+                        )}
                         <button
                           onClick={signOut}
                           className="flex items-center space-x-2 px-4 py-2 hover:bg-gray-100 w-full text-left text-red-600"

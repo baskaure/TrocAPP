@@ -36,6 +36,8 @@ export type User = {
   rating_count: number;
   is_verified: boolean;
   role: 'user' | 'moderator' | 'admin';
+  verification_status?: 'none' | 'pending' | 'verified' | 'rejected';
+  verification_document_url?: string;
   created_at: string;
 };
 
