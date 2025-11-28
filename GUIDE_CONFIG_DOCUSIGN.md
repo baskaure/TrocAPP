@@ -28,14 +28,77 @@
 ### Option B : Service Integration (RSA) - Avancé
 
 1. **Dans "Authentication"** → Choisis **"Service Integration"**
-2. **RSA Keypairs** → Clique **"Generate RSA"**
-3. **Télécharge la clé privée** (tu en auras besoin)
-4. **Note la clé publique** (affichée dans DocuSign)
+2. **Redirect URIs** → **Ajoute un Redirect URI** (obligatoire pour le consentement) :
+   - Clique sur **"Add URI"** ou **"Add Redirect URI"**
+   - Ajoute : `https://trophub.netlify.app` (ou n'importe quelle URL valide)
+   - Sauvegarde
+3. **RSA Keypairs** → Clique **"Generate RSA"** OU **"Add RSA"** si tu as déjà une paire de clés
+3. **Si tu génères une nouvelle clé** :
+   - DocuSign génère automatiquement la paire
+   - **Télécharge la clé privée** (tu en auras besoin)
+   - La clé publique est automatiquement enregistrée dans DocuSign
+4. **Si tu ajoutes une clé existante** :
+   - **IMPORTANT** : Tu dois uploader la clé publique correspondante
+   - Extrais la clé publique de ta clé privée (voir ci-dessous)
+   - Colle la clé publique dans DocuSign
+
+**⚠️ CRITIQUE : Vérifier que la clé publique est bien uploadée**
+
+Si tu vois l'erreur `"no_valid_keys_or_signatures"`, c'est que la clé publique n'est pas correctement configurée dans DocuSign.
+
+**Pour extraire la clé publique de ta clé privée :**
+```bash
+# Avec OpenSSL
+openssl rsa -in private_key.pem -pubout -out public_key.pem
+
+# Puis copie le contenu de public_key.pem (entre -----BEGIN PUBLIC KEY----- et -----END PUBLIC KEY-----)
+# Et colle-le dans DocuSign → "Apps and Keys" → ton app → "RSA Keypairs" → "Add RSA" ou "Edit"
+```
 
 **Credentials nécessaires :**
 - `DOCUSIGN_CLIENT_ID` = Integration Key
-- `DOCUSIGN_RSA_PRIVATE_KEY` = Clé privée RSA (téléchargée)
+- `DOCUSIGN_RSA_PRIVATE_KEY` = Clé privée RSA (téléchargée) - **IMPORTANT : Convertir en PKCS#8** (voir ci-dessous)
 - `DOCUSIGN_USER_ID` = Ton email DocuSign
+
+**⚠️ CRITIQUE : Consentement utilisateur requis**
+
+Avant de pouvoir utiliser JWT avec Service Integration, **tu dois obtenir le consentement de l'utilisateur** (toi-même dans ce cas).
+
+**Étape 1 : Ajouter un Redirect URI (si pas déjà fait)**
+1. Dans DocuSign Dashboard → ton app → "Authentication"
+2. Sous "Redirect URIs", clique **"Add URI"**
+3. Ajoute : `https://trophub.netlify.app` (ou n'importe quelle URL valide)
+4. Sauvegarde
+
+**Étape 2 : Obtenir le consentement**
+1. **Construis l'URL de consentement** (remplace `TON_INTEGRATION_KEY` par ton Integration Key) :
+   ```
+   https://account-d.docusign.com/oauth/auth?response_type=code&scope=signature%20impersonation&client_id=3ee8483e-e2af-4bab-8e8a-0d9134c7344a&redirect_uri=https://trophub.netlify.app
+   ```
+
+2. **Ouvre cette URL dans ton navigateur** et connecte-toi avec ton compte DocuSign
+
+3. **Accorde le consentement** à l'application
+
+4. **Tu seras redirigé** vers `https://trophub.netlify.app` (peu importe si la page affiche une erreur, le consentement sera enregistré)
+
+5. **Une fois le consentement accordé**, l'authentification JWT fonctionnera
+
+**Alternative : Utiliser Authorization Code Grant** (plus simple pour commencer)
+Si tu as des problèmes avec JWT, utilise plutôt l'Option A (Authorization Code Grant) qui ne nécessite pas de consentement préalable.
+
+**⚠️ Conversion de la clé PKCS#1 vers PKCS#8 :**
+
+DocuSign fournit la clé au format PKCS#1 (`-----BEGIN RSA PRIVATE KEY-----`), mais notre code nécessite PKCS#8 (`-----BEGIN PRIVATE KEY-----`).
+
+**Option 1 : Conversion avec OpenSSL (recommandé)**
+```bash
+# Si tu as OpenSSL installé
+openssl pkcs8 -topk8 -inform PEM -in private_key_pkcs1.pem -outform PEM -nocrypt -out private_key_pkcs8.pem
+```
+
+**Option 2 : Utiliser directement la clé PKCS#1**
+Le code essaiera de convertir automatiquement, mais si ça ne fonctionne pas, utilise la conversion OpenSSL ci-dessus.
 
 ### Account ID
 1. Va dans "My Account" → "API Account Information"
@@ -133,4 +196,3 @@ Pour la production :
 2. Utilise des credentials de production
 3. Configure le webhook avec l'URL de production
 4. Teste avec de vrais emails
-
