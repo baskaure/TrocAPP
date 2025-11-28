@@ -958,42 +958,108 @@ export function AdminPage() {
               </div>
 
               <div className="bg-white rounded-lg shadow p-6 mt-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <Gavel className="w-5 h-5 text-blue-600" />
-                  <h3 className="font-semibold">Préparation signatures électroniques</h3>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <Gavel className="w-5 h-5 text-blue-600" />
+                    <h3 className="font-semibold">Signatures électroniques</h3>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      if (!confirm('Traiter les demandes de signature en attente ?')) return;
+                      setLoading(true);
+                      try {
+                        const { data, error } = await supabase.functions.invoke('process-esign-requests', {
+                          body: {},
+                        });
+                        
+                        if (error) {
+                          console.error('Edge Function error:', error);
+                          throw error;
+                        }
+                        
+                        console.log('Edge Function response:', data);
+                        
+                        if (data?.error) {
+                          throw new Error(data.error);
+                        }
+                        
+                        alert(`Demandes traitées : ${data?.processed || 0} réussies, ${data?.failed || 0} échouées`);
+                        loadStats();
+                      } catch (err) {
+                        console.error('Error processing esign requests:', err);
+                        const errorMessage = err instanceof Error ? err.message : String(err);
+                        alert('Erreur: ' + errorMessage + '\n\nVérifie les logs dans Supabase Dashboard → Edge Functions → process-esign-requests → Logs');
+                      } finally {
+                        setLoading(false);
+                      }
+                    }}
+                    disabled={loading}
+                    className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {loading ? 'Traitement...' : 'Traiter les demandes'}
+                  </button>
                 </div>
                 {esignRequests.length === 0 ? (
-                  <p className="text-sm text-gray-500">Aucune demande en attente.</p>
+                  <p className="text-sm text-gray-500">Aucune demande de signature.</p>
                 ) : (
                   <div className="space-y-3">
-                    {esignRequests.map((req) => (
-                      <div key={req.id} className="border border-gray-100 rounded-lg px-4 py-3 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                        <div>
-                          <p className="font-medium text-gray-900">
-                            Contrat #{req.contract_id.slice(0, 6)} • {req.provider}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            Créé le {new Date(req.created_at).toLocaleDateString('fr-FR')}
-                          </p>
+                    {esignRequests.map((req) => {
+                      const statusLabels: Record<string, string> = {
+                        pending: 'En attente',
+                        sent: 'Envoyé',
+                        completed: 'Complété',
+                        failed: 'Échoué',
+                      };
+                      return (
+                        <div key={req.id} className="border border-gray-100 rounded-lg px-4 py-3">
+                          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                            <div className="flex-1">
+                              <p className="font-medium text-gray-900">
+                                Contrat #{req.contract_id.slice(0, 8)} • {req.provider?.toUpperCase() || 'N/A'}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                Créé le {new Date(req.created_at).toLocaleDateString('fr-FR')} à {new Date(req.created_at).toLocaleTimeString('fr-FR')}
+                              </p>
+                              {req.envelope_id && (
+                                <p className="text-xs text-gray-400 mt-1">
+                                  Envelope ID: {req.envelope_id}
+                                </p>
+                              )}
+                            </div>
+                            <span
+                              className={`px-3 py-1 rounded text-xs font-semibold ${
+                                req.status === 'completed'
+                                  ? 'bg-green-100 text-green-700'
+                                  : req.status === 'failed'
+                                  ? 'bg-red-100 text-red-700'
+                                  : req.status === 'sent'
+                                  ? 'bg-blue-100 text-blue-700'
+                                  : 'bg-yellow-100 text-yellow-700'
+                              }`}
+                            >
+                              {statusLabels[req.status] || req.status}
+                            </span>
+                          </div>
                         </div>
-                        <span
-                          className={`px-2 py-1 rounded text-xs font-semibold ${
-                            req.status === 'completed'
-                              ? 'bg-green-100 text-green-700'
-                              : req.status === 'failed'
-                              ? 'bg-red-100 text-red-700'
-                              : 'bg-yellow-100 text-yellow-700'
-                          }`}
-                        >
-                          {req.status}
-                        </span>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
-                <p className="text-xs text-gray-400 mt-3">
-                  Configurez les variables d'environnement VITE_ESIGN_PROVIDER et les clés DocuSign/SignRequest côté serveur pour activer l'envoi automatique.
-                </p>
+                <div className="mt-4 p-3 bg-blue-50 border border-blue-100 rounded-lg">
+                  <p className="text-xs text-blue-800">
+                    <strong>Configuration requise :</strong> Définissez les variables d'environnement suivantes dans Supabase :
+                    <br />
+                    • <code>DOCUSIGN_CLIENT_ID</code>
+                    <br />
+                    • <code>DOCUSIGN_CLIENT_SECRET</code>
+                    <br />
+                    • <code>DOCUSIGN_ACCOUNT_ID</code>
+                    <br />
+                    • <code>DOCUSIGN_BASE_URL</code> (optionnel, défaut: demo.docusign.net)
+                    <br />
+                    • <code>DOCUSIGN_WEBHOOK_SECRET</code> (pour valider les webhooks)
+                  </p>
+                </div>
               </div>
             </div>
           )}

@@ -85,9 +85,11 @@ serve(async () => {
       contract:contracts(
         proposal:proposals(
           id,
+          from_user_id,
+          to_user_id,
           listing:listings(title),
-          from_user:users(id, email, display_name),
-          to_user:users(id, email, display_name)
+          from_user:users!proposals_from_user_id_fkey(id, email, display_name),
+          to_user:users!proposals_to_user_id_fkey(id, email, display_name)
         )
       )
     `)
