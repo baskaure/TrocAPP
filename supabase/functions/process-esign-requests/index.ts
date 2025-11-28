@@ -23,46 +23,50 @@ async function getDocuSignAccessToken(): Promise<string> {
     throw new Error('DOCUSIGN_CLIENT_ID not configured');
   }
 
-  // Essayer d'abord avec Authorization Code Grant (client_secret)
+  // Utiliser Client Credentials Grant avec CLIENT_SECRET (plus simple pour Edge Functions)
   if (docusignClientSecret) {
-    const response = await fetch('https://account.docusign.com/oauth/token', {
+    console.log('Using Client Credentials Grant with CLIENT_SECRET');
+    
+    const isDemo = docusignBaseUrl.includes('demo');
+    const tokenUrl = isDemo 
+      ? 'https://account-d.docusign.com/oauth/token'
+      : 'https://account.docusign.com/oauth/token';
+    
+    console.log('Requesting access token from:', tokenUrl);
+    
+    const response = await fetch(tokenUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: new URLSearchParams({
-        grant_type: 'authorization_code',
+        grant_type: 'client_credentials',
+        scope: 'signature impersonation',
         client_id: docusignClientId,
         client_secret: docusignClientSecret,
-        code: 'dummy', // Pour Service Integration, on utilise JWT
       }),
     });
 
-    // Si ça ne marche pas, essayer client_credentials
+    const responseText = await response.text();
+    console.log('DocuSign response status:', response.status);
+    console.log('DocuSign response body:', responseText);
+
     if (!response.ok) {
-      const response2 = await fetch('https://account.docusign.com/oauth/token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          grant_type: 'client_credentials',
-          scope: 'signature',
-          client_id: docusignClientId,
-          client_secret: docusignClientSecret,
-        }),
-      });
-
-      if (!response2.ok) {
-        const error = await response2.text();
-        throw new Error(`DocuSign auth failed: ${error}`);
-      }
-
-      const data = await response2.json();
-      return data.access_token;
+      throw new Error(`DocuSign auth failed: ${responseText}`);
     }
 
-    const data = await response.json();
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (e) {
+      throw new Error(`Invalid response format: ${responseText}`);
+    }
+
+    if (!data.access_token) {
+      throw new Error(`No access_token in response: ${JSON.stringify(data)}`);
+    }
+
+    console.log('Access token obtained successfully');
     return data.access_token;
   }
 
