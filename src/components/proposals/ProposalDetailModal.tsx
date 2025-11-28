@@ -4,6 +4,7 @@ import { supabase, Proposal } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth-context';
 import { ChatWindow } from '../chat/ChatWindow';
 import { sendTransactionalEmail } from '../../lib/notifications';
+import { enqueueEsignRequest } from '../../lib/esign';
 
 type ProposalDetailModalProps = {
   proposal: Proposal | null;
@@ -60,6 +61,37 @@ export function ProposalDetailModal({ proposal, onClose, onUpdate }: ProposalDet
           proposal_id: proposal.id,
           counterpart_name: proposal.from_user?.display_name,
         });
+      }
+
+      const { data: contract } = await supabase
+        .from('contracts')
+        .select('id')
+        .eq('proposal_id', proposal.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (contract?.id) {
+        try {
+          await enqueueEsignRequest({
+            contractId: contract.id,
+            listingTitle,
+            participants: [
+              {
+                id: proposal.from_user_id,
+                email: proposal.from_user?.email,
+                name: proposal.from_user?.display_name,
+              },
+              {
+                id: proposal.to_user_id,
+                email: proposal.to_user?.email,
+                name: proposal.to_user?.display_name,
+              },
+            ],
+          });
+        } catch (esignError) {
+          console.warn('Impossible de préparer la signature électronique', esignError);
+        }
       }
 
       onUpdate();

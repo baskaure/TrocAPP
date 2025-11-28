@@ -1,18 +1,19 @@
 import { useState, useEffect } from 'react';
 import { Package, Clock, CheckCircle, XCircle, AlertCircle, Calendar } from 'lucide-react';
 import { useAuth } from '../../lib/auth-context';
-import { supabase, Exchange, Contract } from '../../lib/supabase';
+import { supabase, Exchange, Contract, Dispute } from '../../lib/supabase';
 import { ExchangeTracker } from './ExchangeTracker';
 import { ReviewModal } from './ReviewModal';
 
 type ExchangeWithDetails = Exchange & {
   contract?: Contract & {
     proposal?: {
-      from_user?: { display_name: string; avatar_url?: string };
-      to_user?: { display_name: string; avatar_url?: string };
-      listing?: { title: string };
+      from_user?: { display_name: string; avatar_url?: string; email?: string };
+      to_user?: { display_name: string; avatar_url?: string; email?: string };
+      listing?: { title: string; type?: string };
     };
   };
+  dispute?: Dispute | null;
 };
 
 export function ExchangesPage() {
@@ -38,6 +39,7 @@ export function ExchangesPage() {
         .from('exchanges')
         .select(`
           *,
+          dispute:disputes(*),
           contract:contracts(
             *,
             proposal:proposals(
@@ -58,7 +60,12 @@ export function ExchangesPage() {
         return proposal.from_user_id === user.id || proposal.to_user_id === user.id;
       }) || [];
 
-      setExchanges(filtered as ExchangeWithDetails[]);
+      const normalized = filtered.map((ex: any) => ({
+        ...ex,
+        dispute: Array.isArray(ex.dispute) ? ex.dispute[0] : ex.dispute,
+      }));
+
+      setExchanges(normalized as ExchangeWithDetails[]);
     } catch (error) {
       console.error('Error loading exchanges:', error);
     } finally {
@@ -265,6 +272,17 @@ export function ExchangesPage() {
                       {getStatusIcon(exchange.status)}
                       <span>{getStatusText(exchange.status)}</span>
                     </span>
+                  {exchange.dispute && (
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                        exchange.dispute.status === 'resolved'
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-red-100 text-red-700'
+                      }`}
+                    >
+                      Litige {exchange.dispute.status === 'resolved' ? 'résolu' : 'en cours'}
+                    </span>
+                  )}
                   </div>
                 </div>
 

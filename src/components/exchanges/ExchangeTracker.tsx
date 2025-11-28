@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { FormEvent, useState } from 'react';
 import { X, Package, Truck, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../lib/auth-context';
 
 type ExchangeTrackerProps = {
   exchange: any;
@@ -9,8 +10,13 @@ type ExchangeTrackerProps = {
 };
 
 export function ExchangeTracker({ exchange, onClose, onUpdate }: ExchangeTrackerProps) {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showDisputeForm, setShowDisputeForm] = useState(false);
+  const [disputeReason, setDisputeReason] = useState('');
+  const [disputeLoading, setDisputeLoading] = useState(false);
+  const [disputeError, setDisputeError] = useState('');
 
   const steps = [
     { id: 'not_started', label: 'Non démarré', icon: Clock },
@@ -21,9 +27,17 @@ export function ExchangeTracker({ exchange, onClose, onUpdate }: ExchangeTracker
 
   const currentStepIndex = steps.findIndex(s => s.id === exchange.status);
 
+  // Déterminer qui est l'autre partie
+  const proposal = exchange.contract?.proposal;
+  const isFromUser = proposal?.from_user_id === user?.id;
+  const otherPartyId = isFromUser ? proposal?.to_user_id : proposal?.from_user_id;
+
   const canMarkAsInProgress = exchange.status === 'not_started';
   const canMarkAsDelivered = exchange.status === 'in_progress';
-  const canConfirm = exchange.status === 'delivered';
+  // Seul celui qui n'a PAS marqué comme livré peut confirmer
+  const canConfirm = exchange.status === 'delivered' && exchange.delivered_by !== user?.id;
+  const canOpenDispute = exchange.status === 'delivered' || exchange.status === 'in_progress';
+  const shouldShowDisputeSection = canOpenDispute || Boolean(exchange.dispute);
 
   async function handleStartExchange() {
     setLoading(true);
@@ -46,16 +60,54 @@ export function ExchangeTracker({ exchange, onClose, onUpdate }: ExchangeTracker
     }
   }
 
+  async function handleOpenDispute(e: FormEvent) {
+    e.preventDefault();
+    if (!disputeReason.trim()) return;
+    if (!user) {
+      setDisputeError('Session expirée, veuillez vous reconnecter.');
+      return;
+    }
+    setDisputeLoading(true);
+    setDisputeError('');
+
+    try {
+      const { error: disputeError } = await supabase
+        .from('disputes')
+        .insert({
+          exchange_id: exchange.id,
+          opened_by: user?.id,
+          reason: disputeReason,
+          status: 'open',
+        });
+
+      if (disputeError) throw disputeError;
+      setShowDisputeForm(false);
+      setDisputeReason('');
+      onUpdate();
+    } catch (err) {
+      setDisputeError(err instanceof Error ? err.message : 'Impossible d\'ouvrir un litige');
+    } finally {
+      setDisputeLoading(false);
+    }
+  }
+
   async function handleMarkAsDelivered() {
     setLoading(true);
     setError('');
 
     try {
+      if (!user?.id) {
+        setError('Session expirée, veuillez vous reconnecter.');
+        setLoading(false);
+        return;
+      }
+
       const { error: updateError } = await supabase
         .from('exchanges')
         .update({
           status: 'delivered',
           delivered_at: new Date().toISOString(),
+          delivered_by: user.id, // Enregistrer qui a marqué comme livré
         })
         .eq('id', exchange.id);
 
@@ -71,10 +123,44 @@ export function ExchangeTracker({ exchange, onClose, onUpdate }: ExchangeTracker
   }
 
   async function handleConfirmDelivery() {
+    if (!user?.id) {
+      setError('Session expirée, veuillez vous reconnecter.');
+      return;
+    }
+
+    // Vérifier qu'on n'est pas celui qui a marqué comme livré
+    if (exchange.delivered_by === user.id) {
+      setError('Vous ne pouvez pas confirmer la réception d\'un échange que vous avez marqué comme livré.');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
     try {
+      // Vérifier à nouveau avant la mise à jour (protection contre les doubles clics)
+      const { data: currentExchange } = await supabase
+        .from('exchanges')
+        .select('delivered_by, status')
+        .eq('id', exchange.id)
+        .single();
+
+      if (!currentExchange) {
+        throw new Error('Échange introuvable');
+      }
+
+      if (currentExchange.delivered_by === user.id) {
+        setError('Vous ne pouvez pas confirmer la réception d\'un échange que vous avez marqué comme livré.');
+        setLoading(false);
+        return;
+      }
+
+      if (currentExchange.status !== 'delivered') {
+        setError('Cet échange n\'est pas en statut "livré".');
+        setLoading(false);
+        return;
+      }
+
       const { error: updateError } = await supabase
         .from('exchanges')
         .update({
@@ -237,6 +323,73 @@ export function ExchangeTracker({ exchange, onClose, onUpdate }: ExchangeTracker
               >
                 {loading ? 'Confirmation...' : 'Confirmer la réception'}
               </button>
+            )}
+
+            {shouldShowDisputeSection && (
+              <div className="border border-red-100 rounded-lg p-4 space-y-3 bg-red-50/30">
+                {exchange.dispute ? (
+                  <div className="flex items-start space-x-2 text-red-700">
+                    <AlertCircle className="w-5 h-5 mt-0.5" />
+                    <div>
+                      <p className="font-semibold">
+                        {exchange.dispute.status === 'resolved' ? 'Litige résolu' : 'Litige en cours'}
+                      </p>
+                      <p className="text-sm">
+                        Statut : <span className="capitalize">{exchange.dispute.status}</span>
+                      </p>
+                      {exchange.dispute.resolution && (
+                        <p className="text-sm text-gray-700 mt-1">
+                          Résolution proposée : {exchange.dispute.resolution}
+                        </p>
+                      )}
+                      {exchange.dispute.resolution_notes && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Notes : {exchange.dispute.resolution_notes}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ) : canOpenDispute ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setShowDisputeForm(prev => !prev)}
+                      className="w-full text-sm text-red-600 font-medium hover:text-red-700"
+                    >
+                      {showDisputeForm ? 'Annuler le litige' : 'Ouvrir un litige'}
+                    </button>
+                    {showDisputeForm && (
+                      <form onSubmit={handleOpenDispute} className="space-y-3">
+                        <textarea
+                          value={disputeReason}
+                          onChange={e => setDisputeReason(e.target.value)}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-200 focus:border-red-400"
+                          rows={3}
+                          placeholder="Expliquez le problème rencontré..."
+                          required
+                        />
+                        {disputeError && (
+                          <p className="text-sm text-red-600 flex items-center space-x-2">
+                            <AlertCircle className="w-4 h-4" />
+                            <span>{disputeError}</span>
+                          </p>
+                        )}
+                        <button
+                          type="submit"
+                          disabled={disputeLoading || !disputeReason.trim()}
+                          className="w-full bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50"
+                        >
+                          {disputeLoading ? 'Envoi...' : 'Envoyer le litige'}
+                        </button>
+                      </form>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-sm text-gray-600">
+                    Litige clôturé. Contactez le support si vous avez besoin de rouvrir le dossier.
+                  </p>
+                )}
+              </div>
             )}
 
             <button

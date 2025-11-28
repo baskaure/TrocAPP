@@ -108,15 +108,31 @@ export type ChatMessage = {
   sender?: User;
 };
 
+export type Dispute = {
+  id: string;
+  exchange_id: string;
+  opened_by: string;
+  reason: string;
+  status: 'open' | 'in_review' | 'resolved' | 'dismissed';
+  resolution?: string;
+  resolution_notes?: string;
+  resolved_by?: string;
+  resolved_at?: string;
+  created_at: string;
+  updated_at: string;
+};
+
 export type Exchange = {
   id: string;
   contract_id: string;
   status: 'not_started' | 'in_progress' | 'delivered' | 'confirmed' | 'cancelled';
   due_date?: string;
   delivered_at?: string;
+  delivered_by?: string; // ID de l'utilisateur qui a marqué comme livré
   confirmed_at?: string;
   created_at: string;
   updated_at: string;
+  dispute?: Dispute | null;
 };
 
 export type Review = {
@@ -174,6 +190,20 @@ export type Contract = {
   accepted_by_from_at?: string;
   accepted_by_to_at?: string;
   status: 'awaiting_signatures' | 'active' | 'completed' | 'cancelled';
+  signature_provider?: 'docusign' | 'signrequest' | null;
+  signature_status?: 'idle' | 'pending' | 'sent' | 'completed' | 'failed';
+  signature_reference?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type EsignRequest = {
+  id: string;
+  contract_id: string;
+  provider: 'docusign' | 'signrequest';
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  envelope_id?: string | null;
+  metadata?: Record<string, any> | null;
   created_at: string;
   updated_at: string;
 };

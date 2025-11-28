@@ -30,10 +30,39 @@ export function ContractModal({ contract, onClose, onAccepted }: ContractModalPr
     : contract.proposal?.from_user?.display_name;
 
   async function handleAccept() {
+    // Protection : vérifier qu'on n'a pas déjà accepté
+    if (hasUserAccepted) {
+      setError('Vous avez déjà accepté ce contrat.');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
     try {
+      // Vérifier à nouveau le statut avant d'accepter (protection contre les doubles clics)
+      const { data: currentContract } = await supabase
+        .from('contracts')
+        .select('accepted_by_from_at, accepted_by_to_at')
+        .eq('id', contract.id)
+        .single();
+
+      if (!currentContract) {
+        throw new Error('Contrat introuvable');
+      }
+
+      // Vérifier qu'on n'a pas déjà accepté (double vérification)
+      const alreadyAccepted = isFromUser 
+        ? !!currentContract.accepted_by_from_at 
+        : !!currentContract.accepted_by_to_at;
+
+      if (alreadyAccepted) {
+        setError('Vous avez déjà accepté ce contrat.');
+        setLoading(false);
+        onAccepted(); // Rafraîchir pour mettre à jour l'affichage
+        return;
+      }
+
       const updateField = isFromUser ? 'accepted_by_from_at' : 'accepted_by_to_at';
 
       const { error: updateError } = await supabase

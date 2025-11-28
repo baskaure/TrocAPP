@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Shield, Users, FileText, Flag, AlertTriangle, Loader2, Trash2, CheckCircle, XCircle, Eye, BarChart3, Download } from 'lucide-react';
-import { supabase, User } from '../../lib/supabase';
+import { Shield, Users, Flag, AlertTriangle, Loader2, Trash2, CheckCircle, XCircle, Eye, BarChart3, Download, Gavel } from 'lucide-react';
+import { supabase, User, EsignRequest } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth-context';
 
-type Tab = 'reports' | 'users' | 'verification' | 'banned-words' | 'stats';
+type Tab = 'reports' | 'users' | 'verification' | 'banned-words' | 'disputes' | 'stats';
 
 type Report = {
   id: string;
@@ -43,6 +43,10 @@ export function AdminPage() {
   const [bannedWords, setBannedWords] = useState<{ id: string; word: string; severity: string }[]>([]);
   const [newWord, setNewWord] = useState('');
   const [newSeverity, setNewSeverity] = useState<'warning' | 'block'>('warning');
+
+  // Disputes
+  const [disputes, setDisputes] = useState<any[]>([]);
+  const [disputeNotes, setDisputeNotes] = useState<Record<string, string>>({});
   
   // Viewing
   const [viewingListingId, setViewingListingId] = useState<string | null>(null);
@@ -57,12 +61,14 @@ export function AdminPage() {
     acceptedProposals: 0,
     confirmedExchanges: 0,
   });
+  const [esignRequests, setEsignRequests] = useState<EsignRequest[]>([]);
 
   useEffect(() => {
     if (tab === 'reports') loadReports();
     if (tab === 'users') loadUsers();
     if (tab === 'verification') loadVerificationRequests();
     if (tab === 'banned-words') loadBannedWords();
+    if (tab === 'disputes') loadDisputes();
     if (tab === 'stats') loadStats();
   }, [tab]);
 
@@ -85,13 +91,14 @@ export function AdminPage() {
 
   async function loadStats() {
     setLoading(true);
-    const [usersRes, listingsRes, proposalsRes, exchangesRes, acceptedRes, confirmedRes] = await Promise.all([
+    const [usersRes, listingsRes, proposalsRes, exchangesRes, acceptedRes, confirmedRes, esignRes] = await Promise.all([
       supabase.from('users').select('*', { count: 'exact', head: true }),
       supabase.from('listings').select('*', { count: 'exact', head: true }),
       supabase.from('proposals').select('*', { count: 'exact', head: true }),
       supabase.from('exchanges').select('*', { count: 'exact', head: true }),
       supabase.from('proposals').select('*', { count: 'exact', head: true }).eq('status', 'accepted'),
       supabase.from('exchanges').select('*', { count: 'exact', head: true }).eq('status', 'confirmed'),
+      supabase.from('esign_requests').select('*').order('created_at', { ascending: false }).limit(10),
     ]);
     setStats({
       totalUsers: usersRes.count || 0,
@@ -101,6 +108,7 @@ export function AdminPage() {
       acceptedProposals: acceptedRes.count || 0,
       confirmedExchanges: confirmedRes.count || 0,
     });
+    setEsignRequests(esignRes.data || []);
     setLoading(false);
   }
 
@@ -135,6 +143,128 @@ export function AdminPage() {
       .order('created_at', { ascending: false });
     if (data) setReports(data);
     setLoading(false);
+  }
+
+  async function loadDisputes() {
+    setLoading(true);
+    try {
+      // D'abord, récupérer les litiges de base
+      const { data: disputesData, error: disputesError } = await supabase
+        .from('disputes')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (disputesError) {
+        console.error('Erreur lors du chargement des litiges', disputesError);
+        alert('Erreur: ' + disputesError.message);
+        setLoading(false);
+        return;
+      }
+
+      if (!disputesData || disputesData.length === 0) {
+        console.log('Aucun litige trouvé');
+        setDisputes([]);
+        setLoading(false);
+        return;
+      }
+
+      console.log('Litiges bruts trouvés:', disputesData);
+
+      // Enrichir avec les données des utilisateurs et échanges
+      const enrichedDisputes = await Promise.all(
+        disputesData.map(async (dispute) => {
+          // Récupérer l'utilisateur qui a ouvert le litige
+          const { data: openedByUser } = await supabase
+            .from('users')
+            .select('display_name, email')
+            .eq('id', dispute.opened_by)
+            .maybeSingle();
+
+          // Récupérer l'utilisateur qui a résolu (si applicable)
+          let resolvedByUser = null;
+          if (dispute.resolved_by) {
+            const { data: resolvedUser } = await supabase
+              .from('users')
+              .select('display_name')
+              .eq('id', dispute.resolved_by)
+              .maybeSingle();
+            resolvedByUser = resolvedUser;
+          }
+
+          // Récupérer l'échange et ses détails
+          let exchangeData: any = null;
+          const { data: exchange, error: exchangeError } = await supabase
+            .from('exchanges')
+            .select('id, status, contract_id')
+            .eq('id', dispute.exchange_id)
+            .maybeSingle();
+
+          if (exchangeError) {
+            console.warn('Erreur lors de la récupération de l\'échange', exchangeError);
+          } else if (exchange) {
+            exchangeData = { id: exchange.id, status: exchange.status };
+
+            // Récupérer le contrat
+            if (exchange.contract_id) {
+              const { data: contract } = await supabase
+                .from('contracts')
+                .select('proposal_id')
+                .eq('id', exchange.contract_id)
+                .maybeSingle();
+
+              if (contract?.proposal_id) {
+                // Récupérer la proposition
+                const { data: proposal } = await supabase
+                  .from('proposals')
+                  .select(`
+                    id,
+                    listing_id,
+                    from_user_id,
+                    to_user_id,
+                    listing:listings(title),
+                    from_user:users!proposals_from_user_id_fkey(display_name),
+                    to_user:users!proposals_to_user_id_fkey(display_name)
+                  `)
+                  .eq('id', contract.proposal_id)
+                  .maybeSingle();
+
+                if (proposal) {
+                  exchangeData.contract = {
+                    proposal: proposal,
+                  };
+                  console.log('Proposal trouvé:', proposal);
+                  console.log('Listing title:', proposal.listing?.title);
+                }
+              }
+            }
+          }
+
+          return {
+            ...dispute,
+            opened_by_user: openedByUser,
+            resolved_by_user: resolvedByUser,
+            exchange: exchangeData,
+          };
+        })
+      );
+
+      console.log('Litiges enrichis:', enrichedDisputes);
+      setDisputes(enrichedDisputes);
+      setDisputeNotes((prev) => {
+        const next = { ...prev };
+        enrichedDisputes.forEach((dispute: any) => {
+          if (dispute.resolution_notes && !next[dispute.id]) {
+            next[dispute.id] = dispute.resolution_notes;
+          }
+        });
+        return next;
+      });
+    } catch (err) {
+      console.error('Exception lors du chargement des litiges', err);
+      alert('Erreur: ' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function deleteListing(listingId: string, reportId: string) {
@@ -189,6 +319,78 @@ export function AdminPage() {
     const { data } = await supabase.from('banned_words').select('*').order('word');
     if (data) setBannedWords(data);
     setLoading(false);
+  }
+
+  async function handleDisputeStatus(
+    disputeId: string,
+    status: 'open' | 'in_review' | 'resolved' | 'dismissed'
+  ) {
+    if (!user?.id) {
+      alert('Session expirée, veuillez vous reconnecter.');
+      return;
+    }
+
+    // Validation explicite du statut
+    const validStatuses = ['open', 'in_review', 'resolved', 'dismissed'];
+    if (!validStatuses.includes(status)) {
+      console.error('Statut invalide:', status);
+      alert('Statut invalide: ' + status);
+      return;
+    }
+
+    try {
+      const payload: Record<string, any> = {
+        status: status.trim(), // S'assurer qu'il n'y a pas d'espaces
+      };
+
+      console.log('Mise à jour du litige', disputeId, 'avec le statut:', status);
+      console.log('Payload initial:', payload);
+
+      if (status === 'resolved' || status === 'dismissed') {
+        // Essayer d'ajouter resolved_by seulement si la colonne existe
+        // On laisse Supabase gérer l'erreur si elle n'existe pas
+        try {
+          payload.resolved_by = user.id;
+          payload.resolved_at = new Date().toISOString();
+        } catch (e) {
+          console.warn('Colonne resolved_by non disponible, ignorée');
+        }
+        // Utiliser les notes seulement si elles existent dans le state
+        const notes = disputeNotes[disputeId];
+        if (notes) {
+          payload.resolution_notes = notes;
+        }
+        if (status === 'resolved') {
+          payload.resolution = notes || 'Litige résolu';
+        }
+      } else if (status === 'in_review') {
+        // Pour in_review, on ne change que le statut
+        // Ne pas toucher aux autres champs
+      }
+
+      console.log('Payload final avant envoi:', JSON.stringify(payload, null, 2));
+
+      const { error, data } = await supabase
+        .from('disputes')
+        .update(payload)
+        .eq('id', disputeId)
+        .select();
+
+      if (error) {
+        console.error('Erreur lors de la mise à jour du litige', error);
+        console.error('Payload envoyé:', payload);
+        console.error('Code erreur:', error.code);
+        console.error('Détails:', error.details);
+        console.error('Hint:', error.hint);
+        alert('Erreur: ' + error.message + (error.details ? '\n' + error.details : ''));
+      } else {
+        console.log('Litige mis à jour avec succès', data);
+        loadDisputes();
+      }
+    } catch (err) {
+      console.error('Exception lors de la mise à jour', err);
+      alert('Erreur: ' + (err instanceof Error ? err.message : String(err)));
+    }
   }
 
   async function handleReportStatus(reportId: string, status: 'resolved' | 'dismissed') {
@@ -272,6 +474,13 @@ export function AdminPage() {
         >
           <AlertTriangle className="w-4 h-4 inline mr-2" />
           Mots bannis
+        </button>
+        <button
+          onClick={() => setTab('disputes')}
+          className={`px-4 py-2 font-medium border-b-2 -mb-px ${tab === 'disputes' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500'}`}
+        >
+          <Gavel className="w-4 h-4 inline mr-2" />
+          Litiges
         </button>
         <button
           onClick={() => setTab('stats')}
@@ -577,6 +786,126 @@ export function AdminPage() {
             </div>
           )}
 
+          {/* Disputes Tab */}
+          {tab === 'disputes' && (
+            <div className="space-y-4">
+              {loading ? (
+                <div className="flex justify-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                </div>
+              ) : disputes.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">Aucun litige pour le moment</p>
+              ) : (
+                disputes.map((dispute) => {
+                  const proposal = dispute.exchange?.contract?.proposal;
+                  const listingTitle = proposal?.listing?.title || 'Annonce supprimée';
+                  const statusStyles: Record<string, string> = {
+                    open: 'bg-red-100 text-red-700',
+                    in_review: 'bg-yellow-100 text-yellow-700',
+                    resolved: 'bg-green-100 text-green-700',
+                    dismissed: 'bg-gray-100 text-gray-700',
+                  };
+                  const statusLabels: Record<string, string> = {
+                    open: 'Ouvert',
+                    in_review: 'En cours',
+                    resolved: 'Résolu',
+                    dismissed: 'Rejeté',
+                  };
+                  return (
+                    <div key={dispute.id} className="bg-white rounded-lg shadow p-4">
+                      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                        <div className="flex-1 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`px-2 py-1 rounded text-xs font-semibold ${statusStyles[dispute.status] || 'bg-gray-100 text-gray-700'}`}
+                            >
+                              {statusLabels[dispute.status] || dispute.status}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              Ouvert le {new Date(dispute.created_at).toLocaleDateString('fr-FR')}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-500">
+                            {dispute.exchange?.id ? `Échange #${dispute.exchange.id}` : 'Échange supprimé'} • {listingTitle}
+                          </p>
+                          <p className="font-semibold text-gray-900">{dispute.reason}</p>
+                          {dispute.resolution && (
+                            <p className="text-sm text-green-700 bg-green-50 border border-green-100 rounded p-2">
+                              Résolution : {dispute.resolution}
+                            </p>
+                          )}
+                          {proposal && (
+                            <p className="text-xs text-gray-500">
+                              {proposal.from_user?.display_name} ↔ {proposal.to_user?.display_name}
+                            </p>
+                          )}
+                          <p className="text-xs text-gray-500">
+                            Ouvert par {dispute.opened_by_user?.display_name || 'Utilisateur'} ({dispute.opened_by_user?.email || 'email inconnu'})
+                          </p>
+                          {dispute.resolved_by_user && (
+                            <p className="text-xs text-gray-500">
+                              Traité par {dispute.resolved_by_user.display_name} {dispute.resolved_at && `le ${new Date(dispute.resolved_at).toLocaleDateString('fr-FR')}`}
+                            </p>
+                          )}
+                          <textarea
+                            value={disputeNotes[dispute.id] || dispute.resolution_notes || ''}
+                            onChange={(e) =>
+                              setDisputeNotes((prev) => ({ ...prev, [dispute.id]: e.target.value }))
+                            }
+                            placeholder="Notes de résolution (visibles uniquement pour l'équipe)"
+                            rows={3}
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-200"
+                          />
+                          <button
+                            onClick={async () => {
+                              const notes = disputeNotes[dispute.id] || '';
+                              const { error } = await supabase
+                                .from('disputes')
+                                .update({ resolution_notes: notes || null })
+                                .eq('id', dispute.id);
+                              if (error) {
+                                alert('Erreur lors de la sauvegarde des notes: ' + error.message);
+                              } else {
+                                alert('Notes sauvegardées avec succès');
+                                loadDisputes();
+                              }
+                            }}
+                            className="mt-2 px-3 py-1.5 rounded-lg text-xs bg-blue-100 text-blue-700 hover:bg-blue-200"
+                          >
+                            Sauvegarder les notes
+                          </button>
+                        </div>
+                        <div className="flex flex-col gap-2 w-full md:w-56">
+                          <button
+                            onClick={() => handleDisputeStatus(dispute.id, 'in_review')}
+                            className="px-3 py-2 rounded-lg text-sm bg-yellow-100 text-yellow-700 hover:bg-yellow-200 disabled:opacity-50"
+                            disabled={['resolved', 'dismissed', 'in_review'].includes(dispute.status)}
+                          >
+                            Prendre en charge
+                          </button>
+                          <button
+                            onClick={() => handleDisputeStatus(dispute.id, 'resolved')}
+                            className="px-3 py-2 rounded-lg text-sm bg-green-100 text-green-700 hover:bg-green-200 disabled:opacity-50"
+                            disabled={dispute.status === 'resolved'}
+                          >
+                            Résoudre
+                          </button>
+                          <button
+                            onClick={() => handleDisputeStatus(dispute.id, 'dismissed')}
+                            className="px-3 py-2 rounded-lg text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50"
+                            disabled={dispute.status === 'dismissed'}
+                          >
+                            Rejeter
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
+
           {/* Stats Tab */}
           {tab === 'stats' && (
             <div>
@@ -626,6 +955,45 @@ export function AdminPage() {
                     <Download className="w-4 h-4" /> Avis
                   </button>
                 </div>
+              </div>
+
+              <div className="bg-white rounded-lg shadow p-6 mt-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Gavel className="w-5 h-5 text-blue-600" />
+                  <h3 className="font-semibold">Préparation signatures électroniques</h3>
+                </div>
+                {esignRequests.length === 0 ? (
+                  <p className="text-sm text-gray-500">Aucune demande en attente.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {esignRequests.map((req) => (
+                      <div key={req.id} className="border border-gray-100 rounded-lg px-4 py-3 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            Contrat #{req.contract_id.slice(0, 6)} • {req.provider}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Créé le {new Date(req.created_at).toLocaleDateString('fr-FR')}
+                          </p>
+                        </div>
+                        <span
+                          className={`px-2 py-1 rounded text-xs font-semibold ${
+                            req.status === 'completed'
+                              ? 'bg-green-100 text-green-700'
+                              : req.status === 'failed'
+                              ? 'bg-red-100 text-red-700'
+                              : 'bg-yellow-100 text-yellow-700'
+                          }`}
+                        >
+                          {req.status}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <p className="text-xs text-gray-400 mt-3">
+                  Configurez les variables d'environnement VITE_ESIGN_PROVIDER et les clés DocuSign/SignRequest côté serveur pour activer l'envoi automatique.
+                </p>
               </div>
             </div>
           )}
