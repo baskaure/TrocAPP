@@ -149,16 +149,18 @@ async function getDocuSignAccessToken(): Promise<string> {
       const aud = isDemo ? 'account-d.docusign.com' : 'account.docusign.com';
       
       const now = getNumericDate(new Date());
+      // Pour Service Integration, essayons sans le scope dans le JWT
+      // Le scope sera passé dans la requête POST
       const payload = {
         iss: docusignClientId, // Integration Key
         sub: docusignUserId, // User ID (email)
         iat: now,
         exp: now + 3600, // 1 heure de validité
         aud: aud, // Audience différente pour demo vs production
-        scope: 'signature impersonation', // Scope requis pour Service Integration
+        // Scope retiré du JWT - sera dans la requête POST
       };
       
-      console.log('JWT payload:', { iss: docusignClientId, sub: docusignUserId, aud, scope: payload.scope });
+      console.log('JWT payload:', { iss: docusignClientId, sub: docusignUserId, aud, scope: 'signature impersonation (in POST request)' });
 
       // Signer le JWT
       const jwt = await create(
@@ -185,9 +187,11 @@ async function getDocuSignAccessToken(): Promise<string> {
       console.log('Requesting access token from:', tokenUrl);
       
       // Préparer le body de la requête
+      // Pour Service Integration, passons le scope dans la requête POST plutôt que dans le JWT
       const requestBody = new URLSearchParams({
         grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
         assertion: jwt,
+        scope: 'signature impersonation', // Scope dans la requête POST
       });
       
       console.log('Request body params:', {
