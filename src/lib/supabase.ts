@@ -190,7 +190,7 @@ export type Contract = {
   accepted_by_from_at?: string;
   accepted_by_to_at?: string;
   status: 'awaiting_signatures' | 'active' | 'completed' | 'cancelled';
-  signature_provider?: 'docusign' | 'signrequest' | null;
+  signature_provider?: 'signrequest' | null;
   signature_status?: 'idle' | 'pending' | 'sent' | 'completed' | 'failed';
   signature_reference?: string | null;
   created_at: string;
@@ -200,8 +200,8 @@ export type Contract = {
 export type EsignRequest = {
   id: string;
   contract_id: string;
-  provider: 'docusign' | 'signrequest';
-  status: 'pending' | 'processing' | 'completed' | 'failed';
+  provider: 'signrequest';
+  status: 'pending' | 'sent' | 'completed' | 'failed';
   envelope_id?: string | null;
   metadata?: Record<string, any> | null;
   created_at: string;

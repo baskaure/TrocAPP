@@ -233,7 +233,8 @@ export function AdminPage() {
                     proposal: proposal,
                   };
                   console.log('Proposal trouvé:', proposal);
-                  console.log('Listing title:', proposal.listing?.title);
+                  const listing = Array.isArray(proposal.listing) ? proposal.listing[0] : proposal.listing;
+                  console.log('Listing title:', listing?.title);
                 }
               }
             }
@@ -1045,21 +1046,15 @@ export function AdminPage() {
                     })}
                   </div>
                 )}
-                <div className="mt-4 p-3 bg-blue-50 border border-blue-100 rounded-lg">
-                  <p className="text-xs text-blue-800">
-                    <strong>Configuration requise :</strong> Définissez les variables d'environnement suivantes dans Supabase :
-                    <br />
-                    • <code>DOCUSIGN_CLIENT_ID</code>
-                    <br />
-                    • <code>DOCUSIGN_CLIENT_SECRET</code>
-                    <br />
-                    • <code>DOCUSIGN_ACCOUNT_ID</code>
-                    <br />
-                    • <code>DOCUSIGN_BASE_URL</code> (optionnel, défaut: demo.docusign.net)
-                    <br />
-                    • <code>DOCUSIGN_WEBHOOK_SECRET</code> (pour valider les webhooks)
-                  </p>
-                </div>
+        <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <p className="text-xs text-yellow-800">
+            <strong>⚠️ Signature électronique désactivée :</strong> SignRequest ne permet plus de créer de nouveaux tokens API.
+            <br />
+            Les contrats sont toujours générés, mais sans signature électronique automatique.
+            <br />
+            Pour réactiver : configurer HelloSign (Dropbox Sign) ou une autre solution de signature électronique.
+          </p>
+        </div>
               </div>
             </div>
           )}

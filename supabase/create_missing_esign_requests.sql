@@ -21,7 +21,7 @@ ORDER BY c.created_at DESC;
 INSERT INTO esign_requests (contract_id, provider, status, metadata)
 SELECT 
   c.id,
-  'docusign',
+  'signrequest',
   'pending',
   jsonb_build_object(
     'participants', jsonb_build_array(
@@ -51,7 +51,7 @@ WHERE c.status = 'active'
 -- 3. Mettre à jour les contrats
 UPDATE contracts c
 SET 
-  signature_provider = 'docusign',
+  signature_provider = 'signrequest',
   signature_status = 'pending'
 WHERE c.status = 'active'
   AND (c.signature_provider IS NULL OR c.signature_status IS NULL)

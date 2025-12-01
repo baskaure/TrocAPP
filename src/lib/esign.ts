@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 
-type EsignProvider = 'docusign' | 'signrequest';
+type EsignProvider = 'signrequest';
 
 const provider = (import.meta.env.VITE_ESIGN_PROVIDER as EsignProvider | undefined) || null;
 
@@ -10,7 +10,10 @@ type Participant = {
   name?: string;
 };
 
-export const isEsignEnabled = () => Boolean(provider);
+// Signature électronique désactivée temporairement
+// SignRequest ne permet plus de créer de nouveaux tokens API
+// Pour réactiver : configurer HelloSign ou une autre solution
+export const isEsignEnabled = () => false; // Boolean(provider);
 
 export async function enqueueEsignRequest({
   contractId,
@@ -21,13 +24,17 @@ export async function enqueueEsignRequest({
   participants: Participant[];
   listingTitle?: string;
 }) {
-  // Pour le test, créer une demande même si provider n'est pas défini
-  const effectiveProvider = provider || 'docusign';
+  if (!isEsignEnabled()) {
+    console.log('Signature électronique désactivée - contrat généré sans signature automatique');
+    return null;
+  }
   
-  if (!effectiveProvider) {
+  if (!provider) {
     console.warn('VITE_ESIGN_PROVIDER not set, skipping esign request');
     return null;
   }
+  
+  const effectiveProvider = provider;
 
   const metadata = {
     participants,

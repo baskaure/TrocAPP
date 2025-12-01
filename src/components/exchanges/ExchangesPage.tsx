@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Package, Clock, CheckCircle, XCircle, AlertCircle, Calendar } from 'lucide-react';
+import { Package, Clock, CheckCircle, XCircle, AlertCircle, Calendar, FileText } from 'lucide-react';
 import { useAuth } from '../../lib/auth-context';
 import { supabase, Exchange, Contract, Dispute } from '../../lib/supabase';
 import { ExchangeTracker } from './ExchangeTracker';
 import { ReviewModal } from './ReviewModal';
+import { ContractModal } from '../contracts/ContractModal';
 
 type ExchangeWithDetails = Exchange & {
   contract?: Contract & {
@@ -22,6 +23,7 @@ export function ExchangesPage() {
   const [loading, setLoading] = useState(true);
   const [selectedExchange, setSelectedExchange] = useState<ExchangeWithDetails | null>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
 
   useEffect(() => {
@@ -288,10 +290,24 @@ export function ExchangesPage() {
 
                 <div className="space-y-3">
                   <button
+                    onClick={() => {
+                      if (exchange.contract) {
+                        setSelectedContract(exchange.contract as Contract);
+                      } else {
+                        setSelectedExchange(exchange);
+                      }
+                    }}
+                    className="w-full flex items-center justify-center space-x-2 bg-white border border-blue-600 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors"
+                  >
+                    <FileText className="w-4 h-4" />
+                    <span>{exchange.contract ? 'Voir le contrat' : 'Voir les détails'}</span>
+                  </button>
+
+                  <button
                     onClick={() => setSelectedExchange(exchange)}
                     className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
                   >
-                    Voir les détails
+                    Voir le suivi de l'échange
                   </button>
 
                   {canLeaveReview(exchange) && (
@@ -312,7 +328,7 @@ export function ExchangesPage() {
         </div>
       )}
 
-      {selectedExchange && !showReviewModal && (
+      {selectedExchange && !showReviewModal && !selectedContract && (
         <ExchangeTracker
           exchange={selectedExchange}
           onClose={() => setSelectedExchange(null)}
@@ -328,6 +344,21 @@ export function ExchangesPage() {
             setSelectedExchange(null);
           }}
           onSuccess={loadExchanges}
+        />
+      )}
+
+      {selectedContract && (
+        <ContractModal
+          contract={selectedContract as Contract & {
+            proposal?: {
+              from_user_id: string;
+              to_user_id: string;
+              from_user?: { display_name: string };
+              to_user?: { display_name: string };
+            };
+          }}
+          onClose={() => setSelectedContract(null)}
+          onAccepted={loadExchanges}
         />
       )}
     </div>

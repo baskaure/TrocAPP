@@ -21,14 +21,14 @@ SELECT
 FROM esign_requests
 WHERE status = 'pending';
 
--- 3. Voir les demandes avec provider 'docusign'
+-- 3. Voir les demandes avec provider 'signrequest'
 SELECT 
   id,
   contract_id,
   provider,
   status
 FROM esign_requests
-WHERE provider = 'docusign';
+WHERE provider = 'signrequest';
 
 -- 4. Voir les demandes qui devraient être traitées (pending + docusign)
 SELECT 
@@ -39,7 +39,7 @@ SELECT
   created_at
 FROM esign_requests
 WHERE status = 'pending'
-  AND provider = 'docusign'
+  AND provider = 'signrequest'
 ORDER BY created_at DESC;
 
 -- 5. Vérifier les contrats associés

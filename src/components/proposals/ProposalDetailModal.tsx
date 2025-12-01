@@ -4,7 +4,7 @@ import { supabase, Proposal } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth-context';
 import { ChatWindow } from '../chat/ChatWindow';
 import { sendTransactionalEmail } from '../../lib/notifications';
-import { enqueueEsignRequest } from '../../lib/esign';
+import { enqueueEsignRequest, isEsignEnabled } from '../../lib/esign';
 
 type ProposalDetailModalProps = {
   proposal: Proposal | null;
@@ -71,7 +71,9 @@ export function ProposalDetailModal({ proposal, onClose, onUpdate }: ProposalDet
         .limit(1)
         .maybeSingle();
 
-      if (contract?.id) {
+      // Signature électronique désactivée temporairement
+      // Le contrat est généré et peut être téléchargé/signé manuellement
+      if (contract?.id && isEsignEnabled()) {
         try {
           await enqueueEsignRequest({
             contractId: contract.id,

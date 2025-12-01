@@ -61,7 +61,7 @@ BEGIN
     CREATE TABLE esign_requests (
       id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
       contract_id uuid NOT NULL REFERENCES contracts(id) ON DELETE CASCADE,
-      provider text NOT NULL CHECK (provider IN ('docusign', 'signrequest')),
+      provider text NOT NULL CHECK (provider IN ('signrequest')),
       status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'sent', 'completed', 'failed')),
       envelope_id text,
       metadata jsonb,
@@ -78,7 +78,7 @@ BEGIN
     SELECT 1 FROM information_schema.columns
     WHERE table_name = 'contracts' AND column_name = 'signature_provider'
   ) THEN
-    ALTER TABLE contracts ADD COLUMN signature_provider text CHECK (signature_provider IN ('docusign', 'signrequest'));
+    ALTER TABLE contracts ADD COLUMN signature_provider text CHECK (signature_provider IN ('signrequest'));
   END IF;
 
   IF NOT EXISTS (

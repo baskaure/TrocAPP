@@ -21,6 +21,7 @@ export function ContractModal({ contract, onClose, onAccepted }: ContractModalPr
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showFullContract, setShowFullContract] = useState(false);
+  const [hasReadAndAccepted, setHasReadAndAccepted] = useState(false);
 
   const isFromUser = contract.proposal?.from_user_id === user?.id;
   const hasUserAccepted = isFromUser ? !!contract.accepted_by_from_at : !!contract.accepted_by_to_at;
@@ -114,7 +115,7 @@ export function ContractModal({ contract, onClose, onAccepted }: ContractModalPr
         <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <FileText className="w-6 h-6 text-blue-600" />
-            <h2 className="text-2xl font-bold">Contrat d'échange</h2>
+            <h2 className="text-2xl font-bold">Contrat d'échange – Signature électronique interne</h2>
           </div>
           <button
             onClick={onClose}
@@ -132,7 +133,7 @@ export function ContractModal({ contract, onClose, onAccepted }: ContractModalPr
           )}
 
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h3 className="font-semibold text-blue-900 mb-2">Statut des signatures</h3>
+            <h3 className="font-semibold text-blue-900 mb-2">Statut des signatures électroniques</h3>
             <div className="space-y-2 text-sm">
               <div className="flex items-center space-x-2">
                 {hasUserAccepted ? (
@@ -160,7 +161,9 @@ export function ContractModal({ contract, onClose, onAccepted }: ContractModalPr
               <div className="mt-4 p-3 bg-green-100 border border-green-300 rounded-lg">
                 <p className="text-green-800 font-medium flex items-center space-x-2">
                   <CheckCircle className="w-5 h-5" />
-                  <span>Contrat entièrement signé et actif</span>
+                  <span>
+                    Contrat entièrement signé électroniquement sur BonTroc et désormais actif.
+                  </span>
                 </p>
               </div>
             )}
@@ -174,7 +177,7 @@ export function ContractModal({ contract, onClose, onAccepted }: ContractModalPr
                 className="flex items-center space-x-2 text-blue-600 hover:text-blue-700"
               >
                 <Download className="w-4 h-4" />
-                <span>Télécharger</span>
+                <span>Télécharger une copie</span>
               </button>
             </div>
 
@@ -200,18 +203,34 @@ export function ContractModal({ contract, onClose, onAccepted }: ContractModalPr
               <>
                 <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                   <p className="text-yellow-800 text-sm">
-                    En acceptant ce contrat, vous reconnaissez avoir lu et compris tous les termes et conditions.
-                    Le contrat deviendra actif une fois que les deux parties l'auront accepté.
+                    La signature est réalisée directement sur BonTroc&nbsp;: en cochant la case ci-dessous
+                    puis en cliquant sur «&nbsp;Signer le contrat&nbsp;», vous apposez votre signature
+                    électronique simple sur ce contrat. Le contrat deviendra actif une fois que les deux
+                    parties l'auront signé.
                   </p>
                 </div>
 
+                <label className="flex items-start space-x-2 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    className="mt-1 h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                    checked={hasReadAndAccepted}
+                    onChange={(e) => setHasReadAndAccepted(e.target.checked)}
+                  />
+                  <span>
+                    J'ai lu l'intégralité de ce contrat, j'en comprends les termes et conditions, et je
+                    reconnais que mon clic sur le bouton ci-dessous vaut signature électronique et accord
+                    ferme sur ce contrat.
+                  </span>
+                </label>
+
                 <button
                   onClick={handleAccept}
-                  disabled={loading}
+                  disabled={loading || !hasReadAndAccepted}
                   className="w-full bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 font-medium flex items-center justify-center space-x-2"
                 >
                   <CheckCircle className="w-5 h-5" />
-                  <span>{loading ? 'Acceptation...' : 'J\'accepte les termes du contrat'}</span>
+                  <span>{loading ? 'Signature en cours...' : 'Signer électroniquement ce contrat'}</span>
                 </button>
               </>
             ) : (

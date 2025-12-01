@@ -140,7 +140,7 @@
 1. **Ouvre la table `contracts`**
 2. **Trouve le contrat créé**
 3. **Vérifie** :
-   - ✅ `signature_provider` = null (ou 'docusign'/'signrequest' si configuré)
+   - ✅ `signature_provider` = null (ou 'signrequest' si configuré)
    - ✅ `signature_status` = 'idle' ou 'pending'
    - ✅ `signature_reference` = null
 
@@ -149,7 +149,7 @@
 1. **Crée un fichier `.env.local`** (si pas déjà fait)
 2. **Ajoute** :
    ```
-   VITE_ESIGN_PROVIDER=docusign
+   VITE_ESIGN_PROVIDER=signrequest
    ```
    ou
    ```
