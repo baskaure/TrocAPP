@@ -10,9 +10,10 @@ type ProposalDetailModalProps = {
   proposal: Proposal | null;
   onClose: () => void;
   onUpdate: () => void;
+  onUserClick?: (userId: string) => void;
 };
 
-export function ProposalDetailModal({ proposal, onClose, onUpdate }: ProposalDetailModalProps) {
+export function ProposalDetailModal({ proposal, onClose, onUpdate, onUserClick }: ProposalDetailModalProps) {
   const { user } = useAuth();
   const [showChat, setShowChat] = useState(false);
   const [showCounterForm, setShowCounterForm] = useState(false);
@@ -158,7 +159,7 @@ export function ProposalDetailModal({ proposal, onClose, onUpdate }: ProposalDet
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-white rounded-lg max-w-3xl w-full relative my-8">
+      <div className="bg-white rounded-3xl max-w-3xl w-full relative my-8 shadow-soft-lg border border-gray-100">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 z-10 text-gray-400 hover:text-gray-600"
@@ -166,26 +167,46 @@ export function ProposalDetailModal({ proposal, onClose, onUpdate }: ProposalDet
           <X className="w-5 h-5" />
         </button>
 
-        <div className="p-6">
+        <div className="p-6 sm:p-7">
           <div className="flex items-start space-x-4 mb-6">
-            {otherUser?.avatar_url ? (
-              <img
-                src={otherUser.avatar_url}
-                alt={otherUser.display_name}
-                className="w-16 h-16 rounded-full"
-              />
-            ) : (
-              <div className="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center text-2xl">
-                {otherUser?.display_name?.[0]?.toUpperCase()}
-              </div>
-            )}
+            <div
+              onClick={() => {
+                if (onUserClick && otherUser?.id) {
+                  onClose();
+                  onUserClick(otherUser.id);
+                }
+              }}
+              className={`flex-shrink-0 ${onUserClick && otherUser?.id ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+            >
+              {otherUser?.avatar_url ? (
+                <img
+                  src={otherUser.avatar_url}
+                  alt={otherUser.display_name}
+                  className="w-16 h-16 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-16 h-16 bg-brand-yellow text-white rounded-full flex items-center justify-center text-2xl">
+                  {otherUser?.display_name?.[0]?.toUpperCase()}
+                </div>
+              )}
+            </div>
             <div className="flex-1">
-              <h2 className="text-2xl font-bold mb-1">{proposal.listing?.title}</h2>
-              <p className="text-gray-600">
+              <h2 className="text-xl sm:text-2xl font-heading font-semibold mb-1 text-brand-text">
+                {proposal.listing?.title}
+              </h2>
+              <p 
+                onClick={() => {
+                  if (onUserClick && otherUser?.id) {
+                    onClose();
+                    onUserClick(otherUser.id);
+                  }
+                }}
+                className={`text-gray-600 text-sm sm:text-base ${onUserClick && otherUser?.id ? 'cursor-pointer hover:text-brand-blue transition-colors' : ''}`}
+              >
                 Proposition {isReceiver ? 'de' : 'pour'} {otherUser?.display_name}
               </p>
               <div className="mt-2">
-                <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
+                <span className={`inline-block px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${
                   proposal.status === 'accepted' ? 'bg-green-100 text-green-700' :
                   proposal.status === 'refused' ? 'bg-red-100 text-red-700' :
                   proposal.status === 'countered' ? 'bg-orange-100 text-orange-700' :
@@ -201,14 +222,14 @@ export function ProposalDetailModal({ proposal, onClose, onUpdate }: ProposalDet
           </div>
 
           <div className="space-y-4 mb-6">
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h3 className="font-semibold mb-2">Proposition</h3>
+            <div className="bg-gray-50 rounded-2xl p-4">
+              <h3 className="text-sm font-semibold text-gray-800 mb-2 uppercase tracking-wide">Proposition</h3>
               <p className="text-gray-700 whitespace-pre-wrap">{proposal.message}</p>
             </div>
 
             {proposal.offer_payload?.description && (
-              <div className="bg-blue-50 rounded-lg p-4">
-                <h3 className="font-semibold mb-2">En échange</h3>
+              <div className="bg-brand-blue/5 rounded-2xl p-4 border border-brand-blue/15">
+                <h3 className="text-sm font-semibold text-brand-blue mb-2 uppercase tracking-wide">En échange</h3>
                 <p className="text-gray-700 whitespace-pre-wrap">
                   {proposal.offer_payload.description}
                 </p>
@@ -217,7 +238,7 @@ export function ProposalDetailModal({ proposal, onClose, onUpdate }: ProposalDet
           </div>
 
           {error && (
-            <div className="mb-4 text-sm text-red-600 bg-red-50 p-3 rounded-md">
+            <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-100 p-3 rounded-xl">
               {error}
             </div>
           )}
@@ -227,7 +248,7 @@ export function ProposalDetailModal({ proposal, onClose, onUpdate }: ProposalDet
               <button
                 onClick={handleAccept}
                 disabled={loading}
-                className="flex-1 flex items-center justify-center space-x-2 bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                className="flex-1 flex items-center justify-center space-x-2 bg-green-500 text-white py-3 px-4 rounded-full hover:bg-green-600 transition-colors disabled:opacity-50"
               >
                 <CheckCircle className="w-5 h-5" />
                 <span>Accepter</span>
@@ -235,7 +256,7 @@ export function ProposalDetailModal({ proposal, onClose, onUpdate }: ProposalDet
               <button
                 onClick={() => setShowCounterForm(true)}
                 disabled={loading}
-                className="flex-1 flex items-center justify-center space-x-2 bg-orange-600 text-white py-3 px-4 rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50"
+                className="flex-1 flex items-center justify-center space-x-2 bg-brand-yellow text-white py-3 px-4 rounded-full hover:bg-amber-500 transition-colors disabled:opacity-50"
               >
                 <Send className="w-5 h-5" />
                 <span>Contre-proposer</span>
@@ -243,7 +264,7 @@ export function ProposalDetailModal({ proposal, onClose, onUpdate }: ProposalDet
               <button
                 onClick={handleRefuse}
                 disabled={loading}
-                className="flex-1 flex items-center justify-center space-x-2 bg-red-600 text-white py-3 px-4 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                className="flex-1 flex items-center justify-center space-x-2 bg-red-500 text-white py-3 px-4 rounded-full hover:bg-red-600 transition-colors disabled:opacity-50"
               >
                 <XCircle className="w-5 h-5" />
                 <span>Refuser</span>
@@ -261,7 +282,7 @@ export function ProposalDetailModal({ proposal, onClose, onUpdate }: ProposalDet
                   value={counterOffer}
                   onChange={(e) => setCounterOffer(e.target.value)}
                   rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue bg-gray-50 focus:bg-white"
                   required
                 />
               </div>
@@ -273,7 +294,7 @@ export function ProposalDetailModal({ proposal, onClose, onUpdate }: ProposalDet
                   value={counterMessage}
                   onChange={(e) => setCounterMessage(e.target.value)}
                   rows={2}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue bg-gray-50 focus:bg-white"
                   required
                 />
               </div>
@@ -281,14 +302,14 @@ export function ProposalDetailModal({ proposal, onClose, onUpdate }: ProposalDet
                 <button
                   type="button"
                   onClick={() => setShowCounterForm(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+                  className="flex-1 px-4 py-2 border border-gray-200 rounded-full hover:bg-gray-50 text-sm"
                 >
                   Annuler
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50"
+                  className="flex-1 btn-primary rounded-full py-2 disabled:opacity-50"
                 >
                   Envoyer
                 </button>
@@ -298,13 +319,13 @@ export function ProposalDetailModal({ proposal, onClose, onUpdate }: ProposalDet
 
           <button
             onClick={() => setShowChat(!showChat)}
-            className="w-full flex items-center justify-center space-x-2 border-2 border-blue-600 text-blue-600 py-2 px-4 rounded-lg hover:bg-blue-50 transition-colors"
+            className="w-full flex items-center justify-center space-x-2 border border-brand-blue text-brand-blue py-2.5 px-4 rounded-full hover:bg-brand-blue/5 transition-colors text-sm font-medium"
           >
             <MessageCircle className="w-5 h-5" />
             <span>{showChat ? 'Masquer' : 'Ouvrir'} la discussion</span>
           </button>
 
-          {showChat && <ChatWindow proposalId={proposal.id} />}
+          {showChat && <ChatWindow proposalId={proposal.id} onUserClick={onUserClick} />}
         </div>
       </div>
     </div>

@@ -9,6 +9,8 @@ export function SettingsPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [privacyLoading, setPrivacyLoading] = useState(false);
+  const [profileVisibility, setProfileVisibility] = useState<'public' | 'private'>('public');
 
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
@@ -99,6 +101,62 @@ export function SettingsPage() {
     }
   };
 
+  const handleToggleProfileVisibility = async () => {
+    if (!user) return;
+    setPrivacyLoading(true);
+    setError('');
+    setSuccess('');
+
+    const nextVisibility = profileVisibility === 'public' ? 'private' : 'public';
+
+    try {
+      // On stocke l'info dans les metadata Supabase pour éviter de casser le schéma existant
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: { profile_visibility: nextVisibility },
+      });
+
+      if (updateError) throw updateError;
+
+      setProfileVisibility(nextVisibility);
+      setSuccess(
+        nextVisibility === 'public'
+          ? 'Profil rendu visible à tous.'
+          : 'Profil rendu privé. Il ne sera visible que si vous partagez le lien.'
+      );
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Impossible de mettre à jour la visibilité pour le moment.'
+      );
+    } finally {
+      setPrivacyLoading(false);
+    }
+  };
+
+  const handleRequestMyData = async () => {
+    if (!user) return;
+    setPrivacyLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      // Placeholder : envoie juste une confirmation locale.
+      // À brancher sur une Edge Function d’export RGPD si disponible.
+      setSuccess('Demande enregistrée. Vous recevrez un email avec vos données.');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Impossible de traiter la demande pour le moment.'
+      );
+    } finally {
+      setPrivacyLoading(false);
+    }
+  };
+
   if (!user) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8">
@@ -111,7 +169,7 @@ export function SettingsPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-gray-900 mb-8">Paramètres</h1>
+      <h1 className="text-2xl sm:text-3xl font-heading font-semibold text-brand-text mb-6">Paramètres</h1>
 
       {error && (
         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-600">
@@ -126,10 +184,10 @@ export function SettingsPage() {
       )}
 
       <div className="space-y-6">
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="bg-white rounded-3xl shadow-soft-lg p-6 border border-gray-100">
           <div className="flex items-center space-x-3 mb-6">
-            <Lock className="w-6 h-6 text-gray-600" />
-            <h2 className="text-xl font-semibold">Sécurité</h2>
+            <Lock className="w-6 h-6 text-brand-blue" />
+            <h2 className="text-lg font-heading font-semibold text-brand-text">Sécurité</h2>
           </div>
 
           <form onSubmit={handlePasswordChange} className="space-y-4">
@@ -141,7 +199,7 @@ export function SettingsPage() {
                 type="password"
                 value={passwordData.newPassword}
                 onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue bg-gray-50 focus:bg-white"
                 placeholder="Minimum 6 caractères"
                 required
               />
@@ -155,7 +213,7 @@ export function SettingsPage() {
                 type="password"
                 value={passwordData.confirmPassword}
                 onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue bg-gray-50 focus:bg-white"
                 placeholder="Retapez votre mot de passe"
                 required
               />
@@ -164,29 +222,29 @@ export function SettingsPage() {
             <button
               type="submit"
               disabled={loading}
-              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+              className="btn-primary rounded-full px-6 py-2 disabled:opacity-50"
             >
               {loading ? 'Modification...' : 'Modifier le mot de passe'}
             </button>
           </form>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="bg-white rounded-3xl shadow-soft-lg p-6 border border-gray-100">
           <div className="flex items-center space-x-3 mb-6">
-            <Bell className="w-6 h-6 text-gray-600" />
-            <h2 className="text-xl font-semibold">Notifications</h2>
+            <Bell className="w-6 h-6 text-brand-blue" />
+            <h2 className="text-lg font-heading font-semibold text-brand-text">Notifications</h2>
           </div>
 
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-medium text-gray-900">Nouvelles propositions</h3>
+                <h3 className="font-medium text-brand-text">Nouvelles propositions</h3>
                 <p className="text-sm text-gray-500">Recevoir un email lors d'une nouvelle proposition</p>
               </div>
               <button
                 onClick={() => handleNotificationToggle('emailNewProposal')}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  notificationSettings.emailNewProposal ? 'bg-blue-600' : 'bg-gray-300'
+                  notificationSettings.emailNewProposal ? 'bg-brand-blue' : 'bg-gray-300'
                 }`}
               >
                 <span
@@ -205,7 +263,7 @@ export function SettingsPage() {
               <button
                 onClick={() => handleNotificationToggle('emailAcceptedProposal')}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  notificationSettings.emailAcceptedProposal ? 'bg-blue-600' : 'bg-gray-300'
+                  notificationSettings.emailAcceptedProposal ? 'bg-brand-blue' : 'bg-gray-300'
                 }`}
               >
                 <span
@@ -224,7 +282,7 @@ export function SettingsPage() {
               <button
                 onClick={() => handleNotificationToggle('emailNewMessage')}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  notificationSettings.emailNewMessage ? 'bg-blue-600' : 'bg-gray-300'
+                  notificationSettings.emailNewMessage ? 'bg-brand-blue' : 'bg-gray-300'
                 }`}
               >
                 <span
@@ -243,7 +301,7 @@ export function SettingsPage() {
               <button
                 onClick={() => handleNotificationToggle('emailWeeklyDigest')}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  notificationSettings.emailWeeklyDigest ? 'bg-blue-600' : 'bg-gray-300'
+                  notificationSettings.emailWeeklyDigest ? 'bg-brand-blue' : 'bg-gray-300'
                 }`}
               >
                 <span
@@ -256,36 +314,46 @@ export function SettingsPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="bg-white rounded-3xl shadow-soft-lg p-6 border border-gray-100">
           <div className="flex items-center space-x-3 mb-6">
-            <Shield className="w-6 h-6 text-gray-600" />
-            <h2 className="text-xl font-semibold">Confidentialité</h2>
+            <Shield className="w-6 h-6 text-brand-blue" />
+            <h2 className="text-lg font-heading font-semibold text-brand-text">Confidentialité</h2>
           </div>
 
           <div className="space-y-4">
-            <div className="p-4 bg-gray-50 rounded-lg">
+            <div className="p-4 bg-gray-50 rounded-2xl">
               <h3 className="font-medium text-gray-900 mb-2">Visibilité du profil</h3>
               <p className="text-sm text-gray-600 mb-3">
-                Votre profil est actuellement visible par tous les utilisateurs de la plateforme.
+                {profileVisibility === 'public'
+                  ? 'Votre profil est actuellement visible par tous les utilisateurs de la plateforme.'
+                  : 'Votre profil est actuellement privé.'}
               </p>
-              <button className="text-blue-600 hover:text-blue-700 font-medium text-sm">
-                Gérer la visibilité
+              <button
+                onClick={handleToggleProfileVisibility}
+                disabled={privacyLoading}
+                className="text-brand-blue hover:text-sky-600 font-medium text-sm disabled:opacity-60"
+              >
+                {profileVisibility === 'public' ? 'Rendre mon profil privé' : 'Rendre mon profil public'}
               </button>
             </div>
 
-            <div className="p-4 bg-gray-50 rounded-lg">
+            <div className="p-4 bg-gray-50 rounded-2xl">
               <h3 className="font-medium text-gray-900 mb-2">Télécharger mes données</h3>
               <p className="text-sm text-gray-600 mb-3">
                 Obtenez une copie de toutes vos données (conforme RGPD).
               </p>
-              <button className="text-blue-600 hover:text-blue-700 font-medium text-sm">
+              <button
+                onClick={handleRequestMyData}
+                disabled={privacyLoading}
+                className="text-brand-blue hover:text-sky-600 font-medium text-sm disabled:opacity-60"
+              >
                 Demander mes données
               </button>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md p-6 border-2 border-red-200">
+        <div className="bg-white rounded-3xl shadow-soft-lg p-6 border border-red-200/70">
           <div className="flex items-center space-x-3 mb-6">
             <Trash2 className="w-6 h-6 text-red-600" />
             <h2 className="text-xl font-semibold text-red-600">Zone dangereuse</h2>

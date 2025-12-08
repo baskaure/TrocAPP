@@ -182,9 +182,11 @@ export function ExchangeTracker({ exchange, onClose, onUpdate }: ExchangeTracker
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
-          <h2 className="text-2xl font-bold">Suivi de l'échange</h2>
+      <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-soft-lg border border-gray-100">
+        <div className="sticky top-0 bg-white/95 backdrop-blur border-b px-6 py-4 flex items-center justify-between">
+          <h2 className="text-xl sm:text-2xl font-heading font-semibold text-brand-text">
+            Suivi de l'échange
+          </h2>
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700"
@@ -212,11 +214,11 @@ export function ExchangeTracker({ exchange, onClose, onUpdate }: ExchangeTracker
               return (
                 <div key={step.id} className="relative flex items-start mb-8 last:mb-0">
                   <div
-                    className={`relative z-10 w-12 h-12 rounded-full flex items-center justify-center ${
+                    className={`relative z-10 w-11 h-11 rounded-full flex items-center justify-center ${
                       isCompleted
-                        ? 'bg-green-600 text-white'
+                        ? 'bg-green-500 text-white'
                         : isCurrent
-                        ? 'bg-blue-600 text-white'
+                        ? 'bg-brand-blue text-white'
                         : 'bg-gray-200 text-gray-500'
                     }`}
                   >
@@ -225,7 +227,7 @@ export function ExchangeTracker({ exchange, onClose, onUpdate }: ExchangeTracker
 
                   <div className="ml-4 flex-1">
                     <h3
-                      className={`text-lg font-semibold ${
+                      className={`text-base sm:text-lg font-semibold ${
                         isCompleted || isCurrent ? 'text-gray-900' : 'text-gray-500'
                       }`}
                     >
@@ -276,7 +278,7 @@ export function ExchangeTracker({ exchange, onClose, onUpdate }: ExchangeTracker
           </div>
 
           {exchange.due_date && (
-            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="p-4 bg-brand-blue/5 border border-brand-blue/30 rounded-2xl">
               <div className="flex items-center space-x-2 text-blue-900">
                 <Clock className="w-5 h-5" />
                 <div>
@@ -299,9 +301,9 @@ export function ExchangeTracker({ exchange, onClose, onUpdate }: ExchangeTracker
               <button
                 onClick={handleStartExchange}
                 disabled={loading}
-                className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 font-medium"
+                className="w-full btn-primary rounded-full py-3"
               >
-                {loading ? 'Démarrage...' : 'Démarrer l\'échange'}
+                {loading ? 'Démarrage...' : "Démarrer l'échange"}
               </button>
             )}
 
@@ -309,7 +311,7 @@ export function ExchangeTracker({ exchange, onClose, onUpdate }: ExchangeTracker
               <button
                 onClick={handleMarkAsDelivered}
                 disabled={loading}
-                className="w-full bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 font-medium"
+                className="w-full bg-green-500 text-white px-6 py-3 rounded-full hover:bg-green-600 transition-colors disabled:opacity-50 font-medium"
               >
                 {loading ? 'Enregistrement...' : 'Marquer comme livré'}
               </button>
@@ -319,14 +321,14 @@ export function ExchangeTracker({ exchange, onClose, onUpdate }: ExchangeTracker
               <button
                 onClick={handleConfirmDelivery}
                 disabled={loading}
-                className="w-full bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 font-medium"
+                className="w-full bg-green-500 text-white px-6 py-3 rounded-full hover:bg-green-600 transition-colors disabled:opacity-50 font-medium"
               >
                 {loading ? 'Confirmation...' : 'Confirmer la réception'}
               </button>
             )}
 
             {shouldShowDisputeSection && (
-              <div className="border border-red-100 rounded-lg p-4 space-y-3 bg-red-50/30">
+              <div className="border border-red-100 rounded-2xl p-4 space-y-3 bg-red-50/40">
                 {exchange.dispute ? (
                   <div className="flex items-start space-x-2 text-red-700">
                     <AlertCircle className="w-5 h-5 mt-0.5" />
@@ -377,7 +379,7 @@ export function ExchangeTracker({ exchange, onClose, onUpdate }: ExchangeTracker
                         <button
                           type="submit"
                           disabled={disputeLoading || !disputeReason.trim()}
-                          className="w-full bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-50"
+                          className="w-full bg-red-600 text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-red-700 disabled:opacity-50"
                         >
                           {disputeLoading ? 'Envoi...' : 'Envoyer le litige'}
                         </button>
@@ -394,7 +396,7 @@ export function ExchangeTracker({ exchange, onClose, onUpdate }: ExchangeTracker
 
             <button
               onClick={onClose}
-              className="w-full bg-gray-200 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+              className="w-full bg-gray-100 text-gray-700 px-6 py-3 rounded-full hover:bg-gray-200 transition-colors font-medium"
             >
               Fermer
             </button>

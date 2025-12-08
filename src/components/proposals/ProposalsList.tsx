@@ -5,9 +5,10 @@ import { useAuth } from '../../lib/auth-context';
 
 type ProposalsListProps = {
   onSelectProposal: (proposal: Proposal) => void;
+  onUserClick?: (userId: string) => void;
 };
 
-export function ProposalsList({ onSelectProposal }: ProposalsListProps) {
+export function ProposalsList({ onSelectProposal, onUserClick }: ProposalsListProps) {
   const { user } = useAuth();
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,13 +57,13 @@ export function ProposalsList({ onSelectProposal }: ProposalsListProps) {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'accepted':
-        return <CheckCircle className="w-5 h-5 text-green-600" />;
+        return <CheckCircle className="w-5 h-5 text-green-500" />;
       case 'refused':
-        return <XCircle className="w-5 h-5 text-red-600" />;
+        return <XCircle className="w-5 h-5 text-red-500" />;
       case 'countered':
-        return <RefreshCw className="w-5 h-5 text-orange-600" />;
+        return <RefreshCw className="w-5 h-5 text-amber-500" />;
       default:
-        return <Clock className="w-5 h-5 text-blue-600" />;
+        return <Clock className="w-5 h-5 text-brand-blue" />;
     }
   };
 
@@ -80,29 +81,35 @@ export function ProposalsList({ onSelectProposal }: ProposalsListProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-blue"></div>
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center space-x-2 border-b border-gray-200">
+      <div className="flex items-center space-x-2 border-b border-gray-100">
         <button
           onClick={() => setFilter('all')}
-          className={`px-4 py-2 font-medium ${filter === 'all' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}
+          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
+            filter === 'all' ? 'text-brand-blue border-brand-blue' : 'text-gray-500 border-transparent'
+          }`}
         >
           Toutes
         </button>
         <button
           onClick={() => setFilter('sent')}
-          className={`px-4 py-2 font-medium ${filter === 'sent' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}
+          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
+            filter === 'sent' ? 'text-brand-blue border-brand-blue' : 'text-gray-500 border-transparent'
+          }`}
         >
           Envoyées
         </button>
         <button
           onClick={() => setFilter('received')}
-          className={`px-4 py-2 font-medium ${filter === 'received' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500'}`}
+          className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
+            filter === 'received' ? 'text-brand-blue border-brand-blue' : 'text-gray-500 border-transparent'
+          }`}
         >
           Reçues
         </button>
@@ -110,7 +117,7 @@ export function ProposalsList({ onSelectProposal }: ProposalsListProps) {
 
       {proposals.length === 0 ? (
         <div className="text-center py-12 text-gray-500">
-          <MessageCircle className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+          <MessageCircle className="w-12 h-12 mx-auto mb-4 text-gray-300" />
           <p>Aucune proposition pour le moment</p>
         </div>
       ) : (
@@ -123,7 +130,7 @@ export function ProposalsList({ onSelectProposal }: ProposalsListProps) {
               <div
                 key={proposal.id}
                 onClick={() => onSelectProposal(proposal)}
-                className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+                className="bg-white rounded-2xl sm:rounded-3xl shadow-soft-lg border border-gray-100 p-4 hover:shadow-xl transition-all cursor-pointer"
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
@@ -137,20 +144,28 @@ export function ProposalsList({ onSelectProposal }: ProposalsListProps) {
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-3 mb-3">
+                <div 
+                  className={`flex items-center space-x-3 mb-3 ${onUserClick && otherUser?.id ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+                  onClick={(e) => {
+                    if (onUserClick && otherUser?.id) {
+                      e.stopPropagation();
+                      onUserClick(otherUser.id);
+                    }
+                  }}
+                >
                   {otherUser?.avatar_url ? (
                     <img
                       src={otherUser.avatar_url}
                       alt={otherUser.display_name}
-                      className="w-8 h-8 rounded-full"
+                      className="w-8 h-8 rounded-full object-cover"
                     />
                   ) : (
-                    <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm">
-                      {otherUser?.display_name?.[0]?.toUpperCase()}
+                    <div className="w-8 h-8 rounded-full bg-brand-yellow text-white flex items-center justify-center font-semibold text-sm shadow-soft-lg">
+                      {otherUser?.display_name?.[0]?.toUpperCase() || '?'}
                     </div>
                   )}
                   <div>
-                    <p className="font-medium text-sm">{otherUser?.display_name}</p>
+                    <p className={`font-medium text-sm ${onUserClick && otherUser?.id ? 'hover:text-brand-blue transition-colors' : ''}`}>{otherUser?.display_name}</p>
                     <p className="text-xs text-gray-500">
                       {new Date(proposal.created_at).toLocaleDateString('fr-FR')}
                     </p>

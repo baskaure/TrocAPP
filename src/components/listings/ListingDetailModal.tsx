@@ -202,16 +202,16 @@ export function ListingDetailModal({ listing, onClose, onProposalSuccess, onRequ
   const isOwnListing = user?.id === listing.user_id;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-white rounded-lg max-w-4xl w-full relative my-8">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto relative my-8 shadow-soft-lg border border-gray-100">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 z-10 bg-white rounded-full p-2 text-gray-400 hover:text-gray-600 shadow-md"
+          className="fixed sm:absolute top-4 right-4 z-[60] bg-white rounded-full p-2 text-gray-400 hover:text-gray-600 shadow-lg hover:shadow-xl transition-all"
         >
           <X className="w-5 h-5" />
         </button>
 
-        <div className="w-full h-40 sm:h-48 md:h-56 overflow-hidden rounded-t-lg bg-gray-100">
+        <div className="w-full h-40 sm:h-48 md:h-56 overflow-hidden rounded-t-3xl bg-gray-100">
           <img
             src={imageUrl}
             alt={listing.title}
@@ -219,24 +219,26 @@ export function ListingDetailModal({ listing, onClose, onProposalSuccess, onRequ
           />
         </div>
 
-        <div className="p-6">
+        <div className="p-6 sm:p-7">
           <div className="flex items-start justify-between mb-4">
             <div className="flex-1">
               <div className="flex items-center space-x-2 mb-2">
-                <span className="px-3 py-1 text-sm font-medium rounded-full bg-blue-100 text-blue-700">
+                <span className="px-3 py-1 text-xs sm:text-sm font-medium rounded-full bg-brand-blue/10 text-brand-blue">
                   {listing.type === 'service' ? 'Service' : 'Produit'}
                 </span>
-                <span className="px-3 py-1 text-sm font-medium rounded-full bg-gray-100 text-gray-700">
+                <span className="px-3 py-1 text-xs sm:text-sm font-medium rounded-full bg-gray-100 text-gray-700">
                   {listing.mode === 'remote' ? 'À distance' : listing.mode === 'on_site' ? 'Présentiel' : 'Présentiel & À distance'}
                 </span>
               </div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">{listing.title}</h2>
+              <h2 className="text-2xl sm:text-3xl font-heading font-semibold text-brand-text mb-2">
+                {listing.title}
+              </h2>
             </div>
           </div>
 
           {listing.user && (
             <div
-              className={`flex items-center space-x-3 pb-4 border-b border-gray-200 mb-6 ${onUserClick ? 'cursor-pointer hover:bg-gray-50 -mx-2 px-2 py-2 rounded-lg transition-colors' : ''}`}
+              className={`flex items-center space-x-3 pb-4 border-b border-gray-100 mb-6 ${onUserClick ? 'cursor-pointer hover:bg-gray-50 -mx-2 px-2 py-2 rounded-xl transition-colors' : ''}`}
               onClick={() => {
                 if (onUserClick && listing.user?.id) {
                   onUserClick(listing.user.id);
@@ -247,18 +249,18 @@ export function ListingDetailModal({ listing, onClose, onProposalSuccess, onRequ
                 <img
                   src={listing.user.avatar_url}
                   alt={listing.user.display_name}
-                  className="w-12 h-12 rounded-full"
+                  className="w-12 h-12 rounded-full object-cover"
                 />
               ) : (
-                <div className="w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center text-lg font-medium">
+                <div className="w-12 h-12 bg-brand-yellow text-white rounded-full flex items-center justify-center text-lg font-medium">
                   {listing.user.display_name[0].toUpperCase()}
                 </div>
               )}
               <div>
                 <div className="flex items-center space-x-2">
-                  <span className={`font-semibold text-gray-900 ${onUserClick ? 'hover:text-blue-600' : ''}`}>{listing.user.display_name}</span>
+                  <span className={`font-semibold text-brand-text ${onUserClick ? 'hover:text-brand-blue' : ''}`}>{listing.user.display_name}</span>
                   {listing.user.is_verified && (
-                    <CheckCircle className="w-4 h-4 text-blue-600" />
+                    <CheckCircle className="w-4 h-4 text-brand-blue" />
                   )}
                 </div>
                 {listing.user.rating_count > 0 && (
@@ -280,13 +282,17 @@ export function ListingDetailModal({ listing, onClose, onProposalSuccess, onRequ
 
           <div className="space-y-6 mb-6">
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Ce qui est proposé</h3>
-              <p className="text-gray-700 whitespace-pre-wrap">{listing.description_offer}</p>
+              <h3 className="text-sm font-semibold text-gray-700 mb-1 uppercase tracking-wide">
+                Ce qui est proposé
+              </h3>
+              <p className="text-gray-800 whitespace-pre-wrap text-sm sm:text-base">{listing.description_offer}</p>
             </div>
 
-            <div className="bg-blue-50 rounded-lg p-4">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Ce qui est recherché en échange</h3>
-              <p className="text-gray-700 whitespace-pre-wrap">{listing.desired_exchange_desc}</p>
+            <div className="bg-brand-blue/5 rounded-2xl p-4 border border-brand-blue/15">
+              <h3 className="text-sm font-semibold text-brand-blue mb-2 uppercase tracking-wide">
+                Ce qui est recherché en échange
+              </h3>
+              <p className="text-gray-800 whitespace-pre-wrap text-sm sm:text-base">{listing.desired_exchange_desc}</p>
             </div>
 
             <div className="flex items-center space-x-4 text-sm text-gray-500">
@@ -303,10 +309,10 @@ export function ListingDetailModal({ listing, onClose, onProposalSuccess, onRequ
                 <button
                   type="button"
                   onClick={handleToggleEditMode}
-                  className="flex items-center space-x-2 bg-blue-50 text-blue-700 px-4 py-2 rounded-lg hover:bg-blue-100 transition-colors"
+                  className="flex items-center space-x-2 btn-secondary border-brand-blue text-brand-blue hover:bg-brand-blue/5"
                 >
                   <Pencil className="w-4 h-4" />
-                  <span>{editMode ? 'Fermer le formulaire' : 'Modifier l’annonce'}</span>
+                  <span>{editMode ? 'Fermer le formulaire' : "Modifier l'annonce"}</span>
                 </button>
                 <button
                   type="button"
@@ -314,7 +320,7 @@ export function ListingDetailModal({ listing, onClose, onProposalSuccess, onRequ
                     setShowDeleteConfirm(true);
                     setEditError('');
                   }}
-                  className="flex items-center space-x-2 bg-red-50 text-red-700 px-4 py-2 rounded-lg hover:bg-red-100 transition-colors"
+                  className="flex items-center space-x-2 px-4 py-2 rounded-full border border-red-300 text-red-700 text-sm font-semibold bg-white hover:bg-red-50 transition-colors"
                 >
                   <Trash2 className="w-4 h-4" />
                   <span>Supprimer</span>
@@ -329,7 +335,7 @@ export function ListingDetailModal({ listing, onClose, onProposalSuccess, onRequ
                       <select
                         value={editForm.type}
                         onChange={(e) => setEditForm({ ...editForm, type: e.target.value as 'service' | 'product' })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue bg-gray-50 focus:bg-white"
                       >
                         <option value="service">Service</option>
                         <option value="product">Produit</option>
@@ -340,7 +346,7 @@ export function ListingDetailModal({ listing, onClose, onProposalSuccess, onRequ
                       <select
                         value={editForm.mode}
                         onChange={(e) => setEditForm({ ...editForm, mode: e.target.value as 'remote' | 'on_site' | 'both' })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue bg-gray-50 focus:bg-white"
                       >
                         <option value="both">Présentiel & À distance</option>
                         <option value="on_site">Présentiel uniquement</option>
@@ -356,7 +362,7 @@ export function ListingDetailModal({ listing, onClose, onProposalSuccess, onRequ
                       value={editForm.title}
                       onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue bg-gray-50 focus:bg-white"
                     />
                   </div>
 
@@ -368,7 +374,7 @@ export function ListingDetailModal({ listing, onClose, onProposalSuccess, onRequ
                         onChange={(e) => setEditForm({ ...editForm, description_offer: e.target.value })}
                         rows={4}
                         required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue bg-gray-50 focus:bg-white"
                       />
                     </div>
                     <div>
@@ -378,7 +384,7 @@ export function ListingDetailModal({ listing, onClose, onProposalSuccess, onRequ
                         onChange={(e) => setEditForm({ ...editForm, desired_exchange_desc: e.target.value })}
                         rows={4}
                         required
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue bg-gray-50 focus:bg-white"
                       />
                     </div>
                   </div>
@@ -393,7 +399,7 @@ export function ListingDetailModal({ listing, onClose, onProposalSuccess, onRequ
                         placeholder="Min (€)"
                         value={editForm.estimation_min}
                         onChange={(e) => setEditForm({ ...editForm, estimation_min: e.target.value })}
-                        className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue bg-gray-50 focus:bg-white"
                       />
                       <input
                         type="number"
@@ -402,7 +408,7 @@ export function ListingDetailModal({ listing, onClose, onProposalSuccess, onRequ
                         placeholder="Max (€)"
                         value={editForm.estimation_max}
                         onChange={(e) => setEditForm({ ...editForm, estimation_max: e.target.value })}
-                        className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue bg-gray-50 focus:bg-white"
                       />
                     </div>
                   </div>
@@ -411,14 +417,14 @@ export function ListingDetailModal({ listing, onClose, onProposalSuccess, onRequ
                     <button
                       type="button"
                       onClick={handleCancelEdit}
-                      className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100 transition-colors"
+                      className="btn-secondary"
                     >
                       Annuler
                     </button>
                     <button
                       type="submit"
                       disabled={editLoading}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+                      className="btn-primary"
                     >
                       {editLoading ? 'Enregistrement...' : 'Enregistrer les modifications'}
                     </button>
@@ -436,14 +442,14 @@ export function ListingDetailModal({ listing, onClose, onProposalSuccess, onRequ
                       type="button"
                       onClick={handleDeleteListing}
                       disabled={deleteLoading}
-                      className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50"
+                      className="px-4 py-2 bg-red-600 text-white rounded-full hover:bg-red-700 transition-colors disabled:opacity-50 text-sm font-semibold shadow-sm"
                     >
                       {deleteLoading ? 'Suppression...' : 'Confirmer la suppression'}
                     </button>
                     <button
                       type="button"
                       onClick={() => setShowDeleteConfirm(false)}
-                      className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100 transition-colors"
+                      className="btn-secondary"
                     >
                       Annuler
                     </button>
@@ -465,7 +471,7 @@ export function ListingDetailModal({ listing, onClose, onProposalSuccess, onRequ
                 <>
                   <button
                     onClick={() => setShowProposalForm(true)}
-                    className="w-full flex items-center justify-center space-x-2 bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+                    className="w-full btn-primary justify-center gap-2 py-3"
                   >
                     <MessageCircle className="w-5 h-5" />
                     <span>Proposer un échange</span>
@@ -490,7 +496,7 @@ export function ListingDetailModal({ listing, onClose, onProposalSuccess, onRequ
                       value={proposalOffer}
                       onChange={(e) => setProposalOffer(e.target.value)}
                       rows={4}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue bg-gray-50 focus:bg-white"
                       placeholder="Décrivez ce que vous proposez..."
                       required
                     />
@@ -504,7 +510,7 @@ export function ListingDetailModal({ listing, onClose, onProposalSuccess, onRequ
                       value={proposalMessage}
                       onChange={(e) => setProposalMessage(e.target.value)}
                       rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue bg-gray-50 focus:bg-white"
                       placeholder="Ajoutez un message personnalisé..."
                       required
                     />
@@ -520,14 +526,14 @@ export function ListingDetailModal({ listing, onClose, onProposalSuccess, onRequ
                     <button
                       type="button"
                       onClick={() => setShowProposalForm(false)}
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                      className="flex-1 btn-secondary"
                     >
                       Annuler
                     </button>
                     <button
                       type="submit"
                       disabled={proposalLoading}
-                      className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="flex-1 btn-primary"
                     >
                       {proposalLoading ? 'Envoi...' : 'Envoyer la proposition'}
                     </button>
@@ -543,7 +549,7 @@ export function ListingDetailModal({ listing, onClose, onProposalSuccess, onRequ
                 <p className="text-gray-700 mb-3">Connectez-vous pour proposer un échange</p>
                 <button
                   onClick={() => onRequestAuth?.('login')}
-                  className="bg-blue-600 text-white py-2 px-6 rounded-lg hover:bg-blue-700 transition-colors"
+                  className="btn-primary px-6 py-2"
                 >
                   Se connecter
                 </button>

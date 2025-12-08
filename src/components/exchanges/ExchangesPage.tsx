@@ -17,7 +17,11 @@ type ExchangeWithDetails = Exchange & {
   dispute?: Dispute | null;
 };
 
-export function ExchangesPage() {
+type ExchangesPageProps = {
+  onUserClick?: (userId: string) => void;
+};
+
+export function ExchangesPage({ onUserClick }: ExchangesPageProps) {
   const { user } = useAuth();
   const [exchanges, setExchanges] = useState<ExchangeWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,9 +84,9 @@ export function ExchangesPage() {
       case 'not_started':
         return <Clock className="w-5 h-5 text-gray-500" />;
       case 'in_progress':
-        return <Package className="w-5 h-5 text-blue-600" />;
+        return <Package className="w-5 h-5 text-brand-blue" />;
       case 'delivered':
-        return <AlertCircle className="w-5 h-5 text-orange-600" />;
+        return <AlertCircle className="w-5 h-5 text-brand-yellow" />;
       case 'confirmed':
         return <CheckCircle className="w-5 h-5 text-green-600" />;
       case 'cancelled':
@@ -106,8 +110,8 @@ export function ExchangesPage() {
   const getStatusColor = (status: string) => {
     const colors = {
       not_started: 'bg-gray-100 text-gray-700',
-      in_progress: 'bg-blue-100 text-blue-700',
-      delivered: 'bg-orange-100 text-orange-700',
+      in_progress: 'bg-brand-blue/10 text-brand-blue',
+      delivered: 'bg-brand-yellow/20 text-brand-yellow',
       confirmed: 'bg-green-100 text-green-700',
       cancelled: 'bg-red-100 text-red-700',
     };
@@ -146,47 +150,51 @@ export function ExchangesPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Mes échanges</h1>
-        <p className="text-gray-600">Suivez l'état de vos échanges en cours et passés</p>
+        <h1 className="text-2xl sm:text-3xl font-heading font-semibold text-brand-text mb-1">
+          Mes échanges
+        </h1>
+        <p className="text-gray-600 text-sm sm:text-base">
+          Suivez l'état de vos échanges en cours et passés
+        </p>
       </div>
 
       <div className="mb-6 flex items-center space-x-2 overflow-x-auto pb-2">
         <button
           onClick={() => setFilterStatus('all')}
-          className={`px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${
+          className={`px-4 py-2 rounded-full whitespace-nowrap text-sm transition-colors ${
             filterStatus === 'all'
-              ? 'bg-blue-600 text-white'
-              : 'bg-white text-gray-700 hover:bg-gray-100'
+              ? 'bg-brand-blue text-white'
+              : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
           }`}
         >
           Tous ({exchanges.length})
         </button>
         <button
           onClick={() => setFilterStatus('in_progress')}
-          className={`px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${
+          className={`px-4 py-2 rounded-full whitespace-nowrap text-sm transition-colors ${
             filterStatus === 'in_progress'
-              ? 'bg-blue-600 text-white'
-              : 'bg-white text-gray-700 hover:bg-gray-100'
+              ? 'bg-brand-blue text-white'
+              : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
           }`}
         >
           En cours
         </button>
         <button
           onClick={() => setFilterStatus('delivered')}
-          className={`px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${
+          className={`px-4 py-2 rounded-full whitespace-nowrap text-sm transition-colors ${
             filterStatus === 'delivered'
-              ? 'bg-blue-600 text-white'
-              : 'bg-white text-gray-700 hover:bg-gray-100'
+              ? 'bg-brand-blue text-white'
+              : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
           }`}
         >
           À confirmer
         </button>
         <button
           onClick={() => setFilterStatus('confirmed')}
-          className={`px-4 py-2 rounded-lg whitespace-nowrap transition-colors ${
+          className={`px-4 py-2 rounded-full whitespace-nowrap text-sm transition-colors ${
             filterStatus === 'confirmed'
-              ? 'bg-blue-600 text-white'
-              : 'bg-white text-gray-700 hover:bg-gray-100'
+              ? 'bg-brand-blue text-white'
+              : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
           }`}
         >
           Terminés
@@ -195,10 +203,10 @@ export function ExchangesPage() {
 
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-blue"></div>
         </div>
       ) : filteredExchanges.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-lg shadow-sm">
+        <div className="text-center py-12 bg-white rounded-3xl shadow-soft-lg border border-gray-100">
           <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <h3 className="text-xl font-semibold text-gray-900 mb-2">
             Aucun échange
@@ -209,7 +217,7 @@ export function ExchangesPage() {
               : `Aucun échange ${getStatusText(filterStatus).toLowerCase()}`}
           </p>
         </div>
-      ) : (
+        ) : (
         <div className="space-y-4">
           {filteredExchanges.map((exchange) => {
             const otherParty = getOtherParty(exchange);
@@ -222,29 +230,45 @@ export function ExchangesPage() {
             return (
               <div
                 key={exchange.id}
-                className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow"
+                className="bg-white rounded-3xl shadow-soft-lg p-6 hover:shadow-md transition-shadow border border-gray-100"
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-start space-x-4 flex-1">
-                    <div className="flex-shrink-0">
+                    <div
+                      onClick={(e) => {
+                        if (onUserClick && otherParty?.id) {
+                          e.stopPropagation();
+                          onUserClick(otherParty.id);
+                        }
+                      }}
+                      className={`flex-shrink-0 ${onUserClick && otherParty?.id ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+                    >
                       {otherParty?.avatar_url ? (
                         <img
                           src={otherParty.avatar_url}
                           alt={otherParty.display_name}
-                          className="w-12 h-12 rounded-full"
+                          className="w-12 h-12 rounded-full object-cover"
                         />
                       ) : (
-                        <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center text-gray-600 font-semibold">
+                        <div className="w-12 h-12 rounded-full bg-brand-yellow flex items-center justify-center text-white font-semibold shadow-soft-lg">
                           {otherParty?.display_name?.[0]?.toUpperCase() || '?'}
                         </div>
                       )}
                     </div>
 
                     <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                      <h3 
+                        onClick={(e) => {
+                          if (onUserClick && otherParty?.id) {
+                            e.stopPropagation();
+                            onUserClick(otherParty.id);
+                          }
+                        }}
+                        className={`text-lg font-heading font-semibold text-brand-text mb-1 ${onUserClick && otherParty?.id ? 'cursor-pointer hover:text-brand-blue transition-colors' : ''}`}
+                      >
                         Échange avec {otherParty?.display_name || 'Utilisateur inconnu'}
                       </h3>
-                      <p className="text-gray-600 mb-2">
+                      <p className="text-gray-600 mb-2 text-sm">
                         {listing?.title || 'Annonce supprimée'}
                       </p>
                       <div className="flex items-center space-x-4 text-sm text-gray-500">
@@ -270,42 +294,38 @@ export function ExchangesPage() {
                   </div>
 
                   <div className="flex items-center space-x-3">
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium flex items-center space-x-1 ${getStatusColor(exchange.status)}`}>
+                    <span className={`px-3 py-1 rounded-full text-xs sm:text-sm font-medium flex items-center space-x-1 ${getStatusColor(exchange.status)}`}>
                       {getStatusIcon(exchange.status)}
                       <span>{getStatusText(exchange.status)}</span>
                     </span>
-                  {exchange.dispute && (
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                        exchange.dispute.status === 'resolved'
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-red-100 text-red-700'
-                      }`}
-                    >
-                      Litige {exchange.dispute.status === 'resolved' ? 'résolu' : 'en cours'}
-                    </span>
-                  )}
+                    {exchange.dispute && (
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                          exchange.dispute.status === 'resolved'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-red-100 text-red-700'
+                        }`}
+                      >
+                        Litige {exchange.dispute.status === 'resolved' ? 'résolu' : 'en cours'}
+                      </span>
+                    )}
                   </div>
                 </div>
 
                 <div className="space-y-3">
-                  <button
-                    onClick={() => {
-                      if (exchange.contract) {
-                        setSelectedContract(exchange.contract as Contract);
-                      } else {
-                        setSelectedExchange(exchange);
-                      }
-                    }}
-                    className="w-full flex items-center justify-center space-x-2 bg-white border border-blue-600 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors"
-                  >
-                    <FileText className="w-4 h-4" />
-                    <span>{exchange.contract ? 'Voir le contrat' : 'Voir les détails'}</span>
-                  </button>
+                  {exchange.contract && (
+                    <button
+                      onClick={() => setSelectedContract(exchange.contract as Contract)}
+                      className="w-full btn-secondary justify-center gap-2"
+                    >
+                      <FileText className="w-4 h-4" />
+                      <span>Voir le contrat</span>
+                    </button>
+                  )}
 
                   <button
                     onClick={() => setSelectedExchange(exchange)}
-                    className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                    className="w-full btn-primary justify-center"
                   >
                     Voir le suivi de l'échange
                   </button>
@@ -316,7 +336,7 @@ export function ExchangesPage() {
                         setSelectedExchange(exchange);
                         setShowReviewModal(true);
                       }}
-                      className="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                      className="w-full inline-flex items-center justify-center px-4 py-2 rounded-full bg-green-600 text-white text-sm font-semibold shadow-soft-lg hover:bg-green-700 transition-colors"
                     >
                       Laisser un avis
                     </button>

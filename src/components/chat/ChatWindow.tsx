@@ -7,9 +7,10 @@ import { checkContent } from '../../lib/moderation';
 
 type ChatWindowProps = {
   proposalId: string;
+  onUserClick?: (userId: string) => void;
 };
 
-export function ChatWindow({ proposalId }: ChatWindowProps) {
+export function ChatWindow({ proposalId, onUserClick }: ChatWindowProps) {
   const { user } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -125,15 +126,15 @@ export function ChatWindow({ proposalId }: ChatWindowProps) {
     setContentWarning(null);
 
     // Vérifier les mots bannis
-    const { hasWarning, hasBlock, detectedWords } = await checkContent(messageToSend, user.id);
+    const { hasWarning, hasBlock, detectedWords, warningWords, blockWords } = await checkContent(messageToSend, user.id);
     
-    if (hasBlock) {
-      setContentWarning('Ce message contient du contenu interdit et ne peut pas être envoyé.');
+    if (hasBlock && blockWords.length > 0) {
+      setContentWarning(`Ce message contient un terme interdit (${blockWords.join(', ')}). Envoi bloqué.`);
       return;
     }
     
-    if (hasWarning) {
-      setContentWarning(`Attention : votre message contient des termes sensibles (${detectedWords.join(', ')}). Restez vigilant face aux arnaques.`);
+    if (hasWarning && warningWords.length > 0) {
+      setContentWarning(`Attention : votre message contient des termes sensibles (${warningWords.join(', ')}). Restez vigilant face aux arnaques.`);
     }
 
     setLoading(true);
@@ -175,8 +176,8 @@ export function ChatWindow({ proposalId }: ChatWindowProps) {
   };
 
   return (
-    <div className="mt-4 border-t border-gray-200 pt-4">
-      <div className="bg-gray-50 rounded-lg p-4 max-h-96 overflow-y-auto mb-4">
+    <div className="mt-4 border-t border-gray-100 pt-4">
+      <div className="bg-gray-50 rounded-2xl p-4 max-h-96 overflow-y-auto mb-4">
         {messages.length === 0 ? (
           <p className="text-center text-gray-500 py-8">Aucun message pour le moment</p>
         ) : (
@@ -189,19 +190,26 @@ export function ChatWindow({ proposalId }: ChatWindowProps) {
                   className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-[70%] rounded-lg px-4 py-2 ${
+                    className={`max-w-[70%] rounded-2xl px-4 py-2 ${
                       isOwn
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-white border border-gray-200 text-gray-900'
+                        ? 'bg-brand-blue text-white'
+                        : 'bg-white border border-gray-100 text-gray-900'
                     }`}
                   >
                     {!isOwn && (
-                      <p className="text-xs font-medium mb-1 opacity-75">
+                      <p 
+                        onClick={() => {
+                          if (onUserClick && message.sender_id) {
+                            onUserClick(message.sender_id);
+                          }
+                        }}
+                        className={`text-xs font-medium mb-1 opacity-75 ${onUserClick && message.sender_id ? 'cursor-pointer hover:opacity-100 hover:text-brand-blue transition-colors' : ''}`}
+                      >
                         {message.sender?.display_name}
                       </p>
                     )}
                     <p className="whitespace-pre-wrap break-words">{message.body}</p>
-                    <p className={`text-xs mt-1 ${isOwn ? 'text-blue-100' : 'text-gray-500'}`}>
+                    <p className={`text-xs mt-1 ${isOwn ? 'text-sky-100' : 'text-gray-500'}`}>
                       {formatTime(message.created_at)}
                     </p>
                   </div>
@@ -214,7 +222,7 @@ export function ChatWindow({ proposalId }: ChatWindowProps) {
       </div>
 
       {contentWarning && (
-        <div className="flex items-start gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800 mb-2">
+        <div className="flex items-start gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-xl text-sm text-yellow-800 mb-2">
           <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
           <span>{contentWarning}</span>
         </div>
@@ -226,13 +234,13 @@ export function ChatWindow({ proposalId }: ChatWindowProps) {
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
           placeholder="Écrivez votre message..."
-          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="flex-1 px-4 py-2 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-brand-blue bg-white"
           disabled={loading}
         />
         <button
           type="submit"
           disabled={loading || !newMessage.trim()}
-          className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="btn-primary p-2 rounded-full w-10 h-10 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Send className="w-5 h-5" />
         </button>

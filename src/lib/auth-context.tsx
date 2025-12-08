@@ -99,8 +99,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function signOut() {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    try {
+      // Vérifier s'il y a une session active avant de se déconnecter
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      
+      if (currentSession) {
+        // Se déconnecter seulement s'il y a une session active
+        const { error } = await supabase.auth.signOut();
+        if (error && !error.message?.includes('session missing')) {
+          console.warn('Erreur lors de la déconnexion:', error);
+        }
+      }
+    } catch (err: any) {
+      // Si l'erreur est "Auth session missing", c'est normal (session déjà expirée)
+      if (err?.message?.includes('session missing') || err?.message?.includes('Auth session missing')) {
+        // Rien à faire, la session n'existe déjà plus
+      } else {
+        console.warn('Exception lors de la déconnexion:', err);
+      }
+    } finally {
+      // Nettoyer l'état local dans tous les cas pour garantir la déconnexion visuelle
+      setSession(null);
+      setUser(null);
+    }
   }
 
   async function updateProfile(updates: Partial<User>) {

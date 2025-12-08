@@ -35,6 +35,25 @@ function AppContent() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
   const [viewingUserId, setViewingUserId] = useState<string | null>(null);
+  const [previousView, setPreviousView] = useState<'landing' | 'listings' | 'proposals' | 'profile' | 'settings' | 'exchanges' | 'admin'>('listings');
+
+  // Fonction pour gérer le clic sur un utilisateur
+  const handleUserClick = (userId: string) => {
+    // Mémoriser la vue actuelle si ce n'est pas déjà 'public-profile'
+    if (view !== 'public-profile') {
+      setPreviousView(view as 'landing' | 'listings' | 'proposals' | 'profile' | 'settings' | 'exchanges' | 'admin');
+    }
+    setViewingUserId(userId);
+    setView('public-profile');
+  };
+
+  // S'assurer qu'un membre connecté ne voit pas une page vide après refresh :
+  // dès que l'auth est chargée et qu'un user existe, on force la vue sur "listings"
+  useEffect(() => {
+    if (!authLoading && user && view === 'landing') {
+      setView('listings');
+    }
+  }, [authLoading, user, view]);
 
   useEffect(() => {
     loadCategories();
@@ -100,8 +119,8 @@ function AppContent() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-600"></div>
+      <div className="min-h-screen flex items-center justify-center bg-brand-bg">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-blue"></div>
       </div>
     );
   }
@@ -118,7 +137,7 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-brand-bg">
       <Header
         onCreateListing={() => setShowCreateModal(true)}
         onSearch={handleSearch}
@@ -128,27 +147,27 @@ function AppContent() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {user && (
-          <div className="mb-6 flex items-center space-x-4">
+          <div className="mb-6 flex items-center space-x-3">
             <button
               onClick={() => setView('listings')}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+              className={`flex items-center space-x-2 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                 view === 'listings'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white text-gray-700 hover:bg-gray-100'
+                  ? 'bg-brand-blue text-white shadow-soft-lg'
+                  : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
               }`}
             >
-              <Grid className="w-5 h-5" />
+              <Grid className="w-4 h-4" />
               <span>Annonces</span>
             </button>
             <button
               onClick={() => setView('proposals')}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+              className={`flex items-center space-x-2 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                 view === 'proposals'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white text-gray-700 hover:bg-gray-100'
+                  ? 'bg-brand-blue text-white shadow-soft-lg'
+                  : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
               }`}
             >
-              <List className="w-5 h-5" />
+              <List className="w-4 h-4" />
               <span>Mes propositions</span>
             </button>
           </div>
@@ -156,12 +175,12 @@ function AppContent() {
 
         {view === 'listings' ? (
           <>
-            <div className="mb-6 bg-white rounded-lg shadow-sm p-4">
+            <div className="mb-6 bg-white rounded-3xl shadow-soft-lg p-4 border border-gray-100">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold">Filtres</h2>
+                <h2 className="text-base sm:text-lg font-heading font-semibold text-brand-text">Filtres</h2>
                 <button
                   onClick={() => setShowFilters(!showFilters)}
-                  className="text-blue-600 hover:text-blue-700"
+                  className="text-brand-blue hover:text-sky-600"
                 >
                   <Filter className="w-5 h-5" />
                 </button>
@@ -176,9 +195,9 @@ function AppContent() {
                     <div className="flex space-x-2">
                       <button
                         onClick={() => setFilterType('all')}
-                        className={`px-4 py-2 rounded-lg transition-colors ${
+                        className={`px-4 py-2 rounded-full text-sm transition-colors ${
                           filterType === 'all'
-                            ? 'bg-blue-600 text-white'
+                            ? 'bg-brand-blue text-white shadow-soft-lg'
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }`}
                       >
@@ -186,9 +205,9 @@ function AppContent() {
                       </button>
                       <button
                         onClick={() => setFilterType('service')}
-                        className={`px-4 py-2 rounded-lg transition-colors ${
+                        className={`px-4 py-2 rounded-full text-sm transition-colors ${
                           filterType === 'service'
-                            ? 'bg-blue-600 text-white'
+                            ? 'bg-brand-blue text-white shadow-soft-lg'
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }`}
                       >
@@ -196,9 +215,9 @@ function AppContent() {
                       </button>
                       <button
                         onClick={() => setFilterType('product')}
-                        className={`px-4 py-2 rounded-lg transition-colors ${
+                        className={`px-4 py-2 rounded-full text-sm transition-colors ${
                           filterType === 'product'
-                            ? 'bg-blue-600 text-white'
+                            ? 'bg-brand-blue text-white shadow-soft-lg'
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }`}
                       >
@@ -214,9 +233,9 @@ function AppContent() {
                     <div className="flex flex-wrap gap-2">
                       <button
                         onClick={() => setFilterMode('all')}
-                        className={`px-4 py-2 rounded-lg transition-colors ${
+                        className={`px-4 py-2 rounded-full text-sm transition-colors ${
                           filterMode === 'all'
-                            ? 'bg-blue-600 text-white'
+                            ? 'bg-brand-blue text-white shadow-soft-lg'
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }`}
                       >
@@ -224,9 +243,9 @@ function AppContent() {
                       </button>
                       <button
                         onClick={() => setFilterMode('remote')}
-                        className={`px-4 py-2 rounded-lg transition-colors ${
+                        className={`px-4 py-2 rounded-full text-sm transition-colors ${
                           filterMode === 'remote'
-                            ? 'bg-blue-600 text-white'
+                            ? 'bg-brand-blue text-white shadow-soft-lg'
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }`}
                       >
@@ -234,9 +253,9 @@ function AppContent() {
                       </button>
                       <button
                         onClick={() => setFilterMode('on_site')}
-                        className={`px-4 py-2 rounded-lg transition-colors ${
+                        className={`px-4 py-2 rounded-full text-sm transition-colors ${
                           filterMode === 'on_site'
-                            ? 'bg-blue-600 text-white'
+                            ? 'bg-brand-blue text-white shadow-soft-lg'
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }`}
                       >
@@ -244,9 +263,9 @@ function AppContent() {
                       </button>
                       <button
                         onClick={() => setFilterMode('both')}
-                        className={`px-4 py-2 rounded-lg transition-colors ${
+                        className={`px-4 py-2 rounded-full text-sm transition-colors ${
                           filterMode === 'both'
-                            ? 'bg-blue-600 text-white'
+                            ? 'bg-brand-blue text-white shadow-soft-lg'
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }`}
                       >
@@ -265,7 +284,7 @@ function AppContent() {
                           onClick={() => setFilterCategory(null)}
                           className={`px-3 py-1 rounded-full text-sm transition-colors ${
                             filterCategory === null
-                              ? 'bg-blue-600 text-white'
+                              ? 'bg-brand-blue text-white shadow-soft-lg'
                               : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                           }`}
                         >
@@ -277,7 +296,7 @@ function AppContent() {
                             onClick={() => setFilterCategory(category.id)}
                             className={`px-3 py-1 rounded-full text-sm transition-colors ${
                               filterCategory === category.id
-                                ? 'bg-blue-600 text-white'
+                                ? 'bg-brand-blue text-white shadow-soft-lg'
                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                             }`}
                           >
@@ -293,7 +312,7 @@ function AppContent() {
 
             {loading ? (
               <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-blue"></div>
               </div>
             ) : listings.length === 0 ? (
               <div className="text-center py-12">
@@ -309,23 +328,20 @@ function AppContent() {
                 {user && (
                   <button
                     onClick={() => setShowCreateModal(true)}
-                    className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+                    className="btn-primary px-6 py-3 rounded-full"
                   >
                     Créer une annonce
                   </button>
                 )}
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
                 {listings.map((listing) => (
                   <ListingCard
                     key={listing.id}
                     listing={listing}
                     onClick={setSelectedListing}
-                    onUserClick={(userId) => {
-                      setViewingUserId(userId);
-                      setView('public-profile');
-                    }}
+                    onUserClick={handleUserClick}
                   />
                 ))}
               </div>
@@ -334,22 +350,30 @@ function AppContent() {
         ) : view === 'proposals' ? (
           <div className="bg-white rounded-lg shadow-sm p-6">
             <h2 className="text-2xl font-bold mb-6">Mes propositions</h2>
-            <ProposalsList onSelectProposal={setSelectedProposal} />
+            <ProposalsList 
+              onSelectProposal={setSelectedProposal}
+              onUserClick={handleUserClick}
+            />
           </div>
         ) : view === 'profile' ? (
-          <ProfilePage />
+          <ProfilePage 
+            onUserClick={handleUserClick}
+          />
         ) : view === 'settings' ? (
           <SettingsPage />
         ) : view === 'exchanges' ? (
-          <ExchangesPage />
+          <ExchangesPage 
+            onUserClick={handleUserClick}
+          />
         ) : view === 'public-profile' && viewingUserId ? (
           <PublicProfilePage
             userId={viewingUserId}
             onBack={() => {
               setViewingUserId(null);
-              setView('listings');
+              setView(previousView);
             }}
             onViewListing={setSelectedListing}
+            onUserClick={handleUserClick}
           />
         ) : view === 'admin' ? (
           <AdminPage />
@@ -369,8 +393,7 @@ function AppContent() {
         onRequestAuth={handleRequestAuth}
         onUserClick={(userId) => {
           setSelectedListing(null);
-          setViewingUserId(userId);
-          setView('public-profile');
+          handleUserClick(userId);
         }}
       />
 
@@ -378,6 +401,10 @@ function AppContent() {
         proposal={selectedProposal}
         onClose={() => setSelectedProposal(null)}
         onUpdate={loadListings}
+        onUserClick={(userId) => {
+          setSelectedProposal(null);
+          handleUserClick(userId);
+        }}
       />
 
       <AuthModal

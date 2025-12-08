@@ -91,7 +91,7 @@ export function ReportModal({ isOpen, onClose, targetType, targetId, targetUserI
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-md w-full p-6">
+      <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-soft-lg border border-gray-100">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2 text-red-600">
             <AlertTriangle className="w-5 h-5" />
@@ -125,9 +125,9 @@ export function ReportModal({ isOpen, onClose, targetType, targetId, targetUserI
                       value={r.value}
                       checked={reason === r.value}
                       onChange={(e) => setReason(e.target.value)}
-                      className="text-blue-600"
+                      className="text-brand-blue"
                     />
-                    <span className="text-gray-700">{r.label}</span>
+                  <span className="text-gray-700">{r.label}</span>
                   </label>
                 ))}
               </div>
@@ -141,7 +141,7 @@ export function ReportModal({ isOpen, onClose, targetType, targetId, targetUserI
                 value={details}
                 onChange={(e) => setDetails(e.target.value)}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue bg-gray-50 focus:bg-white"
                 placeholder="Décrivez le problème..."
               />
             </div>
@@ -154,14 +154,14 @@ export function ReportModal({ isOpen, onClose, targetType, targetId, targetUserI
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                className="flex-1 px-4 py-2 border border-gray-200 rounded-full hover:bg-gray-50 text-sm"
               >
                 Annuler
               </button>
               <button
                 type="submit"
                 disabled={!reason || loading}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-full hover:bg-red-600 disabled:opacity-50 flex items-center justify-center gap-2 text-sm"
               >
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                 Signaler

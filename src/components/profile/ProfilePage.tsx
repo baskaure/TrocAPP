@@ -55,7 +55,7 @@ function VerificationUpload({ onSuccess }: { onSuccess: () => void }) {
 
   return (
     <div>
-      <label className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg cursor-pointer hover:bg-blue-700 transition-colors">
+      <label className="inline-flex items-center gap-2 px-4 py-2 bg-brand-blue text-white rounded-lg cursor-pointer hover:bg-sky-500 transition-colors">
         <input
           type="file"
           accept="image/*,.pdf"
@@ -80,7 +80,11 @@ function VerificationUpload({ onSuccess }: { onSuccess: () => void }) {
   );
 }
 
-export function ProfilePage() {
+type ProfilePageProps = {
+  onUserClick?: (userId: string) => void;
+};
+
+export function ProfilePage({ onUserClick }: ProfilePageProps) {
   const { user, refreshUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -285,8 +289,8 @@ export function ProfilePage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
-      <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-        <div className="relative h-40 bg-gradient-to-r from-blue-600 to-blue-700">
+      <div className="bg-white rounded-3xl shadow-soft-lg overflow-hidden border border-gray-100">
+        <div className="relative h-40 bg-gradient-to-r from-brand-blue to-sky-500">
           {formData.banner_url && (
             <img
               src={formData.banner_url}
@@ -323,13 +327,13 @@ export function ProfilePage() {
                     className="w-32 h-32 rounded-full border-4 border-white shadow-lg object-cover"
                   />
                 ) : (
-                  <div className="w-32 h-32 bg-gray-300 text-gray-600 rounded-full border-4 border-white shadow-lg flex items-center justify-center text-4xl font-bold">
+                  <div className="w-32 h-32 bg-brand-yellow text-white rounded-full border-4 border-white shadow-lg flex items-center justify-center text-4xl font-bold">
                     {formData.display_name[0]?.toUpperCase() || 'U'}
                   </div>
                 )}
 
                 {isEditing && (
-                  <label className="absolute bottom-2 right-2 inline-flex items-center justify-center bg-blue-600 text-white rounded-full p-2 cursor-pointer hover:bg-blue-700 transition-colors shadow">
+                  <label className="absolute bottom-2 right-2 inline-flex items-center justify-center bg-brand-blue text-white rounded-full p-2 cursor-pointer hover:bg-sky-500 transition-colors shadow">
                     <input
                       type="file"
                       accept="image/*"
@@ -346,7 +350,7 @@ export function ProfilePage() {
               </div>
 
               <div className="pb-2">
-                <h1 className="text-2xl font-bold text-gray-900">{formData.display_name}</h1>
+                <h1 className="text-2xl font-heading font-semibold text-brand-text">{formData.display_name}</h1>
                 <p className="text-gray-500">@{formData.username}</p>
               </div>
             </div>
@@ -354,7 +358,7 @@ export function ProfilePage() {
             {!isEditing ? (
               <button
                 onClick={() => setIsEditing(true)}
-                className="mt-6 flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                className="mt-6 flex items-center space-x-2 btn-primary rounded-full px-5 py-2"
               >
                 <Edit2 className="w-4 h-4" />
                 <span>Modifier</span>
@@ -363,7 +367,7 @@ export function ProfilePage() {
               <div className="mt-16 flex space-x-2">
                 <button
                   onClick={() => setIsEditing(false)}
-                  className="flex items-center space-x-2 bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors"
+                  className="flex items-center space-x-2 bg-gray-100 text-gray-700 px-4 py-2 rounded-full hover:bg-gray-200 transition-colors text-sm"
                 >
                   <X className="w-4 h-4" />
                   <span>Annuler</span>
@@ -395,7 +399,7 @@ export function ProfilePage() {
                     type="text"
                     value={formData.display_name}
                     onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue bg-gray-50 focus:bg-white"
                     required
                   />
                 </div>
@@ -408,7 +412,7 @@ export function ProfilePage() {
                     type="text"
                     value={formData.username}
                     onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue bg-gray-50 focus:bg-white"
                     required
                   />
                 </div>
@@ -421,7 +425,7 @@ export function ProfilePage() {
                     type="text"
                     value={formData.city}
                     onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue bg-gray-50 focus:bg-white"
                   />
                 </div>
 
@@ -433,7 +437,7 @@ export function ProfilePage() {
                     type="text"
                     value={formData.country}
                     onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue bg-gray-50 focus:bg-white"
                   />
                 </div>
 
@@ -445,7 +449,7 @@ export function ProfilePage() {
                     type="tel"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue bg-gray-50 focus:bg-white"
                   />
                 </div>
 
@@ -459,7 +463,7 @@ export function ProfilePage() {
                     max="500"
                     value={formData.search_radius_km}
                     onChange={(e) => setFormData({ ...formData, search_radius_km: parseInt(e.target.value) || 50 })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue bg-gray-50 focus:bg-white"
                   />
                 </div>
               </div>
@@ -488,7 +492,7 @@ export function ProfilePage() {
                     value={newLanguage}
                     onChange={(e) => setNewLanguage(e.target.value)}
                     placeholder="Ajouter une langue"
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="flex-1 px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue bg-gray-50 focus:bg-white"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && newLanguage.trim()) {
                         e.preventDefault();
@@ -507,7 +511,7 @@ export function ProfilePage() {
                         setNewLanguage('');
                       }
                     }}
-                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 text-sm"
                   >
                     Ajouter
                   </button>
@@ -538,7 +542,7 @@ export function ProfilePage() {
                     value={newSkill}
                     onChange={(e) => setNewSkill(e.target.value)}
                     placeholder="Ajouter une compétence"
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="flex-1 px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue bg-gray-50 focus:bg-white"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && newSkill.trim()) {
                         e.preventDefault();
@@ -557,7 +561,7 @@ export function ProfilePage() {
                         setNewSkill('');
                       }
                     }}
-                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 text-sm"
                   >
                     Ajouter
                   </button>
@@ -580,9 +584,9 @@ export function ProfilePage() {
                       onChange={(event) => handleFileChange(event, 'avatar')}
                     />
                     {mediaUploading.avatar ? (
-                      <Loader2 className="w-5 h-5 text-blue-600 animate-spin mb-2" />
+                      <Loader2 className="w-5 h-5 text-brand-blue animate-spin mb-2" />
                     ) : (
-                      <Camera className="w-5 h-5 text-blue-600 mb-2" />
+                      <Camera className="w-5 h-5 text-brand-blue mb-2" />
                     )}
                     <span className="text-sm font-medium text-gray-700">
                       {mediaUploading.avatar ? 'Téléversement...' : 'Mettre à jour l’avatar'}
@@ -597,9 +601,9 @@ export function ProfilePage() {
                       onChange={(event) => handleFileChange(event, 'banner')}
                     />
                     {mediaUploading.banner ? (
-                      <Loader2 className="w-5 h-5 text-blue-600 animate-spin mb-2" />
+                      <Loader2 className="w-5 h-5 text-brand-blue animate-spin mb-2" />
                     ) : (
-                      <ImageUp className="w-5 h-5 text-blue-600 mb-2" />
+                      <ImageUp className="w-5 h-5 text-brand-blue mb-2" />
                     )}
                     <span className="text-sm font-medium text-gray-700">
                       {mediaUploading.banner ? 'Téléversement...' : 'Mettre à jour la bannière'}
@@ -625,7 +629,7 @@ export function ProfilePage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex items-center space-x-2 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                  className="flex items-center space-x-2 btn-primary rounded-full px-6 py-2"
                 >
                   <Check className="w-4 h-4" />
                   <span>{loading ? 'Enregistrement...' : 'Enregistrer'}</span>
@@ -741,16 +745,16 @@ export function ProfilePage() {
               <div className="border-t pt-6">
                 <h3 className="text-lg font-semibold mb-4">Statistiques</h3>
                 <div className="grid grid-cols-3 gap-4 text-center">
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <div className="text-2xl font-bold text-blue-600">{listingsCount}</div>
+                  <div className="bg-gray-50 p-4 rounded-2xl">
+                    <div className="text-2xl font-heading font-semibold text-brand-blue">{listingsCount}</div>
                     <div className="text-sm text-gray-600">Annonces</div>
                   </div>
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <div className="text-2xl font-bold text-blue-600">{reviews.length}</div>
+                  <div className="bg-gray-50 p-4 rounded-2xl">
+                    <div className="text-2xl font-heading font-semibold text-brand-blue">{reviews.length}</div>
                     <div className="text-sm text-gray-600">Avis reçus</div>
                   </div>
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <div className="text-2xl font-bold text-blue-600 flex items-center justify-center space-x-1">
+                  <div className="bg-gray-50 p-4 rounded-2xl">
+                    <div className="text-2xl font-heading font-semibold text-brand-blue flex items-center justify-center space-x-1">
                       {reviews.length > 0 ? (
                         <>
                           <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
@@ -769,7 +773,7 @@ export function ProfilePage() {
                 <h3 className="text-lg font-semibold mb-4">Avis reçus ({reviews.length})</h3>
                 {reviewsLoading ? (
                   <div className="flex justify-center py-8">
-                    <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+                    <Loader2 className="w-6 h-6 animate-spin text-brand-blue" />
                   </div>
                 ) : reviews.length === 0 ? (
                   <p className="text-gray-500 text-center py-8">Aucun avis pour le moment</p>
@@ -777,21 +781,28 @@ export function ProfilePage() {
                   <div className="space-y-4">
                     {reviews.map((review) => (
                       <div key={review.id} className="bg-gray-50 rounded-lg p-4">
-                        <div className="flex items-start space-x-3">
+                        <div 
+                          className={`flex items-start space-x-3 ${onUserClick && review.reviewer?.id ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+                          onClick={() => {
+                            if (onUserClick && review.reviewer?.id) {
+                              onUserClick(review.reviewer.id);
+                            }
+                          }}
+                        >
                           {review.reviewer?.avatar_url ? (
                             <img
                               src={review.reviewer.avatar_url}
                               alt={review.reviewer.display_name}
-                              className="w-10 h-10 rounded-full"
+                              className="w-10 h-10 rounded-full object-cover"
                             />
                           ) : (
-                            <div className="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-medium">
+                            <div className="w-10 h-10 bg-brand-yellow text-white rounded-full flex items-center justify-center text-sm font-medium">
                               {review.reviewer?.display_name?.[0]?.toUpperCase() || '?'}
                             </div>
                           )}
                           <div className="flex-1">
                             <div className="flex items-center justify-between">
-                              <span className="font-medium">{review.reviewer?.display_name}</span>
+                              <span className={`font-medium ${onUserClick && review.reviewer?.id ? 'hover:text-brand-blue transition-colors' : ''}`}>{review.reviewer?.display_name}</span>
                               <div className="flex items-center space-x-1">
                                 {[1, 2, 3, 4, 5].map((star) => (
                                   <Star

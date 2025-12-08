@@ -115,12 +115,14 @@ export function ReviewModal({ exchange, onClose, onSuccess }: ReviewModalProps) 
 
   if (success) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-lg max-w-md w-full p-8 text-center">
-          <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Merci !</h2>
-          <p className="text-gray-600">
-            Votre avis a été publié avec succès
+      <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-3xl max-w-md w-full p-8 text-center shadow-soft-lg border border-gray-100">
+          <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-heading font-semibold text-brand-text mb-2">
+            Merci pour votre avis !
+          </h2>
+          <p className="text-gray-600 text-sm">
+            Votre retour a été publié avec succès et aide la communauté BonTroc.
           </p>
         </div>
       </div>
@@ -128,13 +130,15 @@ export function ReviewModal({ exchange, onClose, onSuccess }: ReviewModalProps) 
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
-          <h2 className="text-2xl font-bold">Laisser un avis</h2>
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-soft-lg border border-gray-100">
+        <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between rounded-t-3xl">
+          <h2 className="text-xl sm:text-2xl font-heading font-semibold text-brand-text">
+            Laisser un avis
+          </h2>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
+            className="inline-flex items-center justify-center w-9 h-9 rounded-full text-gray-500 hover:text-brand-blue hover:bg-brand-blue/10 transition-colors"
           >
             <X className="w-6 h-6" />
           </button>
@@ -142,13 +146,13 @@ export function ReviewModal({ exchange, onClose, onSuccess }: ReviewModalProps) 
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {error && (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-600">
+            <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-red-600 text-sm">
               {error}
             </div>
           )}
 
           <div>
-            <p className="text-gray-600 mb-4">
+            <p className="text-gray-600 mb-4 text-sm">
               Comment s'est passé votre échange avec <strong>{revieweeName}</strong> ?
             </p>
           </div>
@@ -170,14 +174,14 @@ export function ReviewModal({ exchange, onClose, onSuccess }: ReviewModalProps) 
                   <Star
                     className={`w-10 h-10 ${
                       star <= (hoveredRating || rating)
-                        ? 'fill-yellow-400 text-yellow-400'
+                        ? 'fill-brand-yellow text-brand-yellow'
                         : 'text-gray-300'
                     }`}
                   />
                 </button>
               ))}
               {rating > 0 && (
-                <span className="ml-3 text-lg font-semibold text-gray-700">
+                <span className="ml-3 text-lg font-semibold text-brand-text">
                   {rating}/5
                 </span>
               )}
@@ -194,10 +198,10 @@ export function ReviewModal({ exchange, onClose, onSuccess }: ReviewModalProps) 
                   key={tag}
                   type="button"
                   onClick={() => toggleTag(tag)}
-                  className={`px-3 py-1 rounded-full text-sm transition-colors ${
+                  className={`px-3 py-1 rounded-full text-xs sm:text-sm transition-colors border ${
                     selectedTags.includes(tag)
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      ? 'bg-brand-blue text-white border-brand-blue shadow-soft-lg'
+                      : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
                   }`}
                 >
                   {tag}
@@ -214,26 +218,26 @@ export function ReviewModal({ exchange, onClose, onSuccess }: ReviewModalProps) 
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-200 rounded-2xl bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-blue focus:bg-white text-sm"
               placeholder="Partagez votre expérience avec la communauté..."
             />
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-xs sm:text-sm text-gray-500 mt-1">
               Votre avis sera visible publiquement sur le profil de {revieweeName}
             </p>
           </div>
 
-          <div className="flex space-x-3 pt-4">
+          <div className="flex flex-col sm:flex-row gap-3 pt-4">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 bg-gray-200 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+              className="btn-secondary w-full sm:flex-1"
             >
               Annuler
             </button>
             <button
               type="submit"
               disabled={loading || rating === 0}
-              className="flex-1 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 font-medium"
+              className="btn-primary w-full sm:flex-1 disabled:cursor-not-allowed"
             >
               {loading ? 'Envoi...' : 'Publier l\'avis'}
             </button>

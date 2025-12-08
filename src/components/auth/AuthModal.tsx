@@ -61,7 +61,7 @@ export function AuthModal({ isOpen, onClose, initialMode = 'login' }: AuthModalP
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-md w-full p-6 relative">
+      <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 relative shadow-soft-lg border border-gray-100">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
@@ -69,15 +69,18 @@ export function AuthModal({ isOpen, onClose, initialMode = 'login' }: AuthModalP
           <X className="w-5 h-5" />
         </button>
 
-        <h2 className="text-2xl font-bold mb-6">
-          {mode === 'login' ? 'Connexion' : 'Inscription'}
+        <h2 className="text-2xl font-heading font-semibold mb-1 text-brand-text">
+          {mode === 'login' ? 'Connexion' : 'Créer un compte'}
         </h2>
+        <p className="text-sm text-gray-500 mb-6">
+          Accédez à BonTroc pour publier vos annonces et gérer vos échanges en toute simplicité.
+        </p>
 
         <button
           type="button"
           onClick={handleGoogleSignIn}
           disabled={googleLoading}
-          className="w-full flex items-center justify-center space-x-3 bg-white border border-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors mb-4"
+          className="w-full flex items-center justify-center space-x-3 bg-white border border-gray-200 text-gray-700 py-2.5 px-4 rounded-full hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors mb-4"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -108,7 +111,7 @@ export function AuthModal({ isOpen, onClose, initialMode = 'login' }: AuthModalP
                   type="text"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue bg-gray-50 focus:bg-white"
                   required
                 />
               </div>
@@ -120,7 +123,7 @@ export function AuthModal({ isOpen, onClose, initialMode = 'login' }: AuthModalP
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue bg-gray-50 focus:bg-white"
                   required
                 />
               </div>
@@ -135,7 +138,7 @@ export function AuthModal({ isOpen, onClose, initialMode = 'login' }: AuthModalP
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue bg-gray-50 focus:bg-white"
               required
             />
           </div>
@@ -148,14 +151,14 @@ export function AuthModal({ isOpen, onClose, initialMode = 'login' }: AuthModalP
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue bg-gray-50 focus:bg-white"
               required
               minLength={6}
             />
           </div>
 
           {error && (
-            <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md">
+            <div className="text-sm text-red-600 bg-red-50 border border-red-100 p-3 rounded-xl">
               {error}
             </div>
           )}
@@ -163,7 +166,7 @@ export function AuthModal({ isOpen, onClose, initialMode = 'login' }: AuthModalP
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="w-full btn-primary rounded-full py-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Chargement...' : mode === 'login' ? 'Se connecter' : "S'inscrire"}
           </button>
@@ -172,7 +175,7 @@ export function AuthModal({ isOpen, onClose, initialMode = 'login' }: AuthModalP
         <div className="mt-4 text-center">
           <button
             onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
-            className="text-sm text-blue-600 hover:text-blue-700"
+            className="text-sm text-brand-blue hover:text-sky-600"
           >
             {mode === 'login'
               ? "Pas encore de compte ? S'inscrire"

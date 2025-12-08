@@ -6,13 +6,14 @@ type PublicProfilePageProps = {
   userId: string;
   onBack: () => void;
   onViewListing?: (listing: Listing) => void;
+  onUserClick?: (userId: string) => void;
 };
 
 type ReviewWithReviewer = Review & {
   reviewer?: { display_name: string; avatar_url?: string };
 };
 
-export function PublicProfilePage({ userId, onBack, onViewListing }: PublicProfilePageProps) {
+export function PublicProfilePage({ userId, onBack, onViewListing, onUserClick }: PublicProfilePageProps) {
   const [user, setUser] = useState<User | null>(null);
   const [listings, setListings] = useState<Listing[]>([]);
   const [reviews, setReviews] = useState<ReviewWithReviewer[]>([]);
@@ -65,7 +66,7 @@ export function PublicProfilePage({ userId, onBack, onViewListing }: PublicProfi
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        <Loader2 className="w-8 h-8 animate-spin text-brand-blue" />
       </div>
     );
   }
@@ -86,10 +87,10 @@ export function PublicProfilePage({ userId, onBack, onViewListing }: PublicProfi
     <div className="max-w-4xl mx-auto px-4 py-8">
       <button onClick={onBack} className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6">
         <ArrowLeft className="w-5 h-5" />
-        Retour aux annonces
+        Retour
       </button>
 
-      <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+      <div className="bg-white rounded-3xl shadow-soft-lg overflow-hidden border border-gray-100">
         {/* Banner */}
         {user.banner_url && (
           <div className="h-32 md:h-40">
@@ -107,12 +108,12 @@ export function PublicProfilePage({ userId, onBack, onViewListing }: PublicProfi
                 className="w-24 h-24 rounded-full border-4 border-gray-100 shadow-lg object-cover flex-shrink-0"
               />
             ) : (
-              <div className="w-24 h-24 bg-blue-600 text-white rounded-full border-4 border-gray-100 shadow-lg flex items-center justify-center text-3xl font-bold flex-shrink-0">
+              <div className="w-24 h-24 bg-brand-yellow text-white rounded-full border-4 border-gray-100 shadow-lg flex items-center justify-center text-3xl font-bold flex-shrink-0">
                 {user.display_name[0]?.toUpperCase() || 'U'}
               </div>
             )}
             <div className="text-center sm:text-left">
-              <h1 className="text-xl sm:text-2xl font-bold">{user.display_name}</h1>
+              <h1 className="text-xl sm:text-2xl font-heading font-semibold text-brand-text">{user.display_name}</h1>
               <p className="text-gray-500">@{user.username}</p>
               <div className="flex items-center justify-center sm:justify-start gap-1 mt-1 text-sm">
                 {reviews.length > 0 ? (
@@ -153,7 +154,7 @@ export function PublicProfilePage({ userId, onBack, onViewListing }: PublicProfi
               <h3 className="text-sm font-medium text-gray-500 mb-2">Langues</h3>
               <div className="flex flex-wrap gap-2">
                 {user.languages.map((lang) => (
-                  <span key={lang} className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">
+                  <span key={lang} className="px-3 py-1 bg-brand-blue/10 text-brand-blue rounded-full text-sm">
                     {lang}
                   </span>
                 ))}
@@ -176,16 +177,16 @@ export function PublicProfilePage({ userId, onBack, onViewListing }: PublicProfi
 
           {/* Stats */}
           <div className="grid grid-cols-3 gap-4 mb-6">
-            <div className="bg-gray-50 p-4 rounded-lg text-center">
-              <div className="text-2xl font-bold text-blue-600">{listings.length}</div>
+            <div className="bg-gray-50 p-4 rounded-2xl text-center">
+              <div className="text-2xl font-heading font-semibold text-brand-blue">{listings.length}</div>
               <div className="text-sm text-gray-600">Annonces</div>
             </div>
-            <div className="bg-gray-50 p-4 rounded-lg text-center">
-              <div className="text-2xl font-bold text-blue-600">{reviews.length || '-'}</div>
+            <div className="bg-gray-50 p-4 rounded-2xl text-center">
+              <div className="text-2xl font-heading font-semibold text-brand-blue">{reviews.length || '-'}</div>
               <div className="text-sm text-gray-600">Avis</div>
             </div>
-            <div className="bg-gray-50 p-4 rounded-lg text-center">
-              <div className="text-2xl font-bold text-blue-600 flex items-center justify-center gap-1">
+            <div className="bg-gray-50 p-4 rounded-2xl text-center">
+              <div className="text-2xl font-heading font-semibold text-brand-blue flex items-center justify-center gap-1">
                 {reviews.length > 0 ? (
                   <>
                     <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
@@ -208,7 +209,7 @@ export function PublicProfilePage({ userId, onBack, onViewListing }: PublicProfi
                   <button
                     key={listing.id}
                     onClick={() => onViewListing?.(listing)}
-                    className="bg-gray-50 rounded-lg p-4 text-left hover:bg-gray-100 transition-colors"
+                    className="bg-gray-50 rounded-2xl p-4 text-left hover:bg-gray-100 transition-colors"
                   >
                     <div className="flex items-start gap-3">
                       {listing.media && listing.media[0] ? (
@@ -218,8 +219,8 @@ export function PublicProfilePage({ userId, onBack, onViewListing }: PublicProfi
                           className="w-16 h-16 rounded-lg object-cover"
                         />
                       ) : (
-                        <div className={`w-16 h-16 rounded-lg flex items-center justify-center text-white text-xs font-medium ${
-                          listing.type === 'service' ? 'bg-purple-500' : 'bg-pink-500'
+                        <div className={`w-16 h-16 rounded-lg flex items-center justify-center text-xs font-medium text-white ${
+                          listing.type === 'service' ? 'bg-brand-blue' : 'bg-brand-yellow text-brand-text'
                         }`}>
                           {listing.type === 'service' ? 'Service' : 'Produit'}
                         </div>
@@ -244,21 +245,28 @@ export function PublicProfilePage({ userId, onBack, onViewListing }: PublicProfi
               <div className="space-y-4">
                 {reviews.map((review) => (
                   <div key={review.id} className="bg-gray-50 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
+                    <div 
+                      className={`flex items-start gap-3 ${onUserClick && review.reviewer?.id ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
+                      onClick={() => {
+                        if (onUserClick && review.reviewer?.id) {
+                          onUserClick(review.reviewer.id);
+                        }
+                      }}
+                    >
                       {review.reviewer?.avatar_url ? (
                         <img
                           src={review.reviewer.avatar_url}
                           alt=""
-                          className="w-10 h-10 rounded-full"
+                          className="w-10 h-10 rounded-full object-cover"
                         />
                       ) : (
-                        <div className="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-medium">
+                        <div className="w-10 h-10 bg-brand-yellow text-white rounded-full flex items-center justify-center text-sm font-medium">
                           {review.reviewer?.display_name?.[0]?.toUpperCase() || '?'}
                         </div>
                       )}
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
-                          <span className="font-medium">{review.reviewer?.display_name}</span>
+                          <span className={`font-medium ${onUserClick && review.reviewer?.id ? 'hover:text-brand-blue transition-colors' : ''}`}>{review.reviewer?.display_name}</span>
                           <div className="flex items-center gap-0.5">
                             {[1, 2, 3, 4, 5].map((star) => (
                               <Star
