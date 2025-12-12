@@ -47,23 +47,61 @@ Deno.serve(async (req: Request) => {
       text_body = text_body.replace(regex, value);
     }
 
+    // Charger le logo pour l'inclure en inline
+    let logoBase64: string | null = null;
+    try {
+      // Essayer depuis l'URL publique du site
+      const logoUrl = 'https://bontroc.fr/logo/mail.png';
+      const logoResponse = await fetch(logoUrl);
+      if (logoResponse.ok) {
+        const logoBuffer = await logoResponse.arrayBuffer();
+        const bytes = new Uint8Array(logoBuffer);
+        // Convertir en base64 (méthode compatible Deno)
+        const binary = Array.from(bytes, byte => String.fromCharCode(byte)).join('');
+        // @ts-ignore - btoa est disponible dans Deno
+        logoBase64 = btoa(binary);
+      }
+    } catch (e) {
+      console.log('Logo non disponible, utilisation de l\'URL externe');
+    }
+
     let emailStatus = 'sent';
     let errorMessage = null;
 
     if (resendApiKey) {
+      // Remplacer les URLs de logo par CID si le logo est disponible
+      if (logoBase64) {
+        html_body = html_body.replace(
+          /<img[^>]+src=["']https:\/\/bontroc\.fr\/logo\/mail\.png["'][^>]*>/gi,
+          '<img src="cid:logo" alt="BonTroc" style="height:40px; width:auto;" />'
+        );
+      }
+
+      const emailPayload: any = {
+        from: 'BonTroc <noreply@bontroc.fr>',
+        to: recipient,
+        subject,
+        html: html_body,
+        text: text_body,
+      };
+
+      // Ajouter le logo en attachment inline si disponible
+      if (logoBase64) {
+        emailPayload.attachments = [{
+          filename: 'logo.png',
+          content: logoBase64,
+          content_id: 'logo',
+          content_type: 'image/png',
+        }];
+      }
+
       const res = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${resendApiKey}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          from: 'BonTroc <noreply@bontroc.fr>',
-          to: recipient,
-          subject,
-          html: html_body,
-          text: text_body,
-        }),
+        body: JSON.stringify(emailPayload),
       });
 
       if (!res.ok) {
