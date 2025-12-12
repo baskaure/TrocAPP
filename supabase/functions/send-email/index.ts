@@ -58,7 +58,7 @@ Deno.serve(async (req: Request) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          from: 'TrocHub <onboarding@resend.dev>',
+          from: 'BonTroc <noreply@bontroc.fr>',
           to: recipient,
           subject,
           html: html_body,

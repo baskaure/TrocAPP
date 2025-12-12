@@ -12,24 +12,24 @@ review_reminder,"Rappel - laissez un avis sur votre échange","<!DOCTYPE html>
         <td>
           <p style=""color:#475467; font-size:14px;"">Bonjour {{recipient_name}},</p>
           <p style=""color:#101828; font-size:16px; line-height:24px;"">
-            Merci d'avoir finalisé un échange sur TrocHub concernant <strong>{{listing_title}}</strong>.<br />
+            Merci d'avoir finalisé un échange sur BonTroc concernant <strong>{{listing_title}}</strong>.<br />
             Votre avis aide la communauté à identifier les membres fiables et à fluidifier les prochains échanges.
           </p>
           <p style=""color:#101828; font-size:16px; line-height:24px;"">
             Il vous suffit de quelques secondes pour partager votre expérience.
           </p>
           <p style=""margin:32px 0;"">
-            <a href=""https://trophub.netlify.app/exchanges"" style=""display:inline-block; padding:14px 28px; background-color:#2563eb; color:#ffffff; font-weight:600; border-radius:999px; text-decoration:none;"">
+            <a href=""https://bontroc.fr/exchanges"" style=""display:inline-block; padding:14px 28px; background-color:#2563eb; color:#ffffff; font-weight:600; border-radius:999px; text-decoration:none;"">
               Laisser un avis maintenant
             </a>
           </p>
           <p style=""color:#475467; font-size:14px;"">
             Merci pour votre contribution à une communauté de troc fiable et bienveillante.<br />
-            — L'équipe TrocHub
+            — L'équipe BonTroc
           </p>
         </td>
       </tr>
     </table>
   </body>
-</html>","Bonjour {{recipient_name}},\n\nMerci d'avoir finalisé un échange sur TrocHub pour {{listing_title}}. Pouvez-vous prendre 30 secondes pour laisser un avis ?\n\nVotre retour aide la communauté à identifier les membres fiables pour leurs prochains échanges.\n\n👉 https://trophub.netlify.app/exchanges\n\nMerci !\n— L'équipe TrocHub","[""recipient_name"",""listing_title""]",review_reminder,true,,
+</html>","Bonjour {{recipient_name}},\n\nMerci d'avoir finalisé un échange sur BonTroc pour {{listing_title}}. Pouvez-vous prendre 30 secondes pour laisser un avis ?\n\nVotre retour aide la communauté à identifier les membres fiables pour leurs prochains échanges.\n\n👉 https://bontroc.fr/exchanges\n\nMerci !\n— L'équipe BonTroc","[""recipient_name"",""listing_title""]",review_reminder,true,,
 
