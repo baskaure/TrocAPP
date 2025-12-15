@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { X, MapPin, Calendar, MessageCircle, Star, CheckCircle, Pencil, Trash2, Flag } from 'lucide-react';
+import { X, MapPin, Calendar, MessageCircle, Star, CheckCircle, Pencil, Trash2, Flag, Upload, Image as ImageIcon } from 'lucide-react';
 import { ReportModal } from '../reports/ReportModal';
 import { Listing, supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth-context';
@@ -23,6 +23,8 @@ export function ListingDetailModal({ listing, onClose, onProposalSuccess, onRequ
   const [editMode, setEditMode] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState('');
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [newImageUrl, setNewImageUrl] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
@@ -126,12 +128,39 @@ export function ListingDetailModal({ listing, onClose, onProposalSuccess, onRequ
       return next;
     });
     setEditError('');
+    setNewImageUrl(null);
   };
 
   const handleCancelEdit = () => {
     hydrateEditForm();
     setEditMode(false);
     setEditError('');
+    setNewImageUrl(null);
+  };
+
+  const handleUploadImage = async (file?: File | null) => {
+    if (!file || !user) return;
+    setUploadingImage(true);
+    setEditError('');
+    try {
+      const ext = file.name.split('.').pop() || 'jpg';
+      const fileName = `${listing?.id || user.id}-${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from('listing-media')
+        .upload(`images/${fileName}`, file, {
+          upsert: true,
+          contentType: file.type,
+          cacheControl: '3600',
+        });
+      if (uploadError) throw uploadError;
+      const { data } = supabase.storage.from('listing-media').getPublicUrl(`images/${fileName}`);
+      if (!data?.publicUrl) throw new Error("Impossible de récupérer l'URL publique");
+      setNewImageUrl(data.publicUrl);
+    } catch (err: any) {
+      setEditError(err?.message || "Échec du téléversement de l'image");
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const handleUpdateListing = async (e: React.FormEvent) => {
@@ -158,7 +187,30 @@ export function ListingDetailModal({ listing, onClose, onProposalSuccess, onRequ
 
       if (updateError) throw updateError;
 
+      if (newImageUrl) {
+        const currentMedia = listing.media && listing.media.length > 0 ? listing.media[0] : null;
+        if (currentMedia?.id) {
+          const { error: mediaUpdateError } = await supabase
+            .from('listing_media')
+            .update({ url: newImageUrl })
+            .eq('id', currentMedia.id)
+            .eq('listing_id', listing.id);
+          if (mediaUpdateError) throw mediaUpdateError;
+        } else {
+          const { error: mediaInsertError } = await supabase
+            .from('listing_media')
+            .insert({
+              listing_id: listing.id,
+              url: newImageUrl,
+              type: 'image',
+              sort_order: 0,
+            });
+          if (mediaInsertError) throw mediaInsertError;
+        }
+      }
+
       setEditMode(false);
+      setNewImageUrl(null);
       await onProposalSuccess();
     } catch (err: any) {
       setEditError(err?.message || 'Impossible de mettre à jour l’annonce');
@@ -355,7 +407,7 @@ export function ListingDetailModal({ listing, onClose, onProposalSuccess, onRequ
                     </div>
                   </div>
 
-                  <div>
+          <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Titre</label>
                     <input
                       type="text"
@@ -386,6 +438,48 @@ export function ListingDetailModal({ listing, onClose, onProposalSuccess, onRequ
                         required
                         className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue bg-gray-50 focus:bg-white"
                       />
+                    </div>
+                  </div>
+
+                  <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
+                    <p className="text-sm font-medium text-gray-700">Photo de l’annonce</p>
+                    <div className="flex gap-4 items-start">
+                      <div className="w-28 h-20 rounded-lg overflow-hidden bg-gray-100 border border-gray-200 flex items-center justify-center">
+                        {newImageUrl || imageUrl ? (
+                          <img
+                            src={newImageUrl || imageUrl}
+                            alt="Illustration annonce"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <ImageIcon className="w-7 h-7 text-gray-400" />
+                        )}
+                      </div>
+                      <div className="flex-1 space-y-2">
+                        <p className="text-xs text-gray-500">
+                          Tu peux remplacer la photo actuelle par une nouvelle image.
+                        </p>
+                        <label className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors text-sm font-medium">
+                          <Upload className="w-4 h-4" />
+                          {uploadingImage ? 'Téléversement...' : 'Uploader une image'}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => handleUploadImage(e.target.files?.[0] || null)}
+                            disabled={uploadingImage}
+                          />
+                        </label>
+                        {newImageUrl && (
+                          <button
+                            type="button"
+                            className="text-xs text-red-600 hover:underline"
+                            onClick={() => setNewImageUrl(null)}
+                          >
+                            Réinitialiser (garder l’ancienne photo)
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
 

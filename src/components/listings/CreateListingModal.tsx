@@ -1,21 +1,45 @@
-import { useState } from 'react';
-import { X } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { useEffect, useMemo, useState } from 'react';
+import { Image as ImageIcon, Upload, X } from 'lucide-react';
+import { supabase, type Category } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth-context';
 
 type CreateListingModalProps = {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  categories?: Category[];
 };
 
-export function CreateListingModal({ isOpen, onClose, onSuccess }: CreateListingModalProps) {
+const DEFAULT_IMAGES: Record<string, string> = {
+  informatique: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80',
+  maison: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80',
+  services: 'https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?auto=format&fit=crop&w=1200&q=80',
+  sport: 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?auto=format&fit=crop&w=1200&q=80',
+  arts: 'https://images.unsplash.com/photo-1489515217757-5fd1be406fef?auto=format&fit=crop&w=1200&q=80',
+  education: 'https://images.unsplash.com/photo-1516383607781-913a19294fd1?auto=format&fit=crop&w=1200&q=80',
+  mode: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=1200&q=80',
+  mobilier: 'https://images.unsplash.com/photo-1484154218962-a197022b5858?auto=format&fit=crop&w=1200&q=80',
+  __service__: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=1200&q=80',
+  __product__: 'https://images.unsplash.com/photo-1489515217757-5fd1be406fef?auto=format&fit=crop&w=1200&q=80',
+  __default__: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=1200&q=80',
+};
+
+function getDefaultImage(categorySlug: string | undefined, type: 'service' | 'product') {
+  if (categorySlug && DEFAULT_IMAGES[categorySlug]) return DEFAULT_IMAGES[categorySlug];
+  if (type === 'service' && DEFAULT_IMAGES.__service__) return DEFAULT_IMAGES.__service__;
+  if (type === 'product' && DEFAULT_IMAGES.__product__) return DEFAULT_IMAGES.__product__;
+  return DEFAULT_IMAGES.__default__;
+}
+
+export function CreateListingModal({ isOpen, onClose, onSuccess, categories = [] }: CreateListingModalProps) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [uploading, setUploading] = useState(false);
 
   const [formData, setFormData] = useState({
     type: 'service' as 'service' | 'product',
+    category_id: '',
     title: '',
     description_offer: '',
     desired_exchange_desc: '',
@@ -24,6 +48,67 @@ export function CreateListingModal({ isOpen, onClose, onSuccess }: CreateListing
     estimation_max: '',
   });
 
+  const [customImageUrl, setCustomImageUrl] = useState<string | null>(null);
+
+  const selectedCategory = useMemo(
+    () => categories.find((c) => c.id === formData.category_id),
+    [categories, formData.category_id]
+  );
+
+  const defaultImageUrl = useMemo(
+    () => getDefaultImage(selectedCategory?.slug, formData.type),
+    [selectedCategory?.slug, formData.type]
+  );
+
+  useEffect(() => {
+    if (!isOpen) {
+      setCustomImageUrl(null);
+      setFormData({
+        type: 'service',
+        category_id: '',
+        title: '',
+        description_offer: '',
+        desired_exchange_desc: '',
+        mode: 'both',
+        estimation_min: '',
+        estimation_max: '',
+      });
+      setError('');
+      setUploading(false);
+    }
+  }, [isOpen]);
+
+  const handleUpload = async (file?: File | null) => {
+    if (!file || !user) return;
+
+    setUploading(true);
+    setError('');
+
+    try {
+      const ext = file.name.split('.').pop() || 'jpg';
+      const fileName = `${user.id}-${Date.now()}.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('listing-media')
+        .upload(`images/${fileName}`, file, {
+          upsert: true,
+          contentType: file.type,
+          cacheControl: '3600',
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage.from('listing-media').getPublicUrl(`images/${fileName}`);
+      if (!data?.publicUrl) throw new Error("Impossible de récupérer l'URL publique");
+
+      setCustomImageUrl(data.publicUrl);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Échec du téléversement de l'image");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,24 +118,43 @@ export function CreateListingModal({ isOpen, onClose, onSuccess }: CreateListing
     setLoading(true);
 
     try {
-      const { error: insertError } = await supabase.from('listings').insert({
-        user_id: user.id,
-        type: formData.type,
-        title: formData.title,
-        description_offer: formData.description_offer,
-        desired_exchange_desc: formData.desired_exchange_desc,
-        mode: formData.mode,
-        estimation_min: formData.estimation_min ? parseFloat(formData.estimation_min) : null,
-        estimation_max: formData.estimation_max ? parseFloat(formData.estimation_max) : null,
-        status: 'published',
-        location_lat: user.geo_lat,
-        location_lng: user.geo_lng,
-      });
+      const { data: listingRows, error: insertError } = await supabase
+        .from('listings')
+        .insert({
+          user_id: user.id,
+          type: formData.type,
+          category_id: formData.category_id || null,
+          title: formData.title,
+          description_offer: formData.description_offer,
+          desired_exchange_desc: formData.desired_exchange_desc,
+          mode: formData.mode,
+          estimation_min: formData.estimation_min ? parseFloat(formData.estimation_min) : null,
+          estimation_max: formData.estimation_max ? parseFloat(formData.estimation_max) : null,
+          status: 'published',
+          location_lat: user.geo_lat,
+          location_lng: user.geo_lng,
+        })
+        .select('id')
+        .single();
 
       if (insertError) throw insertError;
 
+      const listingId = listingRows?.id;
+      const finalImageUrl = customImageUrl || defaultImageUrl;
+
+      if (listingId && finalImageUrl) {
+        const { error: mediaError } = await supabase.from('listing_media').insert({
+          listing_id: listingId,
+          url: finalImageUrl,
+          type: 'image',
+          sort_order: 0,
+        });
+        if (mediaError) throw mediaError;
+      }
+
       setFormData({
         type: 'service',
+        category_id: '',
         title: '',
         description_offer: '',
         desired_exchange_desc: '',
@@ -58,6 +162,7 @@ export function CreateListingModal({ isOpen, onClose, onSuccess }: CreateListing
         estimation_min: '',
         estimation_max: '',
       });
+      setCustomImageUrl(null);
 
       onSuccess();
       onClose();
@@ -88,6 +193,69 @@ export function CreateListingModal({ isOpen, onClose, onSuccess }: CreateListing
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Catégorie
+            </label>
+            <select
+              value={formData.category_id}
+              onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue focus:bg-white bg-gray-50"
+            >
+              <option value="">Choisir une catégorie</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500 mt-1">
+              Utilisé pour pré-sélectionner une photo adaptée (modifiable ensuite)
+            </p>
+          </div>
+
+          <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 flex gap-4 items-start">
+            <div className="w-28 h-20 rounded-xl overflow-hidden bg-white border border-gray-200 flex items-center justify-center">
+              {customImageUrl || defaultImageUrl ? (
+                <img
+                  src={customImageUrl || defaultImageUrl}
+                  alt="Aperçu"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <ImageIcon className="w-8 h-8 text-gray-400" />
+              )}
+            </div>
+            <div className="flex-1 space-y-2">
+              <p className="text-sm text-gray-700 font-medium">
+                Photo pré-sélectionnée selon le thème
+              </p>
+              <p className="text-xs text-gray-500">
+                Une photo est choisie automatiquement (catégorie ou type). Tu peux la remplacer en uploadant la tienne.
+              </p>
+              <label className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors text-sm font-medium">
+                <Upload className="w-4 h-4" />
+                {uploading ? 'Téléversement...' : 'Uploader une image'}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => handleUpload(e.target.files?.[0] || null)}
+                  disabled={uploading}
+                />
+              </label>
+              {customImageUrl && (
+                <button
+                  type="button"
+                  className="text-xs text-red-600 hover:underline"
+                  onClick={() => setCustomImageUrl(null)}
+                >
+                  Réinitialiser vers la photo par défaut
+                </button>
+              )}
+            </div>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Type d'annonce
@@ -187,7 +355,7 @@ export function CreateListingModal({ isOpen, onClose, onSuccess }: CreateListing
                   type="number"
                   value={formData.estimation_min}
                   onChange={(e) => setFormData({ ...formData, estimation_min: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue focus:bg-white bg-gray-50"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue focus:bg-white bg-gray-50"
                   placeholder="Min (€)"
                   min="0"
                   step="0.01"
@@ -216,7 +384,7 @@ export function CreateListingModal({ isOpen, onClose, onSuccess }: CreateListing
             </div>
           )}
 
-            <div className="flex space-x-3 pt-4">
+          <div className="flex space-x-3 pt-4">
             <button
               type="button"
               onClick={onClose}

@@ -384,6 +384,7 @@ function AppContent() {
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         onSuccess={loadListings}
+        categories={categories}
       />
 
       <ListingDetailModal

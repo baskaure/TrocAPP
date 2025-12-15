@@ -56,6 +56,7 @@ export type Listing = {
   title: string;
   description_offer: string;
   desired_exchange_desc: string;
+  category_id?: string | null;
   desired_categories?: string[];
   desired_tags?: string[];
   mode: 'remote' | 'on_site' | 'both';
