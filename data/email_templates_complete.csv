@@ -1,0 +1,243 @@
+name,subject,html_body,text_body,variables,event_type,is_active,created_at,updated_at
+review_reminder,"Rappel - Laissez un avis sur votre échange","<!DOCTYPE html>
+<html lang=""fr"">
+  <head>
+    <meta charset=""UTF-8"" />
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"" />
+    <title>Rappel avis</title>
+  </head>
+  <body style=""font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color:#f5f7fb; margin:0; padding:24px;"">
+    <table role=""presentation"" style=""width:100%; max-width:560px; margin:0 auto; background:#ffffff; border-radius:16px; padding:32px;"">
+      <tr>
+        <td>
+          <p style=""color:#475467; font-size:14px;"">Bonjour {{recipient_name}},</p>
+          <p style=""color:#101828; font-size:16px; line-height:24px;"">
+            Merci d'avoir finalisé un échange sur BonTroc concernant <strong>{{listing_title}}</strong>.<br />
+            Votre avis aide la communauté à identifier les membres fiables et à fluidifier les prochains échanges.
+          </p>
+          <p style=""color:#101828; font-size:16px; line-height:24px;"">
+            Il vous suffit de quelques secondes pour partager votre expérience.
+          </p>
+          <p style=""margin:32px 0;"">
+            <a href=""https://bontroc.fr/exchanges"" style=""display:inline-block; padding:14px 28px; background-color:#2563eb; color:#ffffff; font-weight:600; border-radius:999px; text-decoration:none;"">Laisser un avis maintenant</a>
+          </p>
+          <p style=""color:#475467; font-size:14px;"">
+            Merci pour votre contribution à une communauté de troc fiable et bienveillante.<br />
+            — L'équipe BonTroc
+          </p>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>","Bonjour {{recipient_name}},\n\nMerci d'avoir finalisé un échange sur BonTroc pour {{listing_title}}. Pouvez-vous prendre 30 secondes pour laisser un avis ?\n\nVotre retour aide la communauté à identifier les membres fiables pour leurs prochains échanges.\n\n👉 https://bontroc.fr/exchanges\n\nMerci !\n— L'équipe BonTroc","[""recipient_name"",""listing_title""]",review_reminder,true,,
+new_proposal,"Nouvelle proposition reçue pour votre annonce","<!DOCTYPE html>
+<html lang=""fr"">
+  <head>
+    <meta charset=""UTF-8"" />
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"" />
+    <title>Nouvelle proposition</title>
+  </head>
+  <body style=""font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color:#f5f7fb; margin:0; padding:24px;"">
+    <table role=""presentation"" style=""width:100%; max-width:560px; margin:0 auto; background:#ffffff; border-radius:16px; padding:32px;"">
+      <tr>
+        <td>
+          <p style=""color:#475467; font-size:14px;"">Bonjour,</p>
+          <p style=""color:#101828; font-size:16px; line-height:24px;"">
+            <strong>{{proposer_name}}</strong> vous a envoyé une proposition pour votre annonce <strong>{{listing_title}}</strong>.
+          </p>
+          <p style=""color:#101828; font-size:16px; line-height:24px;"">
+            Connectez-vous pour voir les détails et répondre à cette proposition.
+          </p>
+          <p style=""margin:32px 0;"">
+            <a href=""https://bontroc.fr/proposals"" style=""display:inline-block; padding:14px 28px; background-color:#2563eb; color:#ffffff; font-weight:600; border-radius:999px; text-decoration:none;"">Voir la proposition</a>
+          </p>
+          <p style=""color:#475467; font-size:14px;"">
+            À bientôt sur BonTroc !<br />
+            — L'équipe BonTroc
+          </p>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>","Bonjour,\n\n{{proposer_name}} vous a envoyé une proposition pour votre annonce {{listing_title}}.\n\nConnectez-vous pour voir les détails et répondre.\n\n👉 https://bontroc.fr/proposals\n\nÀ bientôt !\n— L'équipe BonTroc","[""listing_title"",""proposer_name"",""proposal_id""]",new_proposal,true,,
+exchange_reminder,"Rappel - Finalisez votre échange en cours","<!DOCTYPE html>
+<html lang=""fr"">
+  <head>
+    <meta charset=""UTF-8"" />
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"" />
+    <title>Rappel échange</title>
+  </head>
+  <body style=""font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color:#f5f7fb; margin:0; padding:24px;"">
+    <table role=""presentation"" style=""width:100%; max-width:560px; margin:0 auto; background:#ffffff; border-radius:16px; padding:32px;"">
+      <tr>
+        <td>
+          <p style=""color:#475467; font-size:14px;"">Bonjour {{recipient_name}},</p>
+          <p style=""color:#101828; font-size:16px; line-height:24px;"">
+            Vous avez un échange en cours concernant <strong>{{listing_title}}</strong> avec <strong>{{counterpart_name}}</strong> qui nécessite votre attention.
+          </p>
+          <p style=""color:#101828; font-size:16px; line-height:24px;"">
+            N'oubliez pas de finaliser les étapes restantes pour compléter votre échange.
+          </p>
+          <p style=""margin:32px 0;"">
+            <a href=""https://bontroc.fr/exchanges"" style=""display:inline-block; padding:14px 28px; background-color:#2563eb; color:#ffffff; font-weight:600; border-radius:999px; text-decoration:none;"">Voir mon échange</a>
+          </p>
+          <p style=""color:#475467; font-size:14px;"">
+            Bon échange !<br />
+            — L'équipe BonTroc
+          </p>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>","Bonjour {{recipient_name}},\n\nVous avez un échange en cours concernant {{listing_title}} avec {{counterpart_name}} qui nécessite votre attention.\n\nN'oubliez pas de finaliser les étapes restantes pour compléter votre échange.\n\n👉 https://bontroc.fr/exchanges\n\nBon échange !\n— L'équipe BonTroc","[""recipient_name"",""listing_title"",""counterpart_name"",""exchange_id""]",exchange_reminder,true,,
+counter_proposal,"Nouvelle contre-proposition reçue","<!DOCTYPE html>
+<html lang=""fr"">
+  <head>
+    <meta charset=""UTF-8"" />
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"" />
+    <title>Contre-proposition</title>
+  </head>
+  <body style=""font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color:#f5f7fb; margin:0; padding:24px;"">
+    <table role=""presentation"" style=""width:100%; max-width:560px; margin:0 auto; background:#ffffff; border-radius:16px; padding:32px;"">
+      <tr>
+        <td>
+          <p style=""color:#475467; font-size:14px;"">Bonjour,</p>
+          <p style=""color:#101828; font-size:16px; line-height:24px;"">
+            <strong>{{counter_proposer_name}}</strong> vous a fait une contre-proposition pour votre annonce <strong>{{listing_title}}</strong>.
+          </p>
+          <p style=""color:#101828; font-size:16px; line-height:24px;"">
+            Connectez-vous pour voir les détails de cette nouvelle proposition et y répondre.
+          </p>
+          <p style=""margin:32px 0;"">
+            <a href=""https://bontroc.fr/proposals"" style=""display:inline-block; padding:14px 28px; background-color:#2563eb; color:#ffffff; font-weight:600; border-radius:999px; text-decoration:none;"">Voir la contre-proposition</a>
+          </p>
+          <p style=""color:#475467; font-size:14px;"">
+            À bientôt sur BonTroc !<br />
+            — L'équipe BonTroc
+          </p>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>","Bonjour,\n\n{{counter_proposer_name}} vous a fait une contre-proposition pour votre annonce {{listing_title}}.\n\nConnectez-vous pour voir les détails de cette nouvelle proposition et y répondre.\n\n👉 https://bontroc.fr/proposals\n\nÀ bientôt !\n— L'équipe BonTroc","[""listing_title"",""counter_proposer_name"",""proposal_id""]",counter_proposal,true,,
+new_chat_message,"Nouveau message dans votre conversation","<!DOCTYPE html>
+<html lang=""fr"">
+  <head>
+    <meta charset=""UTF-8"" />
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"" />
+    <title>Nouveau message</title>
+  </head>
+  <body style=""font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color:#f5f7fb; margin:0; padding:24px;"">
+    <table role=""presentation"" style=""width:100%; max-width:560px; margin:0 auto; background:#ffffff; border-radius:16px; padding:32px;"">
+      <tr>
+        <td>
+          <p style=""color:#475467; font-size:14px;"">Bonjour {{recipient_name}},</p>
+          <p style=""color:#101828; font-size:16px; line-height:24px;"">
+            <strong>{{sender_name}}</strong> vous a envoyé un nouveau message concernant votre proposition.
+          </p>
+          <p style=""color:#101828; font-size:16px; line-height:24px;"">
+            Connectez-vous pour lire le message et répondre.
+          </p>
+          <p style=""margin:32px 0;"">
+            <a href=""https://bontroc.fr/proposals"" style=""display:inline-block; padding:14px 28px; background-color:#2563eb; color:#ffffff; font-weight:600; border-radius:999px; text-decoration:none;"">Voir le message</a>
+          </p>
+          <p style=""color:#475467; font-size:14px;"">
+            À bientôt sur BonTroc !<br />
+            — L'équipe BonTroc
+          </p>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>","Bonjour {{recipient_name}},\n\n{{sender_name}} vous a envoyé un nouveau message concernant votre proposition.\n\nConnectez-vous pour lire le message et répondre.\n\n👉 https://bontroc.fr/proposals\n\nÀ bientôt !\n— L'équipe BonTroc","[""proposal_id"",""sender_name"",""recipient_name""]",new_chat_message,true,,
+contract_ready,"Votre contrat est prêt à être signé","<!DOCTYPE html>
+<html lang=""fr"">
+  <head>
+    <meta charset=""UTF-8"" />
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"" />
+    <title>Contrat prêt</title>
+  </head>
+  <body style=""font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color:#f5f7fb; margin:0; padding:24px;"">
+    <table role=""presentation"" style=""width:100%; max-width:560px; margin:0 auto; background:#ffffff; border-radius:16px; padding:32px;"">
+      <tr>
+        <td>
+          <p style=""color:#475467; font-size:14px;"">Bonjour,</p>
+          <p style=""color:#101828; font-size:16px; line-height:24px;"">
+            Votre contrat pour l'échange <strong>{{listing_title}}</strong> avec <strong>{{counterpart_name}}</strong> est maintenant prêt.
+          </p>
+          <p style=""color:#101828; font-size:16px; line-height:24px;"">
+            Vous pouvez le consulter, le signer et suivre l'avancement de votre échange.
+          </p>
+          <p style=""margin:32px 0;"">
+            <a href=""https://bontroc.fr/exchanges"" style=""display:inline-block; padding:14px 28px; background-color:#2563eb; color:#ffffff; font-weight:600; border-radius:999px; text-decoration:none;"">Voir le contrat</a>
+          </p>
+          <p style=""color:#475467; font-size:14px;"">
+            Bon échange !<br />
+            — L'équipe BonTroc
+          </p>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>","Bonjour,\n\nVotre contrat pour l'échange {{listing_title}} avec {{counterpart_name}} est maintenant prêt.\n\nVous pouvez le consulter, le signer et suivre l'avancement de votre échange.\n\n👉 https://bontroc.fr/exchanges\n\nBon échange !\n— L'équipe BonTroc","[""listing_title"",""proposal_id"",""counterpart_name""]",contract_ready,true,,
+welcome,"Bienvenue sur BonTroc !","<!DOCTYPE html>
+<html lang=""fr"">
+  <head>
+    <meta charset=""UTF-8"" />
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"" />
+    <title>Bienvenue</title>
+  </head>
+  <body style=""font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color:#f5f7fb; margin:0; padding:24px;"">
+    <table role=""presentation"" style=""width:100%; max-width:560px; margin:0 auto; background:#ffffff; border-radius:16px; padding:32px;"">
+      <tr>
+        <td>
+          <p style=""color:#475467; font-size:14px;"">Bonjour {{display_name}},</p>
+          <p style=""color:#101828; font-size:16px; line-height:24px;"">
+            Bienvenue sur <strong>BonTroc</strong> ! Nous sommes ravis de vous compter parmi nous.
+          </p>
+          <p style=""color:#101828; font-size:16px; line-height:24px;"">
+            BonTroc est la plateforme où vous pouvez échanger vos services et produits sans argent. Créez votre première annonce ou explorez celles déjà disponibles.
+          </p>
+          <p style=""margin:32px 0;"">
+            <a href=""https://bontroc.fr/listings"" style=""display:inline-block; padding:14px 28px; background-color:#2563eb; color:#ffffff; font-weight:600; border-radius:999px; text-decoration:none;"">Commencer à explorer</a>
+          </p>
+          <p style=""color:#475467; font-size:14px;"">
+            Si vous avez des questions, n'hésitez pas à nous contacter.<br />
+            — L'équipe BonTroc
+          </p>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>","Bonjour {{display_name}},\n\nBienvenue sur BonTroc ! Nous sommes ravis de vous compter parmi nous.\n\nBonTroc est la plateforme où vous pouvez échanger vos services et produits sans argent. Créez votre première annonce ou explorez celles déjà disponibles.\n\n👉 https://bontroc.fr/listings\n\nSi vous avez des questions, n'hésitez pas à nous contacter.\n— L'équipe BonTroc","[""display_name"",""username""]",welcome,true,,
+new_review,"Vous avez reçu un nouvel avis","<!DOCTYPE html>
+<html lang=""fr"">
+  <head>
+    <meta charset=""UTF-8"" />
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"" />
+    <title>Nouvel avis</title>
+  </head>
+  <body style=""font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color:#f5f7fb; margin:0; padding:24px;"">
+    <table role=""presentation"" style=""width:100%; max-width:560px; margin:0 auto; background:#ffffff; border-radius:16px; padding:32px;"">
+      <tr>
+        <td>
+          <p style=""color:#475467; font-size:14px;"">Bonjour,</p>
+          <p style=""color:#101828; font-size:16px; line-height:24px;"">
+            <strong>{{reviewer_name}}</strong> vous a laissé un avis avec une note de <strong>{{rating}}/5</strong> suite à votre échange.
+          </p>
+          <p style=""color:#101828; font-size:16px; line-height:24px;"">
+            Les avis aident à renforcer la confiance au sein de la communauté BonTroc. Consultez votre profil pour voir tous vos avis.
+          </p>
+          <p style=""margin:32px 0;"">
+            <a href=""https://bontroc.fr/profile"" style=""display:inline-block; padding:14px 28px; background-color:#2563eb; color:#ffffff; font-weight:600; border-radius:999px; text-decoration:none;"">Voir mon profil</a>
+          </p>
+          <p style=""color:#475467; font-size:14px;"">
+            Merci pour votre participation à la communauté !<br />
+            — L'équipe BonTroc
+          </p>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>","Bonjour,\n\n{{reviewer_name}} vous a laissé un avis avec une note de {{rating}}/5 suite à votre échange.\n\nLes avis aident à renforcer la confiance au sein de la communauté BonTroc. Consultez votre profil pour voir tous vos avis.\n\n👉 https://bontroc.fr/profile\n\nMerci pour votre participation !\n— L'équipe BonTroc","[""reviewer_name"",""rating"",""exchange_id""]",new_review,true,,
+
