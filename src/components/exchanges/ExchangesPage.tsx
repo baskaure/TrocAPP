@@ -1,16 +1,19 @@
-import { useState, useEffect } from 'react';
-import { Package, Clock, CheckCircle, XCircle, AlertCircle, Calendar, FileText } from 'lucide-react';
+import { useState, useEffect, useMemo, type MouseEvent } from 'react';
 import { useAuth } from '../../lib/auth-context';
 import { supabase, Exchange, Contract, Dispute } from '../../lib/supabase';
 import { ExchangeTracker } from './ExchangeTracker';
 import { ReviewModal } from './ReviewModal';
 import { ContractModal } from '../contracts/ContractModal';
 
+type PartyUser = { id: string; display_name: string; avatar_url?: string; email?: string };
+
 type ExchangeWithDetails = Exchange & {
   contract?: Contract & {
     proposal?: {
-      from_user?: { display_name: string; avatar_url?: string; email?: string };
-      to_user?: { display_name: string; avatar_url?: string; email?: string };
+      from_user_id: string;
+      to_user_id: string;
+      from_user?: PartyUser;
+      to_user?: PartyUser;
       listing?: { title: string; type?: string };
     };
   };
@@ -19,21 +22,48 @@ type ExchangeWithDetails = Exchange & {
 
 type ExchangesPageProps = {
   onUserClick?: (userId: string) => void;
+  onStartNewExchange?: () => void;
 };
 
-export function ExchangesPage({ onUserClick }: ExchangesPageProps) {
+function statusBadgeClass(status: Exchange['status']) {
+  switch (status) {
+    case 'not_started':
+      return 'bg-surface-container-highest text-on-surface-variant';
+    case 'in_progress':
+      return 'bg-secondary-container text-on-secondary-container';
+    case 'delivered':
+      return 'bg-amber-100 text-amber-900 dark:bg-amber-900/35 dark:text-amber-100';
+    case 'confirmed':
+      return 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300';
+    case 'cancelled':
+      return 'bg-error-container text-on-error-container';
+    default:
+      return 'bg-surface-container-highest text-on-surface-variant';
+  }
+}
+
+function statusLabel(status: Exchange['status']) {
+  const m: Record<Exchange['status'], string> = {
+    not_started: 'Non démarré',
+    in_progress: 'En cours',
+    delivered: 'À confirmer',
+    confirmed: 'Terminé',
+    cancelled: 'Annulé',
+  };
+  return m[status] ?? status;
+}
+
+export function ExchangesPage({ onUserClick, onStartNewExchange }: ExchangesPageProps) {
   const { user } = useAuth();
   const [exchanges, setExchanges] = useState<ExchangeWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedExchange, setSelectedExchange] = useState<ExchangeWithDetails | null>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
-  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | Exchange['status']>('all');
 
   useEffect(() => {
-    if (user) {
-      loadExchanges();
-    }
+    if (user) loadExchanges();
   }, [user]);
 
   async function loadExchanges() {
@@ -50,8 +80,8 @@ export function ExchangesPage({ onUserClick }: ExchangesPageProps) {
             *,
             proposal:proposals(
               *,
-              from_user:users!proposals_from_user_id_fkey(display_name, avatar_url, email),
-              to_user:users!proposals_to_user_id_fkey(display_name, avatar_url, email),
+              from_user:users!proposals_from_user_id_fkey(id, display_name, avatar_url, email),
+              to_user:users!proposals_to_user_id_fkey(id, display_name, avatar_url, email),
               listing:listings(title, type)
             )
           )
@@ -60,13 +90,14 @@ export function ExchangesPage({ onUserClick }: ExchangesPageProps) {
 
       if (error) throw error;
 
-      const filtered = data?.filter((ex: any) => {
-        const proposal = ex.contract?.proposal;
-        if (!proposal) return false;
-        return proposal.from_user_id === user.id || proposal.to_user_id === user.id;
-      }) || [];
+      const filtered =
+        data?.filter((ex: ExchangeWithDetails) => {
+          const proposal = ex.contract?.proposal;
+          if (!proposal) return false;
+          return proposal.from_user_id === user.id || proposal.to_user_id === user.id;
+        }) || [];
 
-      const normalized = filtered.map((ex: any) => ({
+      const normalized = filtered.map((ex: ExchangeWithDetails & { dispute?: Dispute | Dispute[] }) => ({
         ...ex,
         dispute: Array.isArray(ex.dispute) ? ex.dispute[0] : ex.dispute,
       }));
@@ -79,273 +110,257 @@ export function ExchangesPage({ onUserClick }: ExchangesPageProps) {
     }
   }
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'not_started':
-        return <Clock className="w-5 h-5 text-gray-500" />;
-      case 'in_progress':
-        return <Package className="w-5 h-5 text-brand-blue" />;
-      case 'delivered':
-        return <AlertCircle className="w-5 h-5 text-brand-yellow" />;
-      case 'confirmed':
-        return <CheckCircle className="w-5 h-5 text-green-600" />;
-      case 'cancelled':
-        return <XCircle className="w-5 h-5 text-red-600" />;
-      default:
-        return null;
-    }
-  };
-
-  const getStatusText = (status: string) => {
-    const texts = {
-      not_started: 'Non démarré',
-      in_progress: 'En cours',
-      delivered: 'Livré (en attente de confirmation)',
-      confirmed: 'Confirmé',
-      cancelled: 'Annulé',
-    };
-    return texts[status as keyof typeof texts] || status;
-  };
-
-  const getStatusColor = (status: string) => {
-    const colors = {
-      not_started: 'bg-gray-100 text-gray-700',
-      in_progress: 'bg-brand-blue/10 text-brand-blue',
-      delivered: 'bg-brand-yellow/20 text-brand-yellow',
-      confirmed: 'bg-green-100 text-green-700',
-      cancelled: 'bg-red-100 text-red-700',
-    };
-    return colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-700';
-  };
-
-  const getOtherParty = (exchange: ExchangeWithDetails) => {
+  const getOtherParty = (exchange: ExchangeWithDetails): PartyUser | null => {
     const proposal = exchange.contract?.proposal;
-    if (!proposal) return null;
-
-    const fromUserId = (proposal as any).from_user_id;
-    if (fromUserId === user?.id) {
-      return proposal.to_user;
+    if (!proposal || !user) return null;
+    if (proposal.from_user_id === user.id) {
+      return proposal.to_user ?? null;
     }
-    return proposal.from_user;
+    return proposal.from_user ?? null;
   };
 
-  const filteredExchanges = filterStatus === 'all'
-    ? exchanges
-    : exchanges.filter(ex => ex.status === filterStatus);
+  const filteredExchanges = useMemo(() => {
+    if (filterStatus === 'all') return exchanges;
+    return exchanges.filter((ex) => ex.status === filterStatus);
+  }, [exchanges, filterStatus]);
 
-  const canLeaveReview = (exchange: ExchangeWithDetails) => {
-    return exchange.status === 'confirmed';
-  };
+  const counts = useMemo(() => {
+    return {
+      all: exchanges.length,
+      in_progress: exchanges.filter((e) => e.status === 'in_progress').length,
+      delivered: exchanges.filter((e) => e.status === 'delivered').length,
+      confirmed: exchanges.filter((e) => e.status === 'confirmed').length,
+    };
+  }, [exchanges]);
+
+  const canLeaveReview = (exchange: ExchangeWithDetails) => exchange.status === 'confirmed';
+
+  const filterTabs: { key: 'all' | Exchange['status']; label: string; count?: number }[] = [
+    { key: 'all', label: 'Tous', count: counts.all },
+    { key: 'in_progress', label: 'En cours', count: counts.in_progress },
+    { key: 'delivered', label: 'À confirmer', count: counts.delivered },
+    { key: 'confirmed', label: 'Terminés', count: counts.confirmed },
+  ];
 
   if (!user) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="text-center text-gray-500">
-          Connectez-vous pour voir vos échanges
-        </div>
+      <div className="w-full py-12 text-center text-on-surface-variant">
+        <p className="font-headline text-lg font-semibold text-on-surface">Connexion requise</p>
+        <p className="mt-2 text-sm">Connectez-vous pour voir vos échanges.</p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-2xl sm:text-3xl font-heading font-semibold text-brand-text mb-1">
+    <div className="relative w-full">
+      <section className="mb-12">
+        <h1 className="mb-2 font-headline text-4xl font-extrabold tracking-tight text-on-surface md:text-5xl">
           Mes échanges
         </h1>
-        <p className="text-gray-600 text-sm sm:text-base">
-          Suivez l'état de vos échanges en cours et passés
+        <p className="font-inter text-lg text-on-surface-variant opacity-90">
+          Suivez l&apos;état de vos échanges en cours et passés
         </p>
-      </div>
+      </section>
 
-      <div className="mb-6 flex items-center space-x-2 overflow-x-auto pb-2">
-        <button
-          onClick={() => setFilterStatus('all')}
-          className={`px-4 py-2 rounded-full whitespace-nowrap text-sm transition-colors ${
-            filterStatus === 'all'
-              ? 'bg-brand-blue text-white'
-              : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
-          }`}
-        >
-          Tous ({exchanges.length})
-        </button>
-        <button
-          onClick={() => setFilterStatus('in_progress')}
-          className={`px-4 py-2 rounded-full whitespace-nowrap text-sm transition-colors ${
-            filterStatus === 'in_progress'
-              ? 'bg-brand-blue text-white'
-              : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
-          }`}
-        >
-          En cours
-        </button>
-        <button
-          onClick={() => setFilterStatus('delivered')}
-          className={`px-4 py-2 rounded-full whitespace-nowrap text-sm transition-colors ${
-            filterStatus === 'delivered'
-              ? 'bg-brand-blue text-white'
-              : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
-          }`}
-        >
-          À confirmer
-        </button>
-        <button
-          onClick={() => setFilterStatus('confirmed')}
-          className={`px-4 py-2 rounded-full whitespace-nowrap text-sm transition-colors ${
-            filterStatus === 'confirmed'
-              ? 'bg-brand-blue text-white'
-              : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
-          }`}
-        >
-          Terminés
-        </button>
+      <div className="mb-10 flex flex-wrap items-center gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {filterTabs.map((tab) => {
+          const active = filterStatus === tab.key;
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setFilterStatus(tab.key)}
+              className={`whitespace-nowrap rounded-full px-6 py-3 font-headline text-sm font-bold transition-colors ${
+                active
+                  ? 'bg-primary text-on-primary shadow-lg shadow-primary/20'
+                  : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+              }`}
+            >
+              {tab.key === 'all'
+                ? `${tab.label} (${tab.count ?? 0})`
+                : `${tab.label}${tab.count !== undefined && tab.count > 0 ? ` (${tab.count})` : ''}`}
+            </button>
+          );
+        })}
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-blue"></div>
+        <div className="flex justify-center py-20">
+          <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-primary" />
         </div>
-      ) : filteredExchanges.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-3xl shadow-soft-lg border border-gray-100">
-          <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">
-            Aucun échange
-          </h3>
-          <p className="text-gray-600">
-            {filterStatus === 'all'
-              ? "Vous n'avez pas encore d'échange en cours"
-              : `Aucun échange ${getStatusText(filterStatus).toLowerCase()}`}
-          </p>
-        </div>
-        ) : (
-        <div className="space-y-4">
-          {filteredExchanges.map((exchange) => {
-            const otherParty = getOtherParty(exchange);
-            const proposal = exchange.contract?.proposal;
-            const listing = proposal?.listing;
-            const daysUntilDue = exchange.due_date
-              ? Math.ceil((new Date(exchange.due_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-              : null;
+      ) : (
+        <>
+          {filteredExchanges.length === 0 ? (
+            <div className="mb-10 rounded-xl border border-outline-variant/20 bg-surface-container-low/80 py-12 text-center dark:bg-slate-900/40">
+              <span className="material-symbols-outlined mx-auto mb-4 block text-5xl text-outline">inventory_2</span>
+              <h3 className="font-headline text-lg font-bold text-on-surface">Aucun échange</h3>
+              <p className="mt-2 text-sm text-on-surface-variant">
+                {filterStatus === 'all'
+                  ? "Vous n'avez pas encore d'échange."
+                  : `Aucun échange dans la catégorie « ${filterTabs.find((t) => t.key === filterStatus)?.label ?? ''} ».`}
+              </p>
+            </div>
+          ) : null}
 
-            return (
-              <div
-                key={exchange.id}
-                className="bg-white rounded-3xl shadow-soft-lg p-6 hover:shadow-md transition-shadow border border-gray-100"
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-start space-x-4 flex-1">
-                    <div
-                      onClick={(e) => {
-                        if (onUserClick && otherParty?.id) {
-                          e.stopPropagation();
-                          onUserClick(otherParty.id);
-                        }
-                      }}
-                      className={`flex-shrink-0 ${onUserClick && otherParty?.id ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
-                    >
-                      {otherParty?.avatar_url ? (
-                        <img
-                          src={otherParty.avatar_url}
-                          alt={otherParty.display_name}
-                          className="w-12 h-12 rounded-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-12 h-12 rounded-full bg-brand-yellow flex items-center justify-center text-white font-semibold shadow-soft-lg">
-                          {otherParty?.display_name?.[0]?.toUpperCase() || '?'}
-                        </div>
-                      )}
-                    </div>
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+            {filteredExchanges.map((exchange) => {
+              const otherParty = getOtherParty(exchange);
+              const proposal = exchange.contract?.proposal;
+              const listing = proposal?.listing;
+              const doneLike = exchange.status === 'confirmed' || exchange.status === 'cancelled';
 
-                    <div className="flex-1">
-                      <h3 
-                        onClick={(e) => {
-                          if (onUserClick && otherParty?.id) {
-                            e.stopPropagation();
-                            onUserClick(otherParty.id);
-                          }
-                        }}
-                        className={`text-lg font-heading font-semibold text-brand-text mb-1 ${onUserClick && otherParty?.id ? 'cursor-pointer hover:text-brand-blue transition-colors' : ''}`}
+              const openProfile = (e: MouseEvent) => {
+                if (onUserClick && otherParty?.id) {
+                  e.stopPropagation();
+                  onUserClick(otherParty.id);
+                }
+              };
+
+              return (
+                <div
+                  key={exchange.id}
+                  className={`glass-card flex flex-col gap-6 rounded-xl border border-white/40 p-8 shadow-xl shadow-slate-200/40 transition-all duration-300 dark:border-white/10 dark:shadow-none ${
+                    doneLike ? 'opacity-80 hover:opacity-100' : 'group hover:shadow-2xl'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 flex-1 items-start gap-4">
+                      <button
+                        type="button"
+                        onClick={openProfile}
+                        disabled={!onUserClick || !otherParty?.id}
+                        className={`h-12 w-12 flex-shrink-0 overflow-hidden rounded-full border-2 border-white dark:border-slate-700 ${
+                          onUserClick && otherParty?.id ? 'cursor-pointer hover:opacity-90' : 'cursor-default'
+                        }`}
                       >
-                        Échange avec {otherParty?.display_name || 'Utilisateur inconnu'}
-                      </h3>
-                      <p className="text-gray-600 mb-2 text-sm">
-                        {listing?.title || 'Annonce supprimée'}
-                      </p>
-                      <div className="flex items-center space-x-4 text-sm text-gray-500">
-                        <div className="flex items-center space-x-1">
-                          <Calendar className="w-4 h-4" />
-                          <span>Créé le {new Date(exchange.created_at).toLocaleDateString('fr-FR')}</span>
-                        </div>
-                        {exchange.due_date && (
-                          <div className="flex items-center space-x-1">
-                            <Clock className="w-4 h-4" />
-                            <span>
-                              Échéance: {new Date(exchange.due_date).toLocaleDateString('fr-FR')}
-                              {daysUntilDue !== null && daysUntilDue > 0 && (
-                                <span className="ml-1 text-orange-600 font-medium">
-                                  ({daysUntilDue} jour{daysUntilDue > 1 ? 's' : ''})
-                                </span>
-                              )}
-                            </span>
+                        {otherParty?.avatar_url ? (
+                          <img
+                            src={otherParty.avatar_url}
+                            alt=""
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center bg-surface-container-highest font-headline text-lg font-bold text-primary">
+                            {otherParty?.display_name?.[0]?.toUpperCase() ?? '?'}
                           </div>
                         )}
+                      </button>
+                      <div className="min-w-0 flex-1">
+                        <button
+                          type="button"
+                          onClick={openProfile}
+                          disabled={!onUserClick || !otherParty?.id}
+                          className={`text-left text-sm font-bold tracking-wide text-primary ${
+                            onUserClick && otherParty?.id ? 'hover:underline' : ''
+                          }`}
+                        >
+                          {otherParty?.display_name ?? 'Utilisateur'}
+                        </button>
+                        <h3 className="font-headline text-xl font-bold leading-tight text-on-surface">
+                          {listing?.title ?? 'Annonce'}
+                        </h3>
                       </div>
+                    </div>
+                    <div className="flex flex-shrink-0 flex-col items-end gap-2">
+                      <span
+                        className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest ${statusBadgeClass(exchange.status)}`}
+                      >
+                        {statusLabel(exchange.status)}
+                      </span>
+                      {exchange.dispute ? (
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[9px] font-bold uppercase ${
+                            exchange.dispute.status === 'resolved'
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200'
+                              : 'bg-error-container text-on-error-container'
+                          }`}
+                        >
+                          Litige {exchange.dispute.status === 'resolved' ? 'résolu' : 'en cours'}
+                        </span>
+                      ) : null}
                     </div>
                   </div>
 
-                  <div className="flex items-center space-x-3">
-                    <span className={`px-3 py-1 rounded-full text-xs sm:text-sm font-medium flex items-center space-x-1 ${getStatusColor(exchange.status)}`}>
-                      {getStatusIcon(exchange.status)}
-                      <span>{getStatusText(exchange.status)}</span>
-                    </span>
-                    {exchange.dispute && (
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                          exchange.dispute.status === 'resolved'
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-red-100 text-red-700'
-                        }`}
+                  <div className="grid grid-cols-2 gap-4 border-y border-outline-variant/10 py-4">
+                    <div>
+                      <p className="mb-1 text-[10px] font-bold uppercase tracking-tighter text-outline">
+                        Date de création
+                      </p>
+                      <p className="text-sm font-semibold text-on-surface">
+                        {new Date(exchange.created_at).toLocaleDateString('fr-FR', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="mb-1 text-[10px] font-bold uppercase tracking-tighter text-outline">Échéance</p>
+                      <p className="text-sm font-semibold text-on-surface">
+                        {exchange.due_date
+                          ? new Date(exchange.due_date).toLocaleDateString('fr-FR', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                            })
+                          : '—'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-auto flex flex-wrap gap-3">
+                    {exchange.contract ? (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedContract(exchange.contract as Contract)}
+                        className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-surface-container-high px-4 py-3 font-headline text-xs font-bold text-on-surface transition-colors hover:bg-surface-container-highest dark:bg-slate-800 dark:hover:bg-slate-700"
                       >
-                        Litige {exchange.dispute.status === 'resolved' ? 'résolu' : 'en cours'}
-                      </span>
+                        <span className="material-symbols-outlined text-base">description</span>
+                        Voir le contrat
+                      </button>
+                    ) : null}
+                    {canLeaveReview(exchange) ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedExchange(exchange);
+                          setShowReviewModal(true);
+                        }}
+                        className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-secondary-container px-4 py-3 font-headline text-xs font-bold text-on-secondary-container transition-colors hover:brightness-95"
+                      >
+                        <span className="material-symbols-outlined text-base">star_half</span>
+                        Laisser un avis
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedExchange(exchange)}
+                        className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 font-headline text-xs font-bold text-on-primary transition-colors hover:bg-primary-container"
+                      >
+                        <span className="material-symbols-outlined text-base">trending_up</span>
+                        Voir le suivi
+                      </button>
                     )}
                   </div>
                 </div>
+              );
+            })}
 
-                <div className="space-y-3">
-                  {exchange.contract && (
-                    <button
-                      onClick={() => setSelectedContract(exchange.contract as Contract)}
-                      className="w-full btn-secondary justify-center gap-2"
-                    >
-                      <FileText className="w-4 h-4" />
-                      <span>Voir le contrat</span>
-                    </button>
-                  )}
-
-                  <button
-                    onClick={() => setSelectedExchange(exchange)}
-                    className="w-full btn-primary justify-center"
-                  >
-                    Voir le suivi de l'échange
-                  </button>
-
-                  {canLeaveReview(exchange) && (
-                    <button
-                      onClick={() => {
-                        setSelectedExchange(exchange);
-                        setShowReviewModal(true);
-                      }}
-                      className="w-full inline-flex items-center justify-center px-4 py-2 rounded-full bg-green-600 text-white text-sm font-semibold shadow-soft-lg hover:bg-green-700 transition-colors"
-                    >
-                      Laisser un avis
-                    </button>
-                  )}
-                </div>
+            <button
+              type="button"
+              onClick={() => onStartNewExchange?.()}
+              className="group flex cursor-pointer flex-col items-center justify-center gap-4 rounded-xl border-2 border-dashed border-outline-variant/30 p-8 text-center transition-colors hover:border-primary/50 dark:border-slate-600 dark:hover:border-primary/40"
+            >
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-surface-container-low text-outline transition-colors group-hover:bg-primary-fixed dark:bg-slate-800">
+                <span className="material-symbols-outlined text-3xl">add_circle</span>
               </div>
-            );
-          })}
-        </div>
+              <div>
+                <h4 className="font-headline text-lg font-bold text-on-surface">Démarrer un nouvel échange</h4>
+                <p className="mt-1 text-sm text-outline">Proposez vos services ou demandez un coup de main</p>
+              </div>
+            </button>
+          </div>
+        </>
       )}
 
       {selectedExchange && !showReviewModal && !selectedContract && (
@@ -369,14 +384,16 @@ export function ExchangesPage({ onUserClick }: ExchangesPageProps) {
 
       {selectedContract && (
         <ContractModal
-          contract={selectedContract as Contract & {
-            proposal?: {
-              from_user_id: string;
-              to_user_id: string;
-              from_user?: { display_name: string };
-              to_user?: { display_name: string };
-            };
-          }}
+          contract={
+            selectedContract as Contract & {
+              proposal?: {
+                from_user_id: string;
+                to_user_id: string;
+                from_user?: { display_name: string };
+                to_user?: { display_name: string };
+              };
+            }
+          }
           onClose={() => setSelectedContract(null)}
           onAccepted={loadExchanges}
         />

@@ -1,178 +1,172 @@
 import { useState } from 'react';
-import { Plus, User, LogOut, Settings, Search, Package, Shield } from 'lucide-react';
+import { User, LogOut, Settings, Package, Shield } from 'lucide-react';
 import { useAuth } from '../../lib/auth-context';
 
+type AppNavView = 'listings' | 'proposals' | 'profile' | 'settings' | 'exchanges' | 'admin';
+
 type HeaderProps = {
+  onLogoClick: () => void;
   onCreateListing: () => void;
-  onSearch: (query: string) => void;
-  onNavigate?: (view: 'listings' | 'proposals' | 'profile' | 'settings' | 'exchanges' | 'admin') => void;
+  onNavigate?: (view: AppNavView) => void;
   onRequestAuth?: (mode: 'login' | 'register') => void;
 };
 
-export function Header({ onCreateListing, onSearch, onNavigate, onRequestAuth }: HeaderProps) {
+export function Header({ onLogoClick, onCreateListing, onNavigate, onRequestAuth }: HeaderProps) {
   const { user, signOut } = useAuth();
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSearch(searchQuery.trim());
-  };
 
   return (
-    <>
-      <header className="bg-white/95 backdrop-blur sticky top-0 z-40 border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16 gap-3">
-            <button
-              type="button"
-              onClick={() => onNavigate?.('listings')}
-              className="flex items-center gap-2 shrink-0"
-            >
-              {/* Logo compact pour mobile, logo horizontal pour desktop */}
-              <img
-                src="/logo/5.png"
-                alt="BonTroc"
-                className="h-8 w-auto sm:hidden"
-              />
-              <img
-                src="/logo/5.png"
-                alt="BonTroc"
-                className="hidden sm:block h-8 w-auto"
-              />
-            </button>
+    <nav className="fixed top-0 z-50 w-full bg-white/70 shadow-xl shadow-primary/5 backdrop-blur-xl">
+      <div className="mx-auto flex max-w-screen-2xl items-center justify-between px-6 py-4 md:px-8">
+        <div className="flex items-center">
+          <button
+            type="button"
+            onClick={onLogoClick}
+            className="font-headline text-2xl font-black tracking-tighter text-primary"
+          >
+            BonTroc
+          </button>
+        </div>
 
-            <div className="flex items-center gap-3">
-              {user ? (
+        <div className="flex items-center gap-2 md:gap-4">
+          <button
+            type="button"
+            onClick={onCreateListing}
+            className="rounded-full bg-primary px-4 py-2 font-headline text-sm font-bold text-on-primary shadow-lg shadow-primary/20 transition-all duration-200 hover:opacity-95 active:scale-95 md:px-6 md:py-2.5"
+          >
+            <span className="hidden sm:inline">Proposer un échange</span>
+            <span className="sm:hidden">Proposer</span>
+          </button>
+
+          {user ? (
+            <>
+              <button
+                type="button"
+                className="rounded-full p-2 text-slate-500 transition-colors hover:bg-surface-container-high dark:text-slate-400"
+                aria-label="Notifications"
+              >
+                <span className="material-symbols-outlined text-[22px] md:text-[24px]">notifications</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onNavigate?.('settings')}
+                className="rounded-full p-2 text-slate-500 transition-colors hover:bg-surface-container-high dark:text-slate-400"
+                aria-label="Paramètres"
+              >
+                <span className="material-symbols-outlined text-[22px] md:text-[24px]">settings</span>
+              </button>
+            </>
+          ) : null}
+
+          {user ? (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                className="h-10 w-10 overflow-hidden rounded-full border-2 border-white shadow-sm"
+                aria-expanded={showUserMenu}
+                aria-haspopup="true"
+              >
+                {user.avatar_url ? (
+                  <img src={user.avatar_url} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-secondary-container text-sm font-bold text-on-secondary-container">
+                    {(user.display_name?.[0] ?? '?').toUpperCase()}
+                  </div>
+                )}
+              </button>
+
+              {showUserMenu && (
                 <>
-                  {/* Bouton mobile - icône seulement */}
                   <button
-                    onClick={onCreateListing}
-                    className="sm:hidden flex items-center justify-center w-10 h-10 rounded-full bg-brand-blue text-white shadow-soft-lg hover:bg-sky-500 transition-colors"
-                    aria-label="Proposer un échange"
-                  >
-                    <Plus className="w-5 h-5" />
-                  </button>
-                  {/* Bouton desktop - texte complet */}
-                  <button
-                    onClick={onCreateListing}
-                    className="hidden sm:inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand-blue text-white text-sm font-semibold shadow-soft-lg hover:bg-sky-500 transition-colors"
-                  >
-                    <Plus className="w-5 h-5" />
-                    <span>Proposer un échange</span>
-                  </button>
-
-                  <div className="relative">
+                    type="button"
+                    className="fixed inset-0 z-10 cursor-default"
+                    aria-label="Fermer le menu"
+                    onClick={() => setShowUserMenu(false)}
+                  />
+                  <div className="absolute right-0 top-full z-20 mt-2 w-56 rounded-2xl border border-surface-container-high bg-surface-container-lowest py-2 shadow-xl">
+                    <p className="truncate px-4 py-2 text-sm font-semibold text-on-surface">{user.display_name}</p>
                     <button
-                      onClick={() => setShowUserMenu(!showUserMenu)}
-                      className="flex items-center gap-2 hover:bg-gray-50 px-2 py-1.5 rounded-full transition-colors"
+                      type="button"
+                      onClick={() => {
+                        onNavigate?.('exchanges');
+                        setShowUserMenu(false);
+                      }}
+                      className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-on-surface-variant hover:bg-surface-container-low"
                     >
-                      {user.avatar_url ? (
-                        <img
-                          src={user.avatar_url}
-                          alt={user.display_name}
-                          className="w-8 h-8 rounded-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-8 h-8 bg-brand-yellow text-white rounded-full flex items-center justify-center">
-                          {user.display_name[0].toUpperCase()}
-                        </div>
-                      )}
-                      <span className="font-medium hidden sm:block">{user.display_name}</span>
+                      <Package className="h-4 w-4" />
+                      Mes échanges
                     </button>
-
-                    {showUserMenu && (
-                      <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-soft-lg border border-gray-100 py-2 z-20">
-                        <button
-                          onClick={() => {
-                            onNavigate?.('exchanges');
-                            setShowUserMenu(false);
-                          }}
-                          className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 w-full text-left text-sm"
-                        >
-                          <Package className="w-4 h-4" />
-                          <span>Mes échanges</span>
-                        </button>
-                        <button
-                          onClick={() => {
-                            onNavigate?.('profile');
-                            setShowUserMenu(false);
-                          }}
-                          className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 w-full text-left text-sm"
-                        >
-                          <User className="w-4 h-4" />
-                          <span>Mon profil</span>
-                        </button>
-                        <button
-                          onClick={() => {
-                            onNavigate?.('settings');
-                            setShowUserMenu(false);
-                          }}
-                          className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 w-full text-left text-sm"
-                        >
-                          <Settings className="w-4 h-4" />
-                          <span>Paramètres</span>
-                        </button>
-                        {user && ['admin', 'moderator'].includes(user.role) && (
-                          <button
-                            onClick={() => {
-                              onNavigate?.('admin');
-                              setShowUserMenu(false);
-                            }}
-                            className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 w-full text-left text-xs font-semibold text-purple-600"
-                          >
-                            <Shield className="w-4 h-4" />
-                            <span>Administration</span>
-                          </button>
-                        )}
-                        <button
-                          onClick={signOut}
-                          className="flex items-center gap-2 px-4 py-2 hover:bg-gray-50 w-full text-left text-xs font-semibold text-red-600"
-                        >
-                          <LogOut className="w-4 h-4" />
-                          <span>Déconnexion</span>
-                        </button>
-                      </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onNavigate?.('profile');
+                        setShowUserMenu(false);
+                      }}
+                      className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-on-surface-variant hover:bg-surface-container-low"
+                    >
+                      <User className="h-4 w-4" />
+                      Mon profil
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onNavigate?.('settings');
+                        setShowUserMenu(false);
+                      }}
+                      className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-on-surface-variant hover:bg-surface-container-low"
+                    >
+                      <Settings className="h-4 w-4" />
+                      Paramètres
+                    </button>
+                    {['admin', 'moderator'].includes(user.role) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onNavigate?.('admin');
+                          setShowUserMenu(false);
+                        }}
+                        className="flex w-full items-center gap-2 px-4 py-2 text-left text-xs font-semibold text-primary hover:bg-surface-container-low"
+                      >
+                        <Shield className="h-4 w-4" />
+                        Administration
+                      </button>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        signOut();
+                        setShowUserMenu(false);
+                      }}
+                      className="flex w-full items-center gap-2 px-4 py-2 text-left text-xs font-semibold text-error hover:bg-error-container/30"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Déconnexion
+                    </button>
                   </div>
                 </>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => onRequestAuth?.('login')}
-                    className="text-sm font-medium text-gray-700 hover:text-gray-900"
-                  >
-                    Connexion
-                  </button>
-                  <button
-                    onClick={() => onRequestAuth?.('register')}
-                    className="btn-primary px-4 py-2 rounded-full"
-                  >
-                    S'inscrire
-                  </button>
-                </div>
               )}
             </div>
-          </div>
-
-          {/* Barre de recherche mobile-first */}
-          <form
-            onSubmit={handleSearch}
-            className={`pb-3 pt-1 md:pt-0 md:pb-4 transition-all ${showUserMenu ? 'mt-4' : 'mt-0'}`}
-          >
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Rechercher un service, un produit, une ville..."
-                className="w-full pl-10 pr-4 py-2.5 rounded-full border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue focus:bg-white transition-colors"
-              />
+          ) : (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => onRequestAuth?.('login')}
+                className="text-sm font-semibold text-primary hover:opacity-80"
+              >
+                Connexion
+              </button>
+              <button
+                type="button"
+                onClick={() => onRequestAuth?.('register')}
+                className="rounded-full border border-primary/20 px-3 py-2 text-sm font-bold text-primary hover:bg-primary/5"
+              >
+                S&apos;inscrire
+              </button>
             </div>
-          </form>
+          )}
         </div>
-      </header>
-    </>
+      </div>
+    </nav>
   );
 }

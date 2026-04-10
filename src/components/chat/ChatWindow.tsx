@@ -8,9 +8,11 @@ import { checkContent } from '../../lib/moderation';
 type ChatWindowProps = {
   proposalId: string;
   onUserClick?: (userId: string) => void;
+  /** Carte sous la modale (historique) ou panneau intégré page détail */
+  variant?: 'card' | 'immersive';
 };
 
-export function ChatWindow({ proposalId, onUserClick }: ChatWindowProps) {
+export function ChatWindow({ proposalId, onUserClick, variant = 'card' }: ChatWindowProps) {
   const { user } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -19,6 +21,8 @@ export function ChatWindow({ proposalId, onUserClick }: ChatWindowProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [recipientInfo, setRecipientInfo] = useState<{ email?: string; displayName?: string } | null>(null);
   const [contentWarning, setContentWarning] = useState<string | null>(null);
+  const [counterpartAvatar, setCounterpartAvatar] = useState<string | null>(null);
+  const [counterpartName, setCounterpartName] = useState<string>('');
 
   useEffect(() => {
     loadChat();
@@ -30,14 +34,18 @@ export function ChatWindow({ proposalId, onUserClick }: ChatWindowProps) {
       loadMessages();
       const subscription = supabase
         .channel(`chat:${chatId}`)
-        .on('postgres_changes', {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'chat_messages',
-          filter: `chat_id=eq.${chatId}`,
-        }, () => {
-          loadMessages();
-        })
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'chat_messages',
+            filter: `chat_id=eq.${chatId}`,
+          },
+          () => {
+            loadMessages();
+          },
+        )
         .subscribe();
 
       return () => {
@@ -55,16 +63,11 @@ export function ChatWindow({ proposalId, onUserClick }: ChatWindowProps) {
   };
 
   async function loadChat() {
-    const { data } = await supabase
-      .from('chats')
-      .select('id')
-      .eq('proposal_id', proposalId)
-      .maybeSingle();
+    const { data } = await supabase.from('chats').select('id').eq('proposal_id', proposalId).maybeSingle();
 
     if (data) {
       setChatId(data.id);
     } else {
-      // Créer le chat s'il n'existe pas
       const { data: newChat, error } = await supabase
         .from('chats')
         .insert({ proposal_id: proposalId })
@@ -82,23 +85,30 @@ export function ChatWindow({ proposalId, onUserClick }: ChatWindowProps) {
 
     const { data } = await supabase
       .from('proposals')
-      .select(`
+      .select(
+        `
         from_user_id,
         to_user_id,
-        from_user:users!proposals_from_user_id_fkey(display_name, email),
-        to_user:users!proposals_to_user_id_fkey(display_name, email)
-      `)
+        from_user:users!proposals_from_user_id_fkey(display_name, email, avatar_url),
+        to_user:users!proposals_to_user_id_fkey(display_name, email, avatar_url)
+      `,
+      )
       .eq('id', proposalId)
       .maybeSingle();
 
-    if (data) {
-      const counterpart =
-        data.from_user_id === user.id ? data.to_user : data.from_user;
-      setRecipientInfo({
-        email: counterpart?.email || undefined,
-        displayName: counterpart?.display_name || undefined,
-      });
-    }
+    if (!data) return;
+
+    const fromU = data.from_user as { display_name?: string; email?: string; avatar_url?: string } | null;
+    const toU = data.to_user as { display_name?: string; email?: string; avatar_url?: string } | null;
+
+    const counterpart = data.from_user_id === user.id ? toU : fromU;
+
+    setRecipientInfo({
+      email: counterpart?.email || undefined,
+      displayName: counterpart?.display_name || undefined,
+    });
+    setCounterpartName(counterpart?.display_name ?? '');
+    setCounterpartAvatar(counterpart?.avatar_url ?? null);
   }
 
   async function loadMessages() {
@@ -106,10 +116,12 @@ export function ChatWindow({ proposalId, onUserClick }: ChatWindowProps) {
 
     const { data } = await supabase
       .from('chat_messages')
-      .select(`
+      .select(
+        `
         *,
         sender:users!chat_messages_sender_id_fkey(*)
-      `)
+      `,
+      )
       .eq('chat_id', chatId)
       .order('created_at', { ascending: true });
 
@@ -125,16 +137,17 @@ export function ChatWindow({ proposalId, onUserClick }: ChatWindowProps) {
     const messageToSend = newMessage.trim();
     setContentWarning(null);
 
-    // Vérifier les mots bannis
-    const { hasWarning, hasBlock, detectedWords, warningWords, blockWords } = await checkContent(messageToSend, user.id);
-    
+    const { hasWarning, hasBlock, warningWords, blockWords } = await checkContent(messageToSend, user.id);
+
     if (hasBlock && blockWords.length > 0) {
       setContentWarning(`Ce message contient un terme interdit (${blockWords.join(', ')}). Envoi bloqué.`);
       return;
     }
-    
+
     if (hasWarning && warningWords.length > 0) {
-      setContentWarning(`Attention : votre message contient des termes sensibles (${warningWords.join(', ')}). Restez vigilant face aux arnaques.`);
+      setContentWarning(
+        `Attention : votre message contient des termes sensibles (${warningWords.join(', ')}). Restez vigilant face aux arnaques.`,
+      );
     }
 
     setLoading(true);
@@ -149,10 +162,8 @@ export function ChatWindow({ proposalId, onUserClick }: ChatWindowProps) {
 
       if (error) throw error;
 
-      // Recharger immédiatement les messages
       await loadMessages();
 
-      // Envoyer l'e-mail de notification
       if (recipientInfo?.email) {
         sendTransactionalEmail('new_chat_message', recipientInfo.email, {
           proposal_id: proposalId,
@@ -162,54 +173,168 @@ export function ChatWindow({ proposalId, onUserClick }: ChatWindowProps) {
       }
     } catch (error) {
       console.error('Error sending message:', error);
-      setNewMessage(messageToSend); // Restaurer le message en cas d'erreur
+      setNewMessage(messageToSend);
     } finally {
       setLoading(false);
     }
   };
 
-  const formatTime = (date: string) => {
-    return new Date(date).toLocaleTimeString('fr-FR', {
+  const formatTime = (date: string) =>
+    new Date(date).toLocaleTimeString('fr-FR', {
       hour: '2-digit',
       minute: '2-digit',
     });
+
+  const isToday = (date: string) => {
+    const d = new Date(date);
+    const t = new Date();
+    return d.getDate() === t.getDate() && d.getMonth() === t.getMonth() && d.getFullYear() === t.getFullYear();
   };
+
+  const messagesBody = (
+    <>
+      {messages.length === 0 ? (
+        <p className="py-12 text-center text-on-surface-variant">
+          Aucun message pour le moment — écrivez pour lancer la discussion.
+        </p>
+      ) : (
+        <div className="space-y-6">
+          {messages[0] && isToday(messages[0].created_at) ? (
+            <div className="flex justify-center">
+              <span className="rounded-full bg-surface-container px-4 py-1 text-[10px] font-bold uppercase tracking-widest text-outline">
+                Aujourd&apos;hui
+              </span>
+            </div>
+          ) : null}
+          {messages.map((message) => {
+            const isOwn = message.sender_id === user?.id;
+            return (
+              <div
+                key={message.id}
+                className={`flex max-w-[85%] items-end gap-3 md:max-w-[80%] ${isOwn ? 'ml-auto flex-row-reverse' : ''}`}
+              >
+                {!isOwn ? (
+                  message.sender?.avatar_url ? (
+                    <img src={message.sender.avatar_url} alt="" className="h-8 w-8 flex-shrink-0 rounded-full object-cover" />
+                  ) : (
+                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-surface-container-high text-xs font-bold text-primary">
+                      {(message.sender?.display_name?.[0] ?? '?').toUpperCase()}
+                    </div>
+                  )
+                ) : null}
+                <div className={`min-w-0 space-y-1 ${isOwn ? 'text-right' : ''}`}>
+                  <div
+                    className={`rounded-2xl px-5 py-3 text-sm text-on-surface ${
+                      isOwn
+                        ? 'rounded-br-none bg-primary text-on-primary shadow-lg shadow-primary/20'
+                        : 'rounded-bl-none bg-surface-container-highest'
+                    }`}
+                  >
+                    {!isOwn && (
+                      <button
+                        type="button"
+                        onClick={() => message.sender_id && onUserClick?.(message.sender_id)}
+                        className={`mb-1 block text-left text-xs font-medium text-outline ${onUserClick && message.sender_id ? 'cursor-pointer hover:text-primary' : ''}`}
+                      >
+                        {message.sender?.display_name}
+                      </button>
+                    )}
+                    <p className="whitespace-pre-wrap break-words">{message.body}</p>
+                  </div>
+                  <span className="block px-1 text-[10px] text-outline">{formatTime(message.created_at)}</span>
+                </div>
+              </div>
+            );
+          })}
+          <div ref={messagesEndRef} />
+        </div>
+      )}
+    </>
+  );
+
+  if (variant === 'immersive') {
+    return (
+      <div className="glass-panel flex h-full min-h-[420px] flex-col overflow-hidden rounded-xl border border-outline-variant/20 shadow-2xl md:min-h-[700px]">
+        <div className="flex items-center justify-between border-b border-outline-variant/10 px-4 py-4 md:px-6">
+          <div className="flex min-w-0 items-center gap-4">
+            <div className="relative flex-shrink-0">
+              {counterpartAvatar ? (
+                <img src={counterpartAvatar} alt="" className="h-10 w-10 rounded-full object-cover" />
+              ) : (
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-container-high font-bold text-primary">
+                  {(counterpartName[0] ?? '?').toUpperCase()}
+                </div>
+              )}
+            </div>
+            <div className="min-w-0">
+              <h4 className="truncate text-sm font-bold text-on-surface">{counterpartName || 'Contrepartie'}</h4>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Discussion</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-1 flex-col overflow-hidden bg-[radial-gradient(circle_at_top_right,rgba(0,45,230,0.03),transparent_40%)]">
+          <div className="flex-1 overflow-y-auto p-4 md:p-6">{messagesBody}</div>
+
+          {contentWarning ? (
+            <div className="mx-4 mb-2 flex items-start gap-2 rounded-xl border border-secondary-container/40 bg-secondary-container/10 p-3 text-sm text-on-secondary-container md:mx-6">
+              <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+              <span>{contentWarning}</span>
+            </div>
+          ) : null}
+
+          <div className="border-t border-outline-variant/10 bg-white/50 p-4 md:p-6">
+            <form onSubmit={handleSend} className="relative flex items-center">
+              <input
+                type="text"
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                placeholder="Écrivez votre message..."
+                className="w-full rounded-full border-0 bg-surface-container-low py-4 pl-5 pr-16 text-sm text-on-surface placeholder:text-outline/50 focus:ring-2 focus:ring-primary/20"
+                disabled={loading}
+              />
+              <button
+                type="submit"
+                disabled={loading || !newMessage.trim()}
+                className="absolute right-2 flex h-10 w-10 items-center justify-center rounded-full bg-primary text-on-primary shadow-lg shadow-primary/30 transition-transform active:scale-90 disabled:opacity-40"
+                aria-label="Envoyer"
+              >
+                <Send className="h-5 w-5" />
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mt-4 border-t border-gray-100 pt-4">
-      <div className="bg-gray-50 rounded-2xl p-4 max-h-96 overflow-y-auto mb-4">
+      <div className="mb-4 max-h-96 overflow-y-auto rounded-2xl bg-gray-50 p-4">
         {messages.length === 0 ? (
-          <p className="text-center text-gray-500 py-8">Aucun message pour le moment</p>
+          <p className="py-8 text-center text-gray-500">Aucun message pour le moment</p>
         ) : (
           <div className="space-y-4">
             {messages.map((message) => {
               const isOwn = message.sender_id === user?.id;
               return (
-                <div
-                  key={message.id}
-                  className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
-                >
+                <div key={message.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
                   <div
                     className={`max-w-[70%] rounded-2xl px-4 py-2 ${
-                      isOwn
-                        ? 'bg-brand-blue text-white'
-                        : 'bg-white border border-gray-100 text-gray-900'
+                      isOwn ? 'bg-brand-blue text-white' : 'border border-gray-100 bg-white text-gray-900'
                     }`}
                   >
                     {!isOwn && (
-                      <p 
-                        onClick={() => {
-                          if (onUserClick && message.sender_id) {
-                            onUserClick(message.sender_id);
-                          }
-                        }}
-                        className={`text-xs font-medium mb-1 opacity-75 ${onUserClick && message.sender_id ? 'cursor-pointer hover:opacity-100 hover:text-brand-blue transition-colors' : ''}`}
+                      <button
+                        type="button"
+                        onClick={() => message.sender_id && onUserClick?.(message.sender_id)}
+                        className={`mb-1 text-xs font-medium opacity-75 ${onUserClick && message.sender_id ? 'cursor-pointer hover:text-brand-blue' : ''}`}
                       >
                         {message.sender?.display_name}
-                      </p>
+                      </button>
                     )}
                     <p className="whitespace-pre-wrap break-words">{message.body}</p>
-                    <p className={`text-xs mt-1 ${isOwn ? 'text-sky-100' : 'text-gray-500'}`}>
+                    <p className={`mt-1 text-xs ${isOwn ? 'text-sky-100' : 'text-gray-500'}`}>
                       {formatTime(message.created_at)}
                     </p>
                   </div>
@@ -222,8 +347,8 @@ export function ChatWindow({ proposalId, onUserClick }: ChatWindowProps) {
       </div>
 
       {contentWarning && (
-        <div className="flex items-start gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-xl text-sm text-yellow-800 mb-2">
-          <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+        <div className="mb-2 flex items-start gap-2 rounded-xl border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800">
+          <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
           <span>{contentWarning}</span>
         </div>
       )}
@@ -234,15 +359,15 @@ export function ChatWindow({ proposalId, onUserClick }: ChatWindowProps) {
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
           placeholder="Écrivez votre message..."
-          className="flex-1 px-4 py-2 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-brand-blue bg-white"
+          className="flex-1 rounded-full border border-gray-200 bg-white px-4 py-2 focus:outline-none focus:ring-2 focus:ring-brand-blue"
           disabled={loading}
         />
         <button
           type="submit"
           disabled={loading || !newMessage.trim()}
-          className="btn-primary p-2 rounded-full w-10 h-10 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+          className="btn-primary flex h-10 w-10 items-center justify-center rounded-full p-2 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <Send className="w-5 h-5" />
+          <Send className="h-5 w-5" />
         </button>
       </form>
     </div>
