@@ -6,6 +6,8 @@
   html {
     @apply bg-background text-on-surface antialiased;
     font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    /* Évite le décalage horizontal du header quand la scrollbar apparaît / disparaît */
+    scrollbar-gutter: stable;
   }
 
   body {

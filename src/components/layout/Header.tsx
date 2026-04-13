@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { User, LogOut, Settings, Package, Shield } from 'lucide-react';
 import { useAuth } from '../../lib/auth-context';
 import { APP_HEADER_HEIGHT_CLASS } from './app-layout';
 
-type AppNavView = 'listings' | 'proposals' | 'profile' | 'settings' | 'exchanges' | 'admin';
+export type AppNavView = 'listings' | 'proposals' | 'profile' | 'settings' | 'exchanges' | 'admin';
 
 type HeaderProps = {
   onLogoClick: () => void;
@@ -12,22 +12,27 @@ type HeaderProps = {
   onRequestAuth?: (mode: 'login' | 'register') => void;
 };
 
-export function Header({ onLogoClick, onCreateListing, onNavigate, onRequestAuth }: HeaderProps) {
+function HeaderInner({ onLogoClick, onCreateListing, onNavigate, onRequestAuth }: HeaderProps) {
   const { user, signOut } = useAuth();
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   return (
     <nav
-      className={`fixed top-0 z-50 ${APP_HEADER_HEIGHT_CLASS} w-full bg-white/70 shadow-xl shadow-primary/5 backdrop-blur-xl`}
+      className={`fixed inset-x-0 top-0 z-50 ${APP_HEADER_HEIGHT_CLASS} bg-white/70 shadow-xl shadow-primary/5 backdrop-blur-xl [transform:translateZ(0)] backface-hidden [contain:layout_style_paint]`}
     >
       <div className="mx-auto flex h-full max-w-screen-2xl items-center justify-between px-6 md:px-8">
         <div className="flex items-center">
           <button
             type="button"
             onClick={onLogoClick}
-            className="font-headline text-2xl font-black tracking-tighter text-primary"
+            className="flex items-center rounded-lg outline-none ring-primary/30 transition-opacity hover:opacity-90 focus-visible:ring-2"
+            aria-label="BonTroc — Accueil"
           >
-            BonTroc
+            <img
+              src="/logo/5.png"
+              alt="BonTroc"
+              className="h-9 w-auto max-h-[2.75rem] object-contain md:h-10"
+            />
           </button>
         </div>
 
@@ -173,3 +178,5 @@ export function Header({ onLogoClick, onCreateListing, onNavigate, onRequestAuth
     </nav>
   );
 }
+
+export const Header = memo(HeaderInner);

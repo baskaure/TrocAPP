@@ -8,6 +8,8 @@ export type AppSidebarActiveItem =
   | 'none';
 
 type AppSidebarProps = {
+  /** Faux : la barre reste dans le DOM mais est masquée (évite les sauts de mise en page). */
+  visible?: boolean;
   activeItem: AppSidebarActiveItem;
   onAnnonces: () => void;
   onProposals: () => void;
@@ -21,6 +23,7 @@ type AppSidebarProps = {
 };
 
 export function AppSidebar({
+  visible = true,
   activeItem,
   onAnnonces,
   onProposals,
@@ -37,8 +40,15 @@ export function AppSidebar({
       active ? 'bg-blue-50 text-primary dark:bg-slate-800 dark:text-blue-400' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80'
     }`;
 
+  const visibilityClass = visible
+    ? 'lg:pointer-events-auto lg:translate-x-0 lg:opacity-100'
+    : 'lg:pointer-events-none lg:-translate-x-full lg:opacity-0';
+
   return (
-    <aside className="fixed left-0 top-0 z-40 mt-20 hidden h-[calc(100dvh-5rem)] w-64 flex-col rounded-r-xl bg-slate-50 p-8 pb-6 shadow-[12px_0_32px_rgba(0,0,0,0.04)] dark:bg-slate-950 lg:flex">
+    <aside
+      aria-hidden={!visible}
+      className={`fixed left-0 top-0 z-40 mt-20 hidden h-[calc(100dvh-5rem)] w-64 flex-col rounded-r-xl bg-slate-50 p-8 pb-6 shadow-[12px_0_32px_rgba(0,0,0,0.04)] transition-[transform,opacity] duration-200 ease-out will-change-transform dark:bg-slate-950 lg:flex ${visibilityClass}`}
+    >
       <div className="mb-8">
         <h4 className="mb-1 font-headline text-xl font-extrabold text-primary">Mon espace</h4>
         <p className="text-xs text-slate-400 dark:text-slate-500">Navigation</p>

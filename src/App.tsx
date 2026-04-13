@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { AuthProvider, useAuth } from './lib/auth-context';
 import { supabase, Listing, Category, Proposal } from './lib/supabase';
-import { Header } from './components/layout/Header';
+import { Header, type AppNavView } from './components/layout/Header';
 import { AppSidebar, type AppSidebarActiveItem } from './components/layout/AppSidebar';
 import { AppFooter } from './components/layout/AppFooter';
 import { MobileBottomNav } from './components/layout/MobileBottomNav';
@@ -182,27 +182,40 @@ function AppContent() {
     }
   }
 
-  const handleRequestAuth = (mode: 'login' | 'register' = 'login') => {
+  const handleRequestAuth = useCallback((mode: 'login' | 'register' = 'login') => {
     setPageReturnView(view);
     setAuthModalMode(mode);
     setView('auth');
-  };
+  }, [view]);
 
-  const openCreateListing = () => {
+  const openCreateListing = useCallback(() => {
     if (!user) {
       handleRequestAuth('register');
       return;
     }
     setPageReturnView(view);
     setView('create-listing');
-  };
+  }, [user, view, handleRequestAuth]);
 
   /** Réinitialise les écrans « détail » pour éviter de mélanger annonce / proposition au changement de section. */
-  const clearDetailViews = () => {
+  const clearDetailViews = useCallback(() => {
     setSelectedListing(null);
     setSelectedProposal(null);
     setProposalDetailOptions({});
-  };
+  }, []);
+
+  const onHeaderLogoClick = useCallback(() => {
+    clearDetailViews();
+    setView('listings');
+  }, [clearDetailViews]);
+
+  const onHeaderNavigate = useCallback(
+    (v: AppNavView) => {
+      clearDetailViews();
+      setView(v);
+    },
+    [clearDetailViews],
+  );
 
   const sidebarActiveForReturnPage = (rv: PrimaryView): AppSidebarActiveItem => {
     switch (rv) {
@@ -454,67 +467,64 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-background text-on-surface">
       <Header
-        onLogoClick={() => {
-          clearDetailViews();
-          setView('listings');
-        }}
+        onLogoClick={onHeaderLogoClick}
         onCreateListing={openCreateListing}
-        onNavigate={(v) => {
-          clearDetailViews();
-          setView(v);
-        }}
+        onNavigate={onHeaderNavigate}
         onRequestAuth={handleRequestAuth}
       />
 
-      {showAppNavSidebar ? (
-        <AppSidebar
-          activeItem={sidebarActiveItem}
-          onAnnonces={() => {
+      <AppSidebar
+        visible={Boolean(showAppNavSidebar)}
+        activeItem={sidebarActiveItem}
+        onAnnonces={() => {
+          clearDetailViews();
+          setView('listings');
+          setShowFilters(false);
+        }}
+        onProposals={() =>
+          requireUser(() => {
             clearDetailViews();
-            setView('listings');
-            setShowFilters(false);
-          }}
-          onProposals={() =>
-            requireUser(() => {
-              clearDetailViews();
-              setView('proposals');
-            })
-          }
-          onExchanges={() =>
-            requireUser(() => {
-              clearDetailViews();
-              setView('exchanges');
-            })
-          }
-          onProfile={() =>
-            requireUser(() => {
-              clearDetailViews();
-              setView('profile');
-            })
-          }
-          onSettings={() =>
-            requireUser(() => {
-              clearDetailViews();
-              setView('settings');
-            })
-          }
-          onAdmin={
-            user && ['admin', 'moderator'].includes(user.role)
-              ? () => {
-                  clearDetailViews();
-                  setView('admin');
-                }
-              : undefined
-          }
-          showAdmin={!!user && ['admin', 'moderator'].includes(user.role)}
-          onSupport={() => {
-            window.location.href = 'mailto:contact@bontroc.fr';
-          }}
-          onCreateListing={openCreateListing}
-        />
-      ) : null}
+            setView('proposals');
+          })
+        }
+        onExchanges={() =>
+          requireUser(() => {
+            clearDetailViews();
+            setView('exchanges');
+          })
+        }
+        onProfile={() =>
+          requireUser(() => {
+            clearDetailViews();
+            setView('profile');
+          })
+        }
+        onSettings={() =>
+          requireUser(() => {
+            clearDetailViews();
+            setView('settings');
+          })
+        }
+        onAdmin={
+          user && ['admin', 'moderator'].includes(user.role)
+            ? () => {
+                clearDetailViews();
+                setView('admin');
+              }
+            : undefined
+        }
+        showAdmin={!!user && ['admin', 'moderator'].includes(user.role)}
+        onSupport={() => {
+          window.location.href = 'mailto:contact@bontroc.fr';
+        }}
+        onCreateListing={openCreateListing}
+      />
 
-      <div className={showAppNavSidebar ? APP_SIDEBAR_CONTENT_INSET_LG : ''}>
+      <div
+        className={`min-w-0 transition-[padding] duration-200 ease-out ${
+          showAppNavSidebar ? APP_SIDEBAR_CONTENT_INSET_LG : ''
+        }`}
+      >
         <main className={`mx-auto max-w-screen-2xl px-6 md:px-8 ${mainContentPadding}`}>
           {view === 'auth' ? (
             <AuthPage
