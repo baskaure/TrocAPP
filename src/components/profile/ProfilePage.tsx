@@ -1,6 +1,7 @@
 import { useState, useEffect, ChangeEvent, type FormEvent } from 'react';
 import { useAuth } from '../../lib/auth-context';
 import { supabase, Review } from '../../lib/supabase';
+import { PageBackRowSpacer } from '../layout/PageBackLink';
 
 type ReviewWithReviewer = Review & {
   reviewer?: { id: string; display_name: string; avatar_url?: string };
@@ -259,8 +260,9 @@ export function ProfilePage({ onUserClick }: ProfilePageProps) {
 
   return (
     <div className="w-full max-w-7xl">
+      <PageBackRowSpacer />
       {/* Hero bannière + avatar (carte unie : plus de bande grise du body sous le chevauchement) */}
-      <section className="relative mt-2 overflow-hidden rounded-xl border border-outline-variant/10 shadow-xl dark:border-slate-700 md:mt-4">
+      <section className="relative overflow-hidden rounded-xl border border-outline-variant/10 shadow-xl dark:border-slate-700">
         {/* Bannière uniquement (le pseudo est dans la barre blanche en dessous) */}
         <div className="relative h-72 w-full overflow-hidden rounded-t-xl md:h-96">
           {formData.banner_url ? (

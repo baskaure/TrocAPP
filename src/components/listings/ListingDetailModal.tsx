@@ -1,8 +1,11 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { ReportModal } from '../reports/ReportModal';
+import { ReportFormPanel } from '../reports/ReportModal';
+import { LocationMap } from '../maps/LocationMap';
 import { Listing, supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth-context';
 import { sendTransactionalEmail } from '../../lib/notifications';
+import { PageBackLink } from '../layout/PageBackLink';
+import { geocodeCity } from '../../lib/geocode';
 
 type ListingWithCategory = Listing & {
   category?: { name: string } | null;
@@ -68,6 +71,8 @@ export function ListingDetailModal({
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [geocodedCoords, setGeocodedCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [geocodeLoading, setGeocodeLoading] = useState(false);
   const [editForm, setEditForm] = useState({
     type: listing?.type ?? 'service',
     title: listing?.title ?? '',
@@ -99,6 +104,50 @@ export function ListingDetailModal({
     setShowProposalForm(false);
   }, [listing]);
 
+  useEffect(() => {
+    setGeocodedCoords(null);
+  }, [listing?.id]);
+
+  useEffect(() => {
+    if (!listing) {
+      setGeocodeLoading(false);
+      return;
+    }
+    const latRaw = listing.location_lat ?? listing.user?.geo_lat;
+    const lngRaw = listing.location_lng ?? listing.user?.geo_lng;
+    const latN = latRaw != null && String(latRaw) !== '' ? Number(latRaw) : NaN;
+    const lngN = lngRaw != null && String(lngRaw) !== '' ? Number(lngRaw) : NaN;
+    if (Number.isFinite(latN) && Number.isFinite(lngN)) {
+      setGeocodeLoading(false);
+      return;
+    }
+
+    const city = listing.user?.city?.trim();
+    if (!city) {
+      setGeocodeLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setGeocodeLoading(true);
+    geocodeCity(city, listing.user?.country).then((coords) => {
+      if (cancelled) return;
+      if (coords) setGeocodedCoords(coords);
+      setGeocodeLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    listing?.id,
+    listing?.location_lat,
+    listing?.location_lng,
+    listing?.user?.geo_lat,
+    listing?.user?.geo_lng,
+    listing?.user?.city,
+    listing?.user?.country,
+  ]);
+
   if (!listing) return null;
 
   const lc = listing as ListingWithCategory;
@@ -109,17 +158,23 @@ export function ListingDetailModal({
       ? listing.media[0].url
       : 'https://images.pexels.com/photos/1181406/pexels-photo-1181406.jpeg?auto=compress&cs=tinysrgb&w=1200';
 
-  const lat = listing.location_lat ?? listing.user?.geo_lat;
-  const lng = listing.location_lng ?? listing.user?.geo_lng;
-  const staticMapUrl =
-    lat != null && lng != null
-      ? `https://staticmap.openstreetmap.de/staticmap.php?center=${lat},${lng}&zoom=13&size=1200x400&maptype=mapnik`
-      : null;
+  const latRaw = listing.location_lat ?? listing.user?.geo_lat;
+  const lngRaw = listing.location_lng ?? listing.user?.geo_lng;
+  const preciseLat = latRaw != null && String(latRaw) !== '' ? Number(latRaw) : NaN;
+  const preciseLng = lngRaw != null && String(lngRaw) !== '' ? Number(lngRaw) : NaN;
+  const hasPreciseCoords = Number.isFinite(preciseLat) && Number.isFinite(preciseLng);
+  const mapLat = hasPreciseCoords ? preciseLat : geocodedCoords?.lat;
+  const mapLng = hasPreciseCoords ? preciseLng : geocodedCoords?.lng;
+  const showMap = mapLat != null && mapLng != null && Number.isFinite(mapLat) && Number.isFinite(mapLng);
+  const mapIsApproximate = showMap && !hasPreciseCoords;
 
   const locationLabel = listing.user?.city?.trim() || 'Non précisée';
   const mapCaption = listing.user?.city
     ? `${listing.user.city}${listing.user?.country ? ` — ${listing.user.country}` : ''}`
     : 'Localisation indicative';
+  const mapPopupLabel = mapIsApproximate
+    ? `${mapCaption} — position approximative (ville)`
+    : mapCaption;
 
   const bullets = offerBulletPoints(listing.description_offer);
   const wanted = wantedItems(listing.desired_exchange_desc);
@@ -308,32 +363,16 @@ export function ListingDetailModal({
   const typeLabel = listing.type === 'service' ? 'Service' : 'Produit';
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto bg-black/50 backdrop-blur-[2px] sm:items-center sm:p-4">
-      <div className="relative min-h-screen w-full max-w-7xl bg-slate-50 text-on-surface dark:bg-slate-950 sm:my-4 sm:max-h-[95vh] sm:min-h-0 sm:overflow-y-auto sm:rounded-3xl sm:shadow-2xl">
-        <button
-          type="button"
-          onClick={onClose}
-          className="fixed right-4 top-4 z-[80] flex h-11 w-11 items-center justify-center rounded-full border border-slate-100 bg-white/95 text-slate-500 shadow-lg transition-all hover:bg-white hover:text-on-surface dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
-          aria-label="Fermer"
-        >
-          <span className="material-symbols-outlined text-[24px]">close</span>
-        </button>
-
-        <div className="px-4 pb-28 pt-20 md:px-8 md:pb-24 md:pt-24">
-          {/* Fil d'Ariane + date */}
-          <div className="mb-10 flex flex-col justify-between gap-6 md:mb-12 md:flex-row md:items-center">
+    <div className="relative w-full max-w-7xl bg-slate-50 text-on-surface dark:bg-slate-950">
+        <div className="pb-28 pt-0 md:pb-24">
+          <PageBackLink onClick={onClose} label="Retour aux annonces" />
+          <div className="mb-10 flex flex-col justify-between gap-4 md:mb-12 md:flex-row md:items-center">
             <nav className="flex flex-wrap items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-slate-400">
-              <button type="button" onClick={onClose} className="hover:text-primary">
-                Annonces
-              </button>
-              <span className="material-symbols-outlined text-[14px]">chevron_right</span>
               {categoryName ? (
-                <>
-                  <span className="text-on-surface dark:text-slate-300">{categoryName}</span>
-                  <span className="material-symbols-outlined text-[14px]">chevron_right</span>
-                </>
-              ) : null}
-              <span className="text-on-surface dark:text-slate-200">Détail</span>
+                <span className="text-on-surface dark:text-slate-300">{categoryName}</span>
+              ) : (
+                <span className="text-on-surface-variant">Annonce</span>
+              )}
             </nav>
             <div className="inline-flex w-fit items-center gap-2.5 rounded-full border border-slate-100 bg-white px-5 py-2.5 text-xs font-bold text-slate-500 shadow-sm dark:border-slate-700 dark:bg-slate-900">
               <span className="material-symbols-outlined text-sm text-primary">calendar_today</span>
@@ -762,40 +801,57 @@ export function ListingDetailModal({
                   <span className="material-symbols-outlined text-primary">map</span>
                   Localisation
                 </h2>
-                <p className="text-xs font-bold uppercase tracking-widest text-slate-400">{mapCaption}</p>
+                <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                  {mapCaption}
+                  {mapIsApproximate ? (
+                    <span className="mt-1 block font-inter text-[10px] font-semibold normal-case text-primary">
+                      Carte centrée sur la ville (GPS non renseigné)
+                    </span>
+                  ) : null}
+                </p>
               </div>
               <div
-                className={`h-[280px] w-full overflow-hidden rounded-[2.5rem] border border-white bg-white md:h-[400px] dark:border-slate-700 dark:bg-slate-900 ${HERO_SHADOW}`}
+                className={`relative h-[280px] w-full overflow-hidden rounded-[2.5rem] border border-white bg-white md:h-[400px] dark:border-slate-700 dark:bg-slate-900 ${HERO_SHADOW}`}
               >
-                {staticMapUrl ? (
-                  <img
-                    src={staticMapUrl}
-                    alt=""
-                    className="h-full w-full object-cover grayscale transition-all duration-700 hover:grayscale-0"
+                {geocodeLoading && !showMap ? (
+                  <div className="flex h-full flex-col items-center justify-center bg-slate-100 dark:bg-slate-800">
+                    <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                    <p className="mt-3 text-sm font-medium text-slate-500">Chargement de la carte…</p>
+                  </div>
+                ) : showMap ? (
+                  <LocationMap
+                    key={`${listing.id}-${mapLat}-${mapLng}`}
+                    lat={mapLat}
+                    lng={mapLng}
+                    zoom={mapIsApproximate ? 12 : 14}
+                    popupLabel={mapPopupLabel}
+                    className="z-[1] h-full min-h-[260px] w-full rounded-[2.5rem]"
                   />
                 ) : (
                   <div className="flex h-full flex-col items-center justify-center bg-slate-100 px-6 text-center dark:bg-slate-800">
                     <span className="material-symbols-outlined mb-2 text-4xl text-slate-400">map</span>
                     <p className="text-sm font-semibold text-slate-500">
                       {listing.user?.city
-                        ? `Zone : ${listing.user.city}`
-                        : 'Coordonnées précises non renseignées'}
+                        ? `Zone : ${listing.user.city} (carte indisponible)`
+                        : 'Indiquez une ville sur le profil pour afficher la carte'}
                     </p>
                   </div>
                 )}
               </div>
             </section>
           )}
-        </div>
-      </div>
 
-      <ReportModal
-        isOpen={showReportModal}
-        onClose={() => setShowReportModal(false)}
-        targetType="listing"
-        targetId={listing.id}
-        targetUserId={listing.user_id}
-      />
+          {showReportModal ? (
+            <div className="mt-12 max-w-xl">
+              <ReportFormPanel
+                targetType="listing"
+                targetId={listing.id}
+                targetUserId={listing.user_id}
+                onDismiss={() => setShowReportModal(false)}
+              />
+            </div>
+          ) : null}
+        </div>
     </div>
   );
 }

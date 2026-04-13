@@ -1,11 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Image as ImageIcon, Upload, X } from 'lucide-react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { supabase, type Category } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth-context';
+import { PageBackLink } from '../layout/PageBackLink';
 
 type CreateListingModalProps = {
-  isOpen: boolean;
-  onClose: () => void;
+  onBack: () => void;
   onSuccess: () => void;
   categories?: Category[];
 };
@@ -31,8 +30,14 @@ function getDefaultImage(categorySlug: string | undefined, type: 'service' | 'pr
   return DEFAULT_IMAGES.__default__;
 }
 
-export function CreateListingModal({ isOpen, onClose, onSuccess, categories = [] }: CreateListingModalProps) {
+const fieldClass =
+  'w-full border-none bg-surface-container-low px-6 py-4 font-inter font-medium text-on-surface placeholder:text-outline focus:ring-2 focus:ring-primary/20 dark:bg-slate-800 rounded-lg';
+const sectionLabelClass =
+  'block text-sm font-bold uppercase tracking-widest text-on-surface-variant dark:text-slate-400';
+
+export function CreateListingModal({ onBack, onSuccess, categories = [] }: CreateListingModalProps) {
   const { user } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -52,31 +57,31 @@ export function CreateListingModal({ isOpen, onClose, onSuccess, categories = []
 
   const selectedCategory = useMemo(
     () => categories.find((c) => c.id === formData.category_id),
-    [categories, formData.category_id]
+    [categories, formData.category_id],
   );
 
   const defaultImageUrl = useMemo(
     () => getDefaultImage(selectedCategory?.slug, formData.type),
-    [selectedCategory?.slug, formData.type]
+    [selectedCategory?.slug, formData.type],
   );
 
+  const previewUrl = customImageUrl || defaultImageUrl;
+
   useEffect(() => {
-    if (!isOpen) {
-      setCustomImageUrl(null);
-      setFormData({
-        type: 'service',
-        category_id: '',
-        title: '',
-        description_offer: '',
-        desired_exchange_desc: '',
-        mode: 'both',
-        estimation_min: '',
-        estimation_max: '',
-      });
-      setError('');
-      setUploading(false);
-    }
-  }, [isOpen]);
+    setCustomImageUrl(null);
+    setFormData({
+      type: 'service',
+      category_id: '',
+      title: '',
+      description_offer: '',
+      desired_exchange_desc: '',
+      mode: 'both',
+      estimation_min: '',
+      estimation_max: '',
+    });
+    setError('');
+    setUploading(false);
+  }, []);
 
   const handleUpload = async (file?: File | null) => {
     if (!file || !user) return;
@@ -102,9 +107,10 @@ export function CreateListingModal({ isOpen, onClose, onSuccess, categories = []
       if (!data?.publicUrl) throw new Error("Impossible de récupérer l'URL publique");
 
       setCustomImageUrl(data.publicUrl);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(err.message || "Échec du téléversement de l'image");
+      const msg = err && typeof err === 'object' && 'message' in err ? String((err as Error).message) : "Échec du téléversement";
+      setError(msg);
     } finally {
       setUploading(false);
     }
@@ -126,7 +132,7 @@ export function CreateListingModal({ isOpen, onClose, onSuccess, categories = []
           category_id: formData.category_id || null,
           title: formData.title,
           description_offer: formData.description_offer,
-          desired_exchange_desc: formData.desired_exchange_desc,
+          desired_exchange_desc: formData.desired_exchange_desc || '',
           mode: formData.mode,
           estimation_min: formData.estimation_min ? parseFloat(formData.estimation_min) : null,
           estimation_max: formData.estimation_max ? parseFloat(formData.estimation_max) : null,
@@ -165,243 +171,323 @@ export function CreateListingModal({ isOpen, onClose, onSuccess, categories = []
       setCustomImageUrl(null);
 
       onSuccess();
-      onClose();
-    } catch (err: any) {
-      setError(err.message || 'Une erreur est survenue');
+      onBack();
+    } catch (err: unknown) {
+      const msg = err && typeof err === 'object' && 'message' in err ? String((err as Error).message) : 'Une erreur est survenue';
+      setError(msg);
     } finally {
       setLoading(false);
     }
   };
 
-  if (!isOpen) return null;
+  const modeOptions: { value: typeof formData.mode; label: string; icon: string }[] = [
+    { value: 'remote', label: 'À distance', icon: 'devices' },
+    { value: 'on_site', label: 'Présentiel', icon: 'person_pin_circle' },
+    { value: 'both', label: 'Mixte', icon: 'dynamic_feed' },
+  ];
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 sm:p-7 relative my-8 shadow-soft-lg">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
-        >
-          <X className="w-5 h-5" />
-        </button>
+    <div className="w-full max-w-5xl pb-24">
+      <form onSubmit={handleSubmit}>
+        <PageBackLink onClick={onBack} label="Retour aux annonces" />
 
-        <h2 className="text-2xl font-heading font-semibold mb-1 text-brand-text">
-          Créer une annonce
-        </h2>
-        <p className="text-sm text-gray-500 mb-6">
-          Décrivez ce que vous offrez et ce que vous cherchez en échange. Tout est pensé pour le troc équitable.
-        </p>
+        {/* En-tête */}
+        <div className="mb-12">
+          <h1 className="mb-4 font-headline text-4xl font-extrabold tracking-tighter text-on-surface md:text-5xl">
+            Créer une annonce
+          </h1>
+          <p className="max-w-2xl text-lg leading-relaxed text-on-surface-variant">
+            Partagez ce que vous proposez et ce que vous cherchez en échange — le troc local et équitable, sans friction.
+          </p>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Catégorie
-            </label>
-            <select
-              value={formData.category_id}
-              onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue focus:bg-white bg-gray-50"
-            >
-              <option value="">Choisir une catégorie</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
-            <p className="text-xs text-gray-500 mt-1">
-              Utilisé pour pré-sélectionner une photo adaptée (modifiable ensuite)
-            </p>
+        <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
+          {/* Colonne formulaire */}
+          <div className="space-y-8 lg:col-span-8">
+            {/* Section identité */}
+            <section className="space-y-8 rounded-xl bg-surface-container-lowest p-8 shadow-sm dark:border dark:border-outline-variant/10 dark:bg-slate-900 md:p-12">
+              <div className="space-y-4">
+                <span className={sectionLabelClass}>Type de troc</span>
+                <div className="flex max-w-sm rounded-xl bg-surface-container-low p-1 dark:bg-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, type: 'product' })}
+                    className={`flex-1 rounded-lg px-6 py-3 text-sm font-bold transition-all ${
+                      formData.type === 'product'
+                        ? 'bg-surface-container-lowest text-primary shadow-sm dark:bg-slate-900'
+                        : 'text-on-surface-variant hover:text-on-surface'
+                    }`}
+                  >
+                    Produit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, type: 'service' })}
+                    className={`flex-1 rounded-lg px-6 py-3 text-sm font-bold transition-all ${
+                      formData.type === 'service'
+                        ? 'bg-surface-container-lowest text-primary shadow-sm dark:bg-slate-900'
+                        : 'text-on-surface-variant hover:text-on-surface'
+                    }`}
+                  >
+                    Service
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <label htmlFor="create-category" className={sectionLabelClass}>
+                  Catégorie
+                </label>
+                <div className="relative">
+                  <select
+                    id="create-category"
+                    value={formData.category_id}
+                    onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}
+                    className={`${fieldClass} appearance-none pr-12`}
+                  >
+                    <option value="">Choisir une catégorie</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant">
+                    <span className="material-symbols-outlined text-[22px]">expand_more</span>
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <label htmlFor="create-title" className={sectionLabelClass}>
+                  Titre de l&apos;annonce
+                </label>
+                <input
+                  id="create-title"
+                  type="text"
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  className={fieldClass}
+                  placeholder="Ex : cours de guitare, réparation vélo, plantes d'intérieur…"
+                  required
+                />
+              </div>
+            </section>
+
+            {/* Section contenu */}
+            <section className="space-y-8 rounded-xl bg-surface-container-lowest p-8 shadow-sm dark:border dark:border-outline-variant/10 dark:bg-slate-900 md:p-12">
+              <div className="space-y-4">
+                <label htmlFor="create-offer" className={sectionLabelClass}>
+                  Ce que vous offrez
+                </label>
+                <textarea
+                  id="create-offer"
+                  value={formData.description_offer}
+                  onChange={(e) => setFormData({ ...formData, description_offer: e.target.value })}
+                  rows={4}
+                  className={fieldClass}
+                  placeholder="Décrivez en détail votre offre…"
+                  required
+                />
+              </div>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between gap-2">
+                  <label htmlFor="create-wanted" className={sectionLabelClass}>
+                    Ce que vous recherchez
+                  </label>
+                  <span className="rounded bg-secondary-container/15 px-2 py-1 text-xs font-bold text-on-secondary-container">
+                    Optionnel
+                  </span>
+                </div>
+                <textarea
+                  id="create-wanted"
+                  value={formData.desired_exchange_desc}
+                  onChange={(e) => setFormData({ ...formData, desired_exchange_desc: e.target.value })}
+                  rows={4}
+                  className={fieldClass}
+                  placeholder="Produits ou services que vous aimeriez recevoir en échange…"
+                />
+              </div>
+            </section>
+
+            {/* Section logistique */}
+            <section className="space-y-8 rounded-xl bg-surface-container-lowest p-8 shadow-sm dark:border dark:border-outline-variant/10 dark:bg-slate-900 md:p-12">
+              <div className="space-y-4">
+                <span className={sectionLabelClass}>Mode d&apos;échange</span>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                  {modeOptions.map((opt) => {
+                    const active = formData.mode === opt.value;
+                    return (
+                      <label
+                        key={opt.value}
+                        className={`group relative flex cursor-pointer flex-col rounded-xl bg-surface-container-low p-4 transition-colors hover:bg-surface-container dark:bg-slate-800 ${
+                          active ? 'ring-2 ring-primary/40' : ''
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="exchange-mode"
+                          value={opt.value}
+                          checked={active}
+                          onChange={() => setFormData({ ...formData, mode: opt.value })}
+                          className="absolute right-4 top-4 text-primary focus:ring-primary"
+                        />
+                        <span
+                          className={`material-symbols-outlined mb-2 text-[28px] ${active ? 'text-primary' : 'text-outline group-hover:text-primary'}`}
+                        >
+                          {opt.icon}
+                        </span>
+                        <span className="text-sm font-bold text-on-surface">{opt.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <span className={sectionLabelClass}>Valeur estimée</span>
+                  <span
+                    className="material-symbols-outlined cursor-help text-sm text-outline"
+                    title="Confidentiel — aide à équilibrer les propositions"
+                  >
+                    info
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={formData.estimation_min}
+                      onChange={(e) => setFormData({ ...formData, estimation_min: e.target.value })}
+                      className={`${fieldClass} pl-10`}
+                      placeholder="Min"
+                      min="0"
+                      step="0.01"
+                    />
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-on-surface-variant">€</span>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={formData.estimation_max}
+                      onChange={(e) => setFormData({ ...formData, estimation_max: e.target.value })}
+                      className={`${fieldClass} pl-10`}
+                      placeholder="Max"
+                      min="0"
+                      step="0.01"
+                    />
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-on-surface-variant">€</span>
+                  </div>
+                </div>
+                <p className="text-xs text-on-surface-variant">Non affiché publiquement.</p>
+              </div>
+            </section>
+
+            {error ? (
+              <div className="rounded-xl border border-error/30 bg-error-container/20 px-4 py-3 text-sm text-error">{error}</div>
+            ) : null}
+
+            {/* Actions (visibles sur tout écran ; mise en avant desktop comme le mockup) */}
+            <div className="hidden flex-col gap-4 border-t border-outline-variant/15 pt-8 md:flex md:flex-row">
+              <button
+                type="button"
+                onClick={onBack}
+                className="flex-1 rounded-full border-2 border-outline-variant/30 py-4 font-headline font-bold text-on-surface-variant transition-colors hover:bg-surface-container-low dark:border-slate-600"
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex-[2] rounded-full bg-primary py-4 font-headline font-bold text-on-primary shadow-xl shadow-primary/20 transition-all hover:scale-[1.01] active:scale-95 disabled:opacity-50"
+              >
+                {loading ? 'Publication…' : "Publier l'annonce"}
+              </button>
+            </div>
           </div>
 
-          <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 flex gap-4 items-start">
-            <div className="w-28 h-20 rounded-xl overflow-hidden bg-white border border-gray-200 flex items-center justify-center">
-              {customImageUrl || defaultImageUrl ? (
-                <img
-                  src={customImageUrl || defaultImageUrl}
-                  alt="Aperçu"
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <ImageIcon className="w-8 h-8 text-gray-400" />
-              )}
-            </div>
-            <div className="flex-1 space-y-2">
-              <p className="text-sm text-gray-700 font-medium">
-                Photo pré-sélectionnée selon le thème
-              </p>
-              <p className="text-xs text-gray-500">
-                Une photo est choisie automatiquement (catégorie ou type). Tu peux la remplacer en uploadant la tienne.
-              </p>
-              <label className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors text-sm font-medium">
-                <Upload className="w-4 h-4" />
-                {uploading ? 'Téléversement...' : 'Uploader une image'}
+          {/* Sidebar */}
+          <aside className="space-y-6 lg:col-span-4 lg:sticky lg:top-28">
+            <div className="space-y-6 rounded-xl bg-surface-container-lowest p-6 shadow-sm dark:border dark:border-outline-variant/10 dark:bg-slate-900">
+              <span className={sectionLabelClass}>Visuel de l&apos;annonce</span>
+              <div className="group relative aspect-square overflow-hidden rounded-xl bg-surface-container-high dark:bg-slate-800">
+                <img src={previewUrl} alt="" className="h-full w-full object-cover" />
+                <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className="flex items-center gap-2 rounded-full bg-surface-container-lowest px-6 py-3 font-headline text-sm font-bold text-on-surface shadow-xl"
+                  >
+                    <span className="material-symbols-outlined text-lg">photo_camera</span>
+                    {uploading ? 'Envoi…' : 'Modifier'}
+                  </button>
+                </div>
                 <input
+                  ref={fileInputRef}
                   type="file"
                   accept="image/*"
                   className="hidden"
                   onChange={(e) => handleUpload(e.target.files?.[0] || null)}
                   disabled={uploading}
                 />
-              </label>
-              {customImageUrl && (
+              </div>
+              {customImageUrl ? (
                 <button
                   type="button"
-                  className="text-xs text-red-600 hover:underline"
                   onClick={() => setCustomImageUrl(null)}
+                  className="text-xs font-semibold text-primary hover:underline"
                 >
-                  Réinitialiser vers la photo par défaut
+                  Réinitialiser l’image suggérée
                 </button>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Type d'annonce
-            </label>
-            <div className="flex space-x-4">
-              <label className="flex-1">
-                <input
-                  type="radio"
-                  value="service"
-                  checked={formData.type === 'service'}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value as 'service' })}
-                  className="sr-only"
-                />
-                <div className={`p-4 border-2 rounded-xl cursor-pointer text-center transition-colors ${formData.type === 'service' ? 'border-brand-blue bg-brand-blue/5' : 'border-gray-200 hover:border-gray-300'}`}>
-                  <span className="font-medium">Service</span>
-                </div>
-              </label>
-              <label className="flex-1">
-                <input
-                  type="radio"
-                  value="product"
-                  checked={formData.type === 'product'}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value as 'product' })}
-                  className="sr-only"
-                />
-                <div className={`p-4 border-2 rounded-xl cursor-pointer text-center transition-colors ${formData.type === 'product' ? 'border-brand-blue bg-brand-blue/5' : 'border-gray-200 hover:border-gray-300'}`}>
-                  <span className="font-medium">Produit</span>
-                </div>
-              </label>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Titre de l'annonce
-            </label>
-            <input
-              type="text"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue focus:bg-white bg-gray-50"
-              placeholder="Ex: Cours de guitare débutant"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Ce que vous offrez
-            </label>
-            <textarea
-              value={formData.description_offer}
-              onChange={(e) => setFormData({ ...formData, description_offer: e.target.value })}
-              rows={4}
-              className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue focus:bg-white bg-gray-50"
-              placeholder="Décrivez en détail ce que vous proposez..."
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Ce que vous recherchez en échange
-            </label>
-            <textarea
-              value={formData.desired_exchange_desc}
-              onChange={(e) => setFormData({ ...formData, desired_exchange_desc: e.target.value })}
-              rows={4}
-              className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue focus:bg-white bg-gray-50"
-              placeholder="Décrivez ce que vous aimeriez recevoir en échange..."
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Mode d'échange
-            </label>
-            <select
-              value={formData.mode}
-              onChange={(e) => setFormData({ ...formData, mode: e.target.value as any })}
-              className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue focus:bg-white bg-gray-50"
-            >
-              <option value="both">Présentiel et À distance</option>
-              <option value="on_site">Présentiel uniquement</option>
-              <option value="remote">À distance uniquement</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Estimation de valeur (optionnel, confidentiel)
-            </label>
-            <div className="flex space-x-4">
-              <div className="flex-1">
-                <input
-                  type="number"
-                  value={formData.estimation_min}
-                  onChange={(e) => setFormData({ ...formData, estimation_min: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue focus:bg-white bg-gray-50"
-                  placeholder="Min (€)"
-                  min="0"
-                  step="0.01"
-                />
-              </div>
-              <div className="flex-1">
-                <input
-                  type="number"
-                  value={formData.estimation_max}
-                  onChange={(e) => setFormData({ ...formData, estimation_max: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue focus:bg-white bg-gray-50"
-                  placeholder="Max (€)"
-                  min="0"
-                  step="0.01"
-                />
+              ) : null}
+              <div className="flex items-start gap-3 rounded-xl bg-secondary-container/10 p-4 dark:bg-secondary-container/20">
+                <span className="material-symbols-outlined shrink-0 text-secondary-container">lightbulb</span>
+                <p className="text-xs font-medium leading-tight text-on-secondary-container">
+                  Une photo claire augmente les chances qu’on vous contacte pour un échange.
+                </p>
               </div>
             </div>
-            <p className="text-xs text-gray-500 mt-1">
-              Cette information ne sera jamais affichée publiquement
-            </p>
-          </div>
 
-          {error && (
-            <div className="text-sm text-red-600 bg-red-50 p-3 rounded-md">
-              {error}
+            <div className="space-y-6 rounded-xl bg-surface-container-low p-8 dark:bg-slate-800/80">
+              <h3 className="font-headline text-xl font-extrabold tracking-tight text-on-surface">Conseils</h3>
+              <ul className="space-y-4">
+                {[
+                  'Soyez précis sur ce que vous offrez et ce que vous attendez.',
+                  'Une fourchette de valeur aide à proposer des échanges équilibrés.',
+                  'Indiquez vos disponibilités ou contraintes dans la description.',
+                ].map((text, i) => (
+                  <li key={i} className="flex gap-3">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-on-primary">
+                      {i + 1}
+                    </span>
+                    <p className="text-sm text-on-surface-variant">{text}</p>
+                  </li>
+                ))}
+              </ul>
             </div>
-          )}
 
-          <div className="flex space-x-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-200 rounded-full hover:bg-gray-50 transition-colors text-sm font-medium"
-            >
-              Annuler
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 btn-primary rounded-full"
-            >
-              {loading ? 'Publication...' : "Publier l'annonce"}
-            </button>
-          </div>
-        </form>
-      </div>
+            {/* Actions mobile : sous la sidebar pour rester accessible */}
+            <div className="flex flex-col gap-4 pt-2 md:hidden">
+              <button
+                type="button"
+                onClick={onBack}
+                className="w-full rounded-full border-2 border-outline-variant/30 py-4 font-headline font-bold text-on-surface-variant"
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full rounded-full bg-primary py-4 font-headline font-bold text-on-primary shadow-lg shadow-primary/20 disabled:opacity-50"
+              >
+                {loading ? 'Publication…' : "Publier l'annonce"}
+              </button>
+            </div>
+          </aside>
+        </div>
+      </form>
     </div>
   );
 }

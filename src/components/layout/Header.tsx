@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { User, LogOut, Settings, Package, Shield } from 'lucide-react';
 import { useAuth } from '../../lib/auth-context';
+import { APP_HEADER_HEIGHT_CLASS } from './app-layout';
 
 type AppNavView = 'listings' | 'proposals' | 'profile' | 'settings' | 'exchanges' | 'admin';
 
@@ -16,8 +17,10 @@ export function Header({ onLogoClick, onCreateListing, onNavigate, onRequestAuth
   const [showUserMenu, setShowUserMenu] = useState(false);
 
   return (
-    <nav className="fixed top-0 z-50 w-full bg-white/70 shadow-xl shadow-primary/5 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-screen-2xl items-center justify-between px-6 py-4 md:px-8">
+    <nav
+      className={`fixed top-0 z-50 ${APP_HEADER_HEIGHT_CLASS} w-full bg-white/70 shadow-xl shadow-primary/5 backdrop-blur-xl`}
+    >
+      <div className="mx-auto flex h-full max-w-screen-2xl items-center justify-between px-6 md:px-8">
         <div className="flex items-center">
           <button
             type="button"

@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, MapPin, Calendar, Star, Loader2 } from 'lucide-react';
+import { MapPin, Calendar, Star, Loader2 } from 'lucide-react';
 import { supabase, User, Listing, Review } from '../../lib/supabase';
+import { PageBackLink } from '../layout/PageBackLink';
 
 type PublicProfilePageProps = {
   userId: string;
   onBack: () => void;
+  /** Libellé du lien retour (ex. selon la page d’origine). */
+  backLabel?: string;
   onViewListing?: (listing: Listing) => void;
   onUserClick?: (userId: string) => void;
 };
@@ -13,7 +16,13 @@ type ReviewWithReviewer = Review & {
   reviewer?: { display_name: string; avatar_url?: string };
 };
 
-export function PublicProfilePage({ userId, onBack, onViewListing, onUserClick }: PublicProfilePageProps) {
+export function PublicProfilePage({
+  userId,
+  onBack,
+  backLabel = 'Retour',
+  onViewListing,
+  onUserClick,
+}: PublicProfilePageProps) {
   const [user, setUser] = useState<User | null>(null);
   const [listings, setListings] = useState<Listing[]>([]);
   const [reviews, setReviews] = useState<ReviewWithReviewer[]>([]);
@@ -73,22 +82,16 @@ export function PublicProfilePage({ userId, onBack, onViewListing, onUserClick }
 
   if (!user) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <button onClick={onBack} className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6">
-          <ArrowLeft className="w-5 h-5" />
-          Retour
-        </button>
-        <div className="text-center text-gray-500 py-20">Utilisateur non trouvé</div>
+      <div className="w-full max-w-4xl">
+        <PageBackLink onClick={onBack} label={backLabel} />
+        <div className="py-20 text-center text-on-surface-variant">Utilisateur non trouvé</div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <button onClick={onBack} className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6">
-        <ArrowLeft className="w-5 h-5" />
-        Retour
-      </button>
+    <div className="w-full max-w-4xl">
+      <PageBackLink onClick={onBack} label={backLabel} />
 
       <div className="bg-white rounded-3xl shadow-soft-lg overflow-hidden border border-gray-100">
         {/* Banner */}

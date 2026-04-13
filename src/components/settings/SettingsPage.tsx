@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../lib/auth-context';
 import { supabase } from '../../lib/supabase';
+import { PageBackRowSpacer } from '../layout/PageBackLink';
 
 function SettingsToggle({
   checked,
@@ -175,6 +176,7 @@ export function SettingsPage() {
 
   return (
     <div className="w-full max-w-7xl space-y-16 md:space-y-20">
+      <PageBackRowSpacer />
       <section className="mb-12">
         <h1 className="mb-2 font-headline text-4xl font-extrabold tracking-tight text-on-surface md:text-5xl">
           Paramètres

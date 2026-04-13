@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './lib/auth-context';
 import { supabase, Listing, Category, Proposal } from './lib/supabase';
 import { Header } from './components/layout/Header';
-import { AppSidebar } from './components/layout/AppSidebar';
+import { AppSidebar, type AppSidebarActiveItem } from './components/layout/AppSidebar';
 import { AppFooter } from './components/layout/AppFooter';
 import { MobileBottomNav } from './components/layout/MobileBottomNav';
 import { ListingCard } from './components/listings/ListingCard';
@@ -15,9 +15,11 @@ import { SettingsPage } from './components/settings/SettingsPage';
 import { ExchangesPage } from './components/exchanges/ExchangesPage';
 import { LandingPage } from './components/home/LandingPage';
 import { Filter, Grid } from 'lucide-react';
-import { AuthModal } from './components/auth/AuthModal';
+import { AuthPage } from './components/auth/AuthPage';
 import { PublicProfilePage } from './components/profile/PublicProfilePage';
 import { AdminPage } from './components/admin/AdminPage';
+import { PageBackRowSpacer } from './components/layout/PageBackLink';
+import { APP_MAIN_PADDING_TOP_CLASS, APP_SIDEBAR_CONTENT_INSET_LG } from './components/layout/app-layout';
 
 function AppContent() {
   console.log('AppContent rendering...');
@@ -26,21 +28,35 @@ function AppContent() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [selectedProposal, setSelectedProposal] = useState<Proposal | null>(null);
   const [proposalDetailOptions, setProposalDetailOptions] = useState<{ openChat?: boolean }>({});
-  const [view, setView] = useState<'landing' | 'listings' | 'proposals' | 'profile' | 'settings' | 'exchanges' | 'public-profile' | 'admin'>(!user ? 'landing' : 'listings');
+  type PrimaryView =
+    | 'landing'
+    | 'listings'
+    | 'proposals'
+    | 'profile'
+    | 'settings'
+    | 'exchanges'
+    | 'public-profile'
+    | 'admin'
+    | 'create-listing'
+    | 'listing-detail'
+    | 'proposal-detail'
+    | 'auth';
+  const [view, setView] = useState<PrimaryView>(!user ? 'landing' : 'listings');
+  const [pageReturnView, setPageReturnView] = useState<PrimaryView>('listings');
   const [filterType, setFilterType] = useState<'all' | 'service' | 'product'>('all');
   const [filterMode, setFilterMode] = useState<'all' | 'remote' | 'on_site' | 'both'>('all');
   const [filterCategory, setFilterCategory] = useState<string | null>(null);
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-  const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
   const [viewingUserId, setViewingUserId] = useState<string | null>(null);
-  const [previousView, setPreviousView] = useState<'landing' | 'listings' | 'proposals' | 'profile' | 'settings' | 'exchanges' | 'admin'>('listings');
+  const [previousView, setPreviousView] = useState<
+    'landing' | 'listings' | 'proposals' | 'profile' | 'settings' | 'exchanges' | 'admin'
+  >('listings');
 
   // Fonction pour gérer le clic sur un utilisateur
   const handleUserClick = (userId: string) => {
@@ -49,7 +65,42 @@ function AppContent() {
       setPreviousView(view as 'landing' | 'listings' | 'proposals' | 'profile' | 'settings' | 'exchanges' | 'admin');
     }
     setViewingUserId(userId);
+    setSelectedListing(null);
+    setSelectedProposal(null);
+    setProposalDetailOptions({});
     setView('public-profile');
+  };
+
+  const openListingDetail = (listing: Listing) => {
+    if (view === 'public-profile') {
+      setPageReturnView('public-profile');
+    } else {
+      setPageReturnView(view);
+    }
+    setSelectedListing(listing);
+    setView('listing-detail');
+  };
+
+  const closeListingDetail = () => {
+    setSelectedListing(null);
+    setView(pageReturnView);
+  };
+
+  const openProposalDetail = (p: Proposal, opts?: { openChat?: boolean }) => {
+    setPageReturnView(view);
+    setSelectedProposal(p);
+    setProposalDetailOptions(opts ?? {});
+    setView('proposal-detail');
+  };
+
+  const closeProposalDetail = () => {
+    setSelectedProposal(null);
+    setProposalDetailOptions({});
+    setView(pageReturnView);
+  };
+
+  const closeCreateListing = () => {
+    setView(pageReturnView);
   };
 
   // S'assurer qu'un membre connecté ne voit pas une page vide après refresh :
@@ -59,6 +110,18 @@ function AppContent() {
       setView('listings');
     }
   }, [authLoading, user, view]);
+
+  useEffect(() => {
+    if (view === 'listing-detail' && !selectedListing) {
+      setView('listings');
+    }
+  }, [view, selectedListing]);
+
+  useEffect(() => {
+    if (view === 'proposal-detail' && !selectedProposal) {
+      setView('proposals');
+    }
+  }, [view, selectedProposal]);
 
   useEffect(() => {
     const id = window.setTimeout(() => setSearchQuery(searchInput.trim()), 400);
@@ -120,8 +183,9 @@ function AppContent() {
   }
 
   const handleRequestAuth = (mode: 'login' | 'register' = 'login') => {
+    setPageReturnView(view);
     setAuthModalMode(mode);
-    setShowAuthModal(true);
+    setView('auth');
   };
 
   const openCreateListing = () => {
@@ -129,29 +193,69 @@ function AppContent() {
       handleRequestAuth('register');
       return;
     }
-    setShowCreateModal(true);
+    setPageReturnView(view);
+    setView('create-listing');
   };
 
-  const showMarketplaceChrome = view === 'listings' || view === 'proposals';
+  /** Réinitialise les écrans « détail » pour éviter de mélanger annonce / proposition au changement de section. */
+  const clearDetailViews = () => {
+    setSelectedListing(null);
+    setSelectedProposal(null);
+    setProposalDetailOptions({});
+  };
+
+  const sidebarActiveForReturnPage = (rv: PrimaryView): AppSidebarActiveItem => {
+    switch (rv) {
+      case 'proposals':
+      case 'proposal-detail':
+        return 'proposals';
+      case 'exchanges':
+        return 'exchanges';
+      case 'profile':
+      case 'public-profile':
+        return 'profile';
+      case 'settings':
+        return 'settings';
+      case 'admin':
+        return 'admin';
+      default:
+        return 'explore';
+    }
+  };
+
   const showAppNavSidebar =
     view !== 'public-profile' &&
     (view === 'listings' ||
-      (user && ['proposals', 'exchanges', 'profile', 'settings', 'admin'].includes(view)));
+      (user &&
+        [
+          'proposals',
+          'exchanges',
+          'profile',
+          'settings',
+          'admin',
+          'listing-detail',
+          'proposal-detail',
+          'create-listing',
+        ].includes(view)));
 
-  const sidebarActiveItem =
-    view === 'listings'
-      ? 'explore'
-      : view === 'proposals'
-        ? 'proposals'
-        : view === 'exchanges'
-          ? 'exchanges'
-          : view === 'profile'
-            ? 'profile'
-            : view === 'settings'
-              ? 'settings'
-              : view === 'admin'
-                ? 'admin'
-                : 'none';
+  const sidebarActiveItem: AppSidebarActiveItem =
+    view === 'proposal-detail'
+      ? 'proposals'
+      : view === 'listing-detail' || view === 'create-listing'
+        ? sidebarActiveForReturnPage(pageReturnView)
+        : view === 'listings'
+          ? 'explore'
+          : view === 'proposals'
+            ? 'proposals'
+            : view === 'exchanges'
+              ? 'exchanges'
+              : view === 'profile'
+                ? 'profile'
+                : view === 'settings'
+                  ? 'settings'
+                  : view === 'admin'
+                    ? 'admin'
+                    : 'none';
 
   const requireUser = (go: () => void) => {
     if (!user) {
@@ -161,23 +265,39 @@ function AppContent() {
     go();
   };
 
+  const publicProfileBackLabel = (() => {
+    const v = previousView as string;
+    if (v === 'listings' || v === 'listing-detail' || v === 'create-listing') return 'Retour aux annonces';
+    if (v === 'proposals' || v === 'proposal-detail') return 'Retour aux propositions';
+    if (v === 'exchanges') return 'Retour aux échanges';
+    if (v === 'profile') return 'Retour au profil';
+    if (v === 'settings') return 'Retour aux paramètres';
+    if (v === 'admin') return "Retour à l'administration";
+    return 'Retour';
+  })();
+
   const showMobileDock =
     view !== 'public-profile' &&
     view !== 'settings' &&
     view !== 'admin' &&
-    ['listings', 'proposals', 'exchanges', 'profile'].includes(view);
+    view !== 'auth' &&
+    [
+      'listings',
+      'proposals',
+      'exchanges',
+      'profile',
+      'listing-detail',
+      'proposal-detail',
+      'create-listing',
+    ].includes(view);
 
-  /** Même écart sous le header que Propositions / Échanges (pas de dock mobile sur Paramètres). */
-  const mainContentPadding =
-    showMarketplaceChrome || showMobileDock
-      ? 'pb-28 pt-28 md:pb-20'
-      : view === 'settings'
-        ? 'pt-28 pb-24 md:pb-24'
-        : 'py-24';
+  /** Marge sous le header + bas de page (dock mobile ou non). */
+  const mainContentPadding = showMobileDock
+    ? `${APP_MAIN_PADDING_TOP_CLASS} pb-28 md:pb-12`
+    : `${APP_MAIN_PADDING_TOP_CLASS} pb-12 md:pb-16`;
 
   const handleSelectProposal = (p: Proposal, opts?: { openChat?: boolean }) => {
-    setSelectedProposal(p);
-    setProposalDetailOptions(opts ?? {});
+    openProposalDetail(p, opts);
   };
 
   if (authLoading) {
@@ -190,26 +310,30 @@ function AppContent() {
 
   if (!user && view === 'landing') {
     return (
-      <div className="min-h-screen">
-        <LandingPage
-          onExplore={() => setView('listings')}
-          onCreateAccount={() => {
-            setView('listings');
-            setAuthModalMode('register');
-            setShowAuthModal(true);
-          }}
-          onLogin={() => {
-            setView('listings');
-            setAuthModalMode('login');
-            setShowAuthModal(true);
-          }}
-        />
-        <AuthModal
-          isOpen={showAuthModal}
-          onClose={() => setShowAuthModal(false)}
-          initialMode={authModalMode}
-        />
-      </div>
+      <LandingPage
+        onExplore={() => setView('listings')}
+        onCreateAccount={() => {
+          setPageReturnView('landing');
+          setAuthModalMode('register');
+          setView('auth');
+        }}
+        onLogin={() => {
+          setPageReturnView('landing');
+          setAuthModalMode('login');
+          setView('auth');
+        }}
+      />
+    );
+  }
+
+  if (!user && view === 'auth' && pageReturnView === 'landing') {
+    return (
+      <AuthPage
+        variant="standalone"
+        initialMode={authModalMode}
+        onBack={() => setView('landing')}
+        onAuthenticated={() => setView('listings')}
+      />
     );
   }
 
@@ -330,9 +454,15 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-background text-on-surface">
       <Header
-        onLogoClick={() => setView('listings')}
+        onLogoClick={() => {
+          clearDetailViews();
+          setView('listings');
+        }}
         onCreateListing={openCreateListing}
-        onNavigate={(v) => setView(v)}
+        onNavigate={(v) => {
+          clearDetailViews();
+          setView(v);
+        }}
         onRequestAuth={handleRequestAuth}
       />
 
@@ -340,14 +470,42 @@ function AppContent() {
         <AppSidebar
           activeItem={sidebarActiveItem}
           onAnnonces={() => {
+            clearDetailViews();
             setView('listings');
             setShowFilters(false);
           }}
-          onProposals={() => requireUser(() => setView('proposals'))}
-          onExchanges={() => requireUser(() => setView('exchanges'))}
-          onProfile={() => requireUser(() => setView('profile'))}
-          onSettings={() => requireUser(() => setView('settings'))}
-          onAdmin={user && ['admin', 'moderator'].includes(user.role) ? () => setView('admin') : undefined}
+          onProposals={() =>
+            requireUser(() => {
+              clearDetailViews();
+              setView('proposals');
+            })
+          }
+          onExchanges={() =>
+            requireUser(() => {
+              clearDetailViews();
+              setView('exchanges');
+            })
+          }
+          onProfile={() =>
+            requireUser(() => {
+              clearDetailViews();
+              setView('profile');
+            })
+          }
+          onSettings={() =>
+            requireUser(() => {
+              clearDetailViews();
+              setView('settings');
+            })
+          }
+          onAdmin={
+            user && ['admin', 'moderator'].includes(user.role)
+              ? () => {
+                  clearDetailViews();
+                  setView('admin');
+                }
+              : undefined
+          }
           showAdmin={!!user && ['admin', 'moderator'].includes(user.role)}
           onSupport={() => {
             window.location.href = 'mailto:contact@bontroc.fr';
@@ -356,10 +514,57 @@ function AppContent() {
         />
       ) : null}
 
-      <div className={showAppNavSidebar ? 'lg:pl-64' : ''}>
+      <div className={showAppNavSidebar ? APP_SIDEBAR_CONTENT_INSET_LG : ''}>
         <main className={`mx-auto max-w-screen-2xl px-6 md:px-8 ${mainContentPadding}`}>
-          {view === 'listings' ? (
+          {view === 'auth' ? (
+            <AuthPage
+              variant="embedded"
+              initialMode={authModalMode}
+              onBack={() => setView(pageReturnView)}
+              onAuthenticated={() =>
+                setView(pageReturnView === 'landing' || pageReturnView === 'auth' ? 'listings' : pageReturnView)
+              }
+            />
+          ) : view === 'create-listing' && user ? (
+            <CreateListingModal
+              categories={categories}
+              onBack={closeCreateListing}
+              onSuccess={loadListings}
+            />
+          ) : view === 'listing-detail' && selectedListing ? (
+            <ListingDetailModal
+              listing={selectedListing}
+              onClose={closeListingDetail}
+              onProposalSuccess={loadListings}
+              onRequestAuth={handleRequestAuth}
+              onUserClick={(userId) => {
+                setSelectedListing(null);
+                handleUserClick(userId);
+              }}
+            />
+          ) : view === 'proposal-detail' && selectedProposal ? (
+            <ProposalDetailModal
+              proposal={selectedProposal}
+              initialFocusChat={proposalDetailOptions.openChat === true}
+              onClose={closeProposalDetail}
+              onUpdate={loadListings}
+              onUserClick={(userId) => {
+                setSelectedProposal(null);
+                setProposalDetailOptions({});
+                handleUserClick(userId);
+              }}
+              onOpenExchanges={() => {
+                clearDetailViews();
+                setView('exchanges');
+              }}
+              onOpenProfile={() => {
+                clearDetailViews();
+                setView('profile');
+              }}
+            />
+          ) : view === 'listings' ? (
             <section>
+              <PageBackRowSpacer />
               <header className="mb-16">
                 <h1 className="mb-8 font-headline text-5xl font-black leading-[1.1] tracking-tighter text-on-surface md:text-7xl">
                   L&apos;échange <span className="text-primary">intelligent</span>
@@ -416,7 +621,7 @@ function AppContent() {
               ) : (
                 <div className="grid grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-4">
                   {listings.map((listing) => (
-                    <ListingCard key={listing.id} listing={listing} onClick={setSelectedListing} />
+                    <ListingCard key={listing.id} listing={listing} onClick={openListingDetail} />
                   ))}
                 </div>
               )}
@@ -437,11 +642,12 @@ function AppContent() {
           ) : view === 'public-profile' && viewingUserId ? (
             <PublicProfilePage
               userId={viewingUserId}
+              backLabel={publicProfileBackLabel}
               onBack={() => {
                 setViewingUserId(null);
                 setView(previousView);
               }}
-              onViewListing={setSelectedListing}
+              onViewListing={openListingDetail}
               onUserClick={handleUserClick}
             />
           ) : view === 'admin' ? (
@@ -457,17 +663,19 @@ function AppContent() {
           active={
             view === 'profile'
               ? 'person'
-              : view === 'proposals' || view === 'exchanges'
+              : view === 'proposals' || view === 'exchanges' || view === 'proposal-detail'
                 ? 'chat'
                 : showFilters
                   ? 'category'
                   : 'explore'
           }
           onExplore={() => {
+            clearDetailViews();
             setView('listings');
             setShowFilters(false);
           }}
           onCategory={() => {
+            clearDetailViews();
             setView('listings');
             setShowFilters((v) => !v);
           }}
@@ -477,6 +685,7 @@ function AppContent() {
               handleRequestAuth('login');
               return;
             }
+            clearDetailViews();
             setView('proposals');
           }}
           onPerson={() => {
@@ -484,51 +693,12 @@ function AppContent() {
               handleRequestAuth('login');
               return;
             }
+            clearDetailViews();
             setView('profile');
           }}
         />
       ) : null}
 
-      <CreateListingModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onSuccess={loadListings}
-        categories={categories}
-      />
-
-      <ListingDetailModal
-        listing={selectedListing}
-        onClose={() => setSelectedListing(null)}
-        onProposalSuccess={loadListings}
-        onRequestAuth={handleRequestAuth}
-        onUserClick={(userId) => {
-          setSelectedListing(null);
-          handleUserClick(userId);
-        }}
-      />
-
-      <ProposalDetailModal
-        proposal={selectedProposal}
-        initialFocusChat={proposalDetailOptions.openChat === true}
-        onClose={() => {
-          setSelectedProposal(null);
-          setProposalDetailOptions({});
-        }}
-        onUpdate={loadListings}
-        onUserClick={(userId) => {
-          setSelectedProposal(null);
-          setProposalDetailOptions({});
-          handleUserClick(userId);
-        }}
-        onOpenExchanges={() => setView('exchanges')}
-        onOpenProfile={() => setView('profile')}
-      />
-
-      <AuthModal
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-        initialMode={authModalMode}
-      />
     </div>
   );
 }

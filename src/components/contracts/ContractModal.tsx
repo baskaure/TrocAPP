@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase, Contract, type Listing, type Proposal } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth-context';
+import { PageBackLink } from '../layout/PageBackLink';
 
 type PartyUser = { id?: string; display_name?: string; avatar_url?: string };
 
@@ -160,37 +161,23 @@ export function ContractModal({ contract, onClose, onAccepted }: ContractModalPr
     partyUserId && user?.id === partyUserId ? ' (Vous)' : '';
 
   return (
-    <div className="fixed inset-0 z-[60] flex flex-col bg-black/50 backdrop-blur-[2px]">
-      {/* Barre document (pas le header app) */}
-      <header className="flex-shrink-0 border-b border-outline-variant/20 bg-slate-50/90 backdrop-blur-xl dark:border-slate-700 dark:bg-slate-900/90">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
-          <span className="font-headline text-xl font-black tracking-tight text-slate-900 dark:text-white">
-            BonTroc
-          </span>
-          <div className="flex items-center gap-2 sm:gap-3">
-            <button
-              type="button"
-              onClick={downloadContract}
-              className="flex items-center gap-2 rounded-full bg-surface-container-high px-3 py-2 font-headline text-xs font-semibold text-on-surface-variant transition-all hover:bg-slate-200/80 dark:bg-slate-800 dark:hover:bg-slate-700 sm:px-4 sm:text-sm"
-            >
-              <span className="material-symbols-outlined text-[20px]">download</span>
-              <span className="hidden sm:inline">Télécharger une copie</span>
-              <span className="sm:hidden">PDF/HTML</span>
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex h-10 w-10 items-center justify-center rounded-full transition-colors hover:bg-slate-200/50 dark:hover:bg-slate-800"
-              aria-label="Fermer"
-            >
-              <span className="material-symbols-outlined text-slate-500 dark:text-slate-400">close</span>
-            </button>
-          </div>
-        </div>
-      </header>
+    <div className="flex w-full flex-col pb-20">
+      <PageBackLink onClick={onClose} label="Retour aux échanges" />
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-40 pt-6 sm:px-6">
-        <div className="mx-auto max-w-5xl overflow-hidden rounded-xl border border-white/40 bg-surface-container-lowest shadow-2xl shadow-slate-200/50 dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
+      <div className="mb-6 flex flex-shrink-0 justify-end px-0 sm:px-0">
+        <button
+          type="button"
+          onClick={downloadContract}
+          className="flex items-center gap-2 rounded-full bg-surface-container-high px-3 py-2 font-headline text-xs font-semibold text-on-surface-variant transition-all hover:bg-slate-200/80 dark:bg-slate-800 dark:hover:bg-slate-700 sm:px-4 sm:text-sm"
+        >
+          <span className="material-symbols-outlined text-[20px]">download</span>
+          <span className="hidden sm:inline">Télécharger une copie</span>
+          <span className="sm:hidden">PDF/HTML</span>
+        </button>
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-y-auto pb-40 pt-2">
+        <div className="w-full max-w-5xl overflow-hidden rounded-xl border border-white/40 bg-surface-container-lowest shadow-2xl shadow-slate-200/50 dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
           {/* En-tête document */}
           <div className="border-b border-outline-variant/10 bg-slate-50 p-8 dark:border-slate-700 dark:bg-slate-800/80 md:p-12">
             <div className="flex flex-col items-start justify-between gap-6 md:flex-row">
@@ -482,7 +469,7 @@ export function ContractModal({ contract, onClose, onAccepted }: ContractModalPr
 
       {/* Pied fixe */}
       <footer className="fixed bottom-0 left-0 z-[61] w-full border-t border-outline-variant/20 bg-white/90 shadow-[0_-10px_40px_rgba(0,0,0,0.04)] backdrop-blur-lg dark:border-slate-700 dark:bg-slate-900/90">
-        <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-4 px-4 py-5 sm:flex-row sm:px-6">
+        <div className="flex w-full max-w-5xl flex-col items-center justify-between gap-4 px-4 py-5 sm:flex-row sm:px-6">
           <div className="flex items-center gap-4">
             <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary-fixed text-primary dark:bg-primary/30 dark:text-primary-fixed">
               <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>

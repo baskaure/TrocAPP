@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth-context';
 import { sendTransactionalEmail } from '../../lib/notifications';
+import { PageBackLink } from '../layout/PageBackLink';
 
 type ReviewModalExchange = {
   id: string;
@@ -123,7 +124,7 @@ export function ReviewModal({ exchange, onClose, onSuccess }: ReviewModalProps) 
 
   if (success) {
     return (
-      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 backdrop-blur-[2px]">
+      <div className="flex w-full justify-center py-12">
         <div className="glass-panel w-full max-w-md rounded-xl border border-white/40 p-10 text-center shadow-[0_20px_40px_rgba(25,28,29,0.08)] dark:border-white/10">
           <span
             className="material-symbols-outlined mx-auto mb-4 block text-6xl text-green-600 dark:text-green-400"
@@ -141,21 +142,14 @@ export function ReviewModal({ exchange, onClose, onSuccess }: ReviewModalProps) 
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 backdrop-blur-[2px]">
-      <div className="relative w-full max-w-4xl max-h-[92vh] overflow-y-auto">
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute right-2 top-2 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-on-surface shadow-sm transition-colors hover:bg-white dark:bg-slate-800/90 dark:text-white dark:hover:bg-slate-800 sm:right-4 sm:top-4"
-          aria-label="Fermer"
-        >
-          <span className="material-symbols-outlined text-[24px]">close</span>
-        </button>
+    <div className="w-full pb-16">
+      <div className="relative w-full max-w-4xl">
+        <PageBackLink onClick={onClose} label="Retour aux échanges" />
 
         <div className="absolute -left-12 -top-12 -z-10 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
         <div className="absolute -bottom-24 -right-24 -z-10 h-80 w-80 rounded-full bg-secondary/10 blur-3xl" />
 
-        <section className="glass-panel mt-8 rounded-xl border border-white/40 p-8 shadow-[0_20px_40px_rgba(25,28,29,0.06)] dark:border-white/10 md:mt-0 md:p-12">
+        <section className="glass-panel rounded-xl border border-white/40 p-8 shadow-[0_20px_40px_rgba(25,28,29,0.06)] dark:border-white/10 md:p-12">
           <div className="mb-10 text-center md:text-left">
             <span className="mb-4 inline-block rounded-full bg-primary-fixed px-4 py-1.5 font-headline text-xs font-bold uppercase tracking-widest text-on-primary-fixed dark:bg-primary/25 dark:text-primary-fixed">
               Laissez un avis

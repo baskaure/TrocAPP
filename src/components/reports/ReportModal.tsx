@@ -1,14 +1,16 @@
 import { useState } from 'react';
-import { X, AlertTriangle, Loader2 } from 'lucide-react';
+import { AlertTriangle, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth-context';
 
-type ReportModalProps = {
-  isOpen: boolean;
-  onClose: () => void;
+type ReportTarget = {
   targetType: 'listing' | 'user' | 'proposal' | 'chat';
   targetId: string;
   targetUserId?: string;
+};
+
+type ReportFormPanelProps = ReportTarget & {
+  onDismiss: () => void;
 };
 
 const REPORT_REASONS = [
@@ -20,7 +22,8 @@ const REPORT_REASONS = [
   { value: 'other', label: 'Autre' },
 ];
 
-export function ReportModal({ isOpen, onClose, targetType, targetId, targetUserId }: ReportModalProps) {
+/** Formulaire de signalement (page / panneau inline, sans overlay). */
+export function ReportFormPanel({ targetType, targetId, targetUserId, onDismiss }: ReportFormPanelProps) {
   const { user } = useAuth();
   const [reason, setReason] = useState('');
   const [details, setDetails] = useState('');
@@ -28,7 +31,20 @@ export function ReportModal({ isOpen, onClose, targetType, targetId, targetUserI
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
 
-  if (!isOpen) return null;
+  const getTitle = () => {
+    switch (targetType) {
+      case 'listing':
+        return 'Signaler cette annonce';
+      case 'user':
+        return 'Signaler cet utilisateur';
+      case 'proposal':
+        return 'Signaler cette proposition';
+      case 'chat':
+        return 'Signaler cette conversation';
+      default:
+        return 'Signaler';
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,119 +74,94 @@ export function ReportModal({ isOpen, onClose, targetType, targetId, targetUserI
         reportData.reported_user_id = targetId;
       }
 
-      const { error: insertError } = await supabase
-        .from('reports')
-        .insert(reportData);
+      const { error: insertError } = await supabase.from('reports').insert(reportData);
 
       if (insertError) throw insertError;
 
       setSuccess(true);
-      setTimeout(() => {
-        onClose();
+      window.setTimeout(() => {
+        onDismiss();
         setSuccess(false);
         setReason('');
         setDetails('');
       }, 2000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error submitting report:', err);
-      setError(err.message || 'Erreur lors de l\'envoi du signalement');
+      const msg = err && typeof err === 'object' && 'message' in err ? String((err as Error).message) : "Erreur lors de l'envoi du signalement";
+      setError(msg);
     } finally {
       setLoading(false);
     }
   };
 
-  const getTitle = () => {
-    switch (targetType) {
-      case 'listing': return 'Signaler cette annonce';
-      case 'user': return 'Signaler cet utilisateur';
-      case 'proposal': return 'Signaler cette proposition';
-      case 'chat': return 'Signaler cette conversation';
-      default: return 'Signaler';
-    }
-  };
-
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-soft-lg border border-gray-100">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2 text-red-600">
-            <AlertTriangle className="w-5 h-5" />
-            <h2 className="text-lg font-semibold">{getTitle()}</h2>
-          </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {success ? (
-          <div className="text-center py-8">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <AlertTriangle className="w-8 h-8 text-green-600" />
-            </div>
-            <p className="text-green-600 font-medium">Signalement envoyé !</p>
-            <p className="text-gray-500 text-sm mt-1">Merci pour votre vigilance</p>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Motif du signalement *
-              </label>
-              <div className="space-y-2">
-                {REPORT_REASONS.map((r) => (
-                  <label key={r.value} className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="reason"
-                      value={r.value}
-                      checked={reason === r.value}
-                      onChange={(e) => setReason(e.target.value)}
-                      className="text-brand-blue"
-                    />
-                  <span className="text-gray-700">{r.label}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Détails (optionnel)
-              </label>
-              <textarea
-                value={details}
-                onChange={(e) => setDetails(e.target.value)}
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue bg-gray-50 focus:bg-white"
-                placeholder="Décrivez le problème..."
-              />
-            </div>
-
-            {error && (
-              <p className="text-red-600 text-sm">{error}</p>
-            )}
-
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 px-4 py-2 border border-gray-200 rounded-full hover:bg-gray-50 text-sm"
-              >
-                Annuler
-              </button>
-              <button
-                type="submit"
-                disabled={!reason || loading}
-                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-full hover:bg-red-600 disabled:opacity-50 flex items-center justify-center gap-2 text-sm"
-              >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                Signaler
-              </button>
-            </div>
-          </form>
-        )}
+    <div className="rounded-2xl border border-outline-variant/20 bg-surface-container-lowest p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+      <div className="mb-4 flex items-center gap-2 text-error">
+        <AlertTriangle className="h-5 w-5 shrink-0" />
+        <h2 className="font-headline text-lg font-semibold text-on-surface">{getTitle()}</h2>
       </div>
+
+      {success ? (
+        <div className="py-8 text-center">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/40">
+            <AlertTriangle className="h-8 w-8 text-green-600 dark:text-green-400" />
+          </div>
+          <p className="font-medium text-green-700 dark:text-green-400">Signalement envoyé !</p>
+          <p className="mt-1 text-sm text-on-surface-variant">Merci pour votre vigilance</p>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="mb-2 block text-sm font-medium text-on-surface-variant">Motif du signalement *</label>
+            <div className="space-y-2">
+              {REPORT_REASONS.map((r) => (
+                <label key={r.value} className="flex cursor-pointer items-center gap-2">
+                  <input
+                    type="radio"
+                    name="reason"
+                    value={r.value}
+                    checked={reason === r.value}
+                    onChange={(e) => setReason(e.target.value)}
+                    className="text-primary"
+                  />
+                  <span className="text-on-surface">{r.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-on-surface-variant">Détails (optionnel)</label>
+            <textarea
+              value={details}
+              onChange={(e) => setDetails(e.target.value)}
+              rows={3}
+              className="w-full rounded-xl border border-outline-variant/30 bg-surface-container-low px-3 py-2 text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 dark:bg-slate-800"
+              placeholder="Décrivez le problème..."
+            />
+          </div>
+
+          {error ? <p className="text-sm text-error">{error}</p> : null}
+
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={onDismiss}
+              className="flex-1 rounded-full border border-outline-variant/30 px-4 py-2 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-high"
+            >
+              Annuler
+            </button>
+            <button
+              type="submit"
+              disabled={!reason || loading}
+              className="flex flex-1 items-center justify-center gap-2 rounded-full bg-error px-4 py-2 text-sm font-semibold text-on-error disabled:opacity-50"
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              Signaler
+            </button>
+          </div>
+        </form>
+      )}
     </div>
   );
 }
-

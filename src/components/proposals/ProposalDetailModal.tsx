@@ -5,6 +5,7 @@ import { useAuth } from '../../lib/auth-context';
 import { ChatWindow } from '../chat/ChatWindow';
 import { sendTransactionalEmail } from '../../lib/notifications';
 import { enqueueEsignRequest, isEsignEnabled } from '../../lib/esign';
+import { PageBackLink } from '../layout/PageBackLink';
 
 type ProposalDetailModalProps = {
   proposal: Proposal | null;
@@ -201,26 +202,9 @@ export function ProposalDetailModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] overflow-y-auto bg-background text-on-surface">
-      <nav className="sticky top-0 z-50 border-b border-outline-variant/10 bg-surface dark:bg-slate-900">
-        <div className="mx-auto flex max-w-[1440px] items-center justify-between px-4 py-3 md:px-8">
-          <div className="flex min-w-0 items-center gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-full p-2 text-on-surface-variant hover:bg-surface-container-high"
-              aria-label="Retour"
-            >
-              <span className="material-symbols-outlined">arrow_back</span>
-            </button>
-            <span className="truncate font-headline text-lg font-semibold text-on-surface md:text-xl">
-              {proposal.listing?.title ?? 'Proposition'}
-            </span>
-          </div>
-        </div>
-      </nav>
-
-      <div className="mx-auto max-w-6xl space-y-8 p-4 md:p-10">
+    <div className="w-full overflow-x-hidden bg-background pb-20 text-on-surface">
+      <div className="w-full max-w-6xl space-y-8">
+        <PageBackLink onClick={onClose} label="Retour aux propositions" />
         <header ref={detailsRef} id="proposal-detail-top" className="space-y-2 scroll-mt-24">
           <div className="mb-2 flex flex-wrap items-center gap-3">
             <span className={`rounded-full px-3 py-1 font-headline text-xs font-bold ${statusPillClass}`}>

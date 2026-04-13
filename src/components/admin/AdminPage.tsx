@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Shield, Users, Flag, AlertTriangle, Loader2, Trash2, CheckCircle, XCircle, Eye, BarChart3, Download, Gavel } from 'lucide-react';
 import { supabase, User, EsignRequest } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth-context';
+import { PageBackRowSpacer } from '../layout/PageBackLink';
 
 type Tab = 'reports' | 'users' | 'verification' | 'banned-words' | 'disputes' | 'stats';
 
@@ -452,7 +453,7 @@ export function AdminPage() {
 
   if (!user || !['admin', 'moderator'].includes(user.role)) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-8 text-center">
+      <div className="w-full max-w-4xl text-center">
         <Shield className="w-16 h-16 text-brand-blue/20 mx-auto mb-4" />
         <h2 className="text-xl font-heading font-semibold text-brand-text">Accès refusé</h2>
         <p className="text-gray-500">Cette page est réservée aux administrateurs.</p>
@@ -461,8 +462,9 @@ export function AdminPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      <div className="flex items-center gap-3 mb-6">
+    <div className="w-full max-w-6xl">
+      <PageBackRowSpacer />
+      <div className="mb-6 flex items-center gap-3">
         <div className="w-9 h-9 rounded-2xl bg-brand-blue/10 flex items-center justify-center">
           <Shield className="w-5 h-5 text-brand-blue" />
         </div>

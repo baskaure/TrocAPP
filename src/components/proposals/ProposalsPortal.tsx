@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../lib/auth-context';
 import { supabase, Proposal } from '../../lib/supabase';
+import { PageBackRowSpacer } from '../layout/PageBackLink';
 
 type ProposalWithListing = Proposal & {
   listing?: Proposal['listing'] & {
@@ -139,6 +140,7 @@ export function ProposalsPortal({ onSelectProposal }: ProposalsPortalProps) {
 
   return (
     <div className="relative min-h-[calc(100dvh-5.5rem)] w-full">
+      <PageBackRowSpacer />
       <section className="mb-12">
         <h1 className="mb-2 font-headline text-4xl font-extrabold tracking-tight text-on-surface md:text-5xl">
           Mes propositions

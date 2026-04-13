@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { supabase, type Listing } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth-context';
+import { PageBackLink } from '../layout/PageBackLink';
 
 type TrackerExchange = {
   id: string;
@@ -272,22 +273,13 @@ export function ExchangeTracker({ exchange, onClose, onUpdate }: ExchangeTracker
         : null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 backdrop-blur-[2px]">
+    <div className="w-full pb-16">
+      <PageBackLink onClick={onClose} label="Retour aux échanges" />
       <div
-        className="relative max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-xl border border-white/40 bg-surface-container-lowest shadow-2xl shadow-slate-200/50 dark:border-white/10 dark:bg-slate-900 dark:shadow-none"
-        role="dialog"
+        className="relative w-full max-w-4xl overflow-x-hidden rounded-xl border border-white/40 bg-surface-container-lowest shadow-xl shadow-slate-200/50 dark:border-white/10 dark:bg-slate-900 dark:shadow-none"
+        role="region"
         aria-labelledby="exchange-tracker-title"
-        aria-modal="true"
       >
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute right-4 top-4 z-30 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-on-surface shadow-sm transition-colors hover:bg-white dark:bg-slate-800/90 dark:text-white dark:hover:bg-slate-800"
-          aria-label="Fermer"
-        >
-          <span className="material-symbols-outlined text-[22px]">close</span>
-        </button>
-
         {/* Hero */}
         <div className="relative h-44 w-full overflow-hidden sm:h-48">
           <div className="absolute inset-0 z-10 bg-gradient-to-r from-primary to-primary-container opacity-20 mix-blend-multiply dark:opacity-30" />

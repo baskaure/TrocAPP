@@ -4,6 +4,7 @@ import { supabase, Exchange, Contract, Dispute } from '../../lib/supabase';
 import { ExchangeTracker } from './ExchangeTracker';
 import { ReviewModal } from './ReviewModal';
 import { ContractModal } from '../contracts/ContractModal';
+import { PageBackRowSpacer } from '../layout/PageBackLink';
 
 type PartyUser = { id: string; display_name: string; avatar_url?: string; email?: string };
 
@@ -135,6 +136,11 @@ export function ExchangesPage({ onUserClick, onStartNewExchange }: ExchangesPage
 
   const canLeaveReview = (exchange: ExchangeWithDetails) => exchange.status === 'confirmed';
 
+  const fullPageExchangeDetail =
+    selectedContract != null ||
+    showReviewModal ||
+    (selectedExchange != null && !showReviewModal && !selectedContract);
+
   const filterTabs: { key: 'all' | Exchange['status']; label: string; count?: number }[] = [
     { key: 'all', label: 'Tous', count: counts.all },
     { key: 'in_progress', label: 'En cours', count: counts.in_progress },
@@ -153,43 +159,88 @@ export function ExchangesPage({ onUserClick, onStartNewExchange }: ExchangesPage
 
   return (
     <div className="relative w-full">
-      <section className="mb-12">
-        <h1 className="mb-2 font-headline text-4xl font-extrabold tracking-tight text-on-surface md:text-5xl">
-          Mes échanges
-        </h1>
-        <p className="font-inter text-lg text-on-surface-variant opacity-90">
-          Suivez l&apos;état de vos échanges en cours et passés
-        </p>
-      </section>
-
-      <div className="mb-10 flex flex-wrap items-center gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {filterTabs.map((tab) => {
-          const active = filterStatus === tab.key;
-          return (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => setFilterStatus(tab.key)}
-              className={`whitespace-nowrap rounded-full px-6 py-3 font-headline text-sm font-bold transition-colors ${
-                active
-                  ? 'bg-primary text-on-primary shadow-lg shadow-primary/20'
-                  : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
-              }`}
-            >
-              {tab.key === 'all'
-                ? `${tab.label} (${tab.count ?? 0})`
-                : `${tab.label}${tab.count !== undefined && tab.count > 0 ? ` (${tab.count})` : ''}`}
-            </button>
-          );
-        })}
-      </div>
-
-      {loading ? (
-        <div className="flex justify-center py-20">
-          <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-primary" />
-        </div>
+      {fullPageExchangeDetail ? (
+        loading ? (
+          <div className="flex justify-center py-20">
+            <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-primary" />
+          </div>
+        ) : (
+          <>
+            {selectedExchange && !showReviewModal && !selectedContract ? (
+              <ExchangeTracker
+                exchange={selectedExchange}
+                onClose={() => setSelectedExchange(null)}
+                onUpdate={loadExchanges}
+              />
+            ) : null}
+            {showReviewModal && selectedExchange ? (
+              <ReviewModal
+                exchange={selectedExchange}
+                onClose={() => {
+                  setShowReviewModal(false);
+                  setSelectedExchange(null);
+                }}
+                onSuccess={loadExchanges}
+              />
+            ) : null}
+            {selectedContract ? (
+              <ContractModal
+                contract={
+                  selectedContract as Contract & {
+                    proposal?: {
+                      from_user_id: string;
+                      to_user_id: string;
+                      from_user?: { display_name: string };
+                      to_user?: { display_name: string };
+                    };
+                  }
+                }
+                onClose={() => setSelectedContract(null)}
+                onAccepted={loadExchanges}
+              />
+            ) : null}
+          </>
+        )
       ) : (
         <>
+          <PageBackRowSpacer />
+          <section className="mb-12">
+            <h1 className="mb-2 font-headline text-4xl font-extrabold tracking-tight text-on-surface md:text-5xl">
+              Mes échanges
+            </h1>
+            <p className="font-inter text-lg text-on-surface-variant opacity-90">
+              Suivez l&apos;état de vos échanges en cours et passés
+            </p>
+          </section>
+
+          <div className="mb-10 flex flex-wrap items-center gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {filterTabs.map((tab) => {
+              const active = filterStatus === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setFilterStatus(tab.key)}
+                  className={`whitespace-nowrap rounded-full px-6 py-3 font-headline text-sm font-bold transition-colors ${
+                    active
+                      ? 'bg-primary text-on-primary shadow-lg shadow-primary/20'
+                      : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  {tab.key === 'all'
+                    ? `${tab.label} (${tab.count ?? 0})`
+                    : `${tab.label}${tab.count !== undefined && tab.count > 0 ? ` (${tab.count})` : ''}`}
+                </button>
+              );
+            })}
+          </div>
+
+          {loading ? (
+            <div className="flex justify-center py-20">
+              <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-primary" />
+            </div>
+          ) : (
+            <>
           {filteredExchanges.length === 0 ? (
             <div className="mb-10 rounded-xl border border-outline-variant/20 bg-surface-container-low/80 py-12 text-center dark:bg-slate-900/40">
               <span className="material-symbols-outlined mx-auto mb-4 block text-5xl text-outline">inventory_2</span>
@@ -360,43 +411,9 @@ export function ExchangesPage({ onUserClick, onStartNewExchange }: ExchangesPage
               </div>
             </button>
           </div>
+            </>
+          )}
         </>
-      )}
-
-      {selectedExchange && !showReviewModal && !selectedContract && (
-        <ExchangeTracker
-          exchange={selectedExchange}
-          onClose={() => setSelectedExchange(null)}
-          onUpdate={loadExchanges}
-        />
-      )}
-
-      {showReviewModal && selectedExchange && (
-        <ReviewModal
-          exchange={selectedExchange}
-          onClose={() => {
-            setShowReviewModal(false);
-            setSelectedExchange(null);
-          }}
-          onSuccess={loadExchanges}
-        />
-      )}
-
-      {selectedContract && (
-        <ContractModal
-          contract={
-            selectedContract as Contract & {
-              proposal?: {
-                from_user_id: string;
-                to_user_id: string;
-                from_user?: { display_name: string };
-                to_user?: { display_name: string };
-              };
-            }
-          }
-          onClose={() => setSelectedContract(null)}
-          onAccepted={loadExchanges}
-        />
       )}
     </div>
   );

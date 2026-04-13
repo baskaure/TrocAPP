@@ -50,6 +50,27 @@
   .hero-gradient {
     background: linear-gradient(135deg, #002de6 0%, #314eff 100%);
   }
+
+  /* Marqueur Leaflet personnalisé (pas de cadre blanc par défaut) */
+  .leaflet-container {
+    height: 100%;
+    width: 100%;
+    min-height: 12rem;
+    font-family: Inter, system-ui, sans-serif;
+  }
+
+  .leaflet-container .location-map-pin {
+    border: none !important;
+    background: transparent !important;
+  }
+
+  .leaflet-popup-content-wrapper {
+    @apply rounded-xl shadow-lg;
+  }
+
+  .leaflet-popup-content {
+    @apply m-3 font-inter text-sm;
+  }
 }
 
 @layer utilities {
