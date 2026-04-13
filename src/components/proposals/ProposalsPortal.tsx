@@ -59,13 +59,17 @@ export function ProposalsPortal({ onSelectProposal }: ProposalsPortalProps) {
 
   useEffect(() => {
     if (user) loadProposals();
-  }, [user, filter]);
+  }, [user]);
+
+  useEffect(() => {
+    setMonthKey(null);
+  }, [filter]);
 
   async function loadProposals() {
     if (!user) return;
     setLoading(true);
     try {
-      let query = supabase
+      const { data, error } = await supabase
         .from('proposals')
         .select(
           `
@@ -79,17 +83,9 @@ export function ProposalsPortal({ onSelectProposal }: ProposalsPortalProps) {
           )
         `,
         )
+        .or(`from_user_id.eq.${user.id},to_user_id.eq.${user.id}`)
         .order('created_at', { ascending: false });
 
-      if (filter === 'sent') {
-        query = query.eq('from_user_id', user.id);
-      } else if (filter === 'received') {
-        query = query.eq('to_user_id', user.id);
-      } else {
-        query = query.or(`from_user_id.eq.${user.id},to_user_id.eq.${user.id}`);
-      }
-
-      const { data, error } = await query;
       if (error) throw error;
       setProposals((data as ProposalWithListing[]) || []);
     } catch (e) {
@@ -99,16 +95,34 @@ export function ProposalsPortal({ onSelectProposal }: ProposalsPortalProps) {
     }
   }
 
+  const filteredByDirection = useMemo(() => {
+    if (!user) return [];
+    if (filter === 'sent') return proposals.filter((p) => p.from_user_id === user.id);
+    if (filter === 'received') return proposals.filter((p) => p.to_user_id === user.id);
+    return proposals;
+  }, [proposals, filter, user]);
+
+  const proposalFilterTabs: { key: typeof filter; label: string; count: number }[] = useMemo(() => {
+    if (!user) return [];
+    const sent = proposals.filter((p) => p.from_user_id === user.id).length;
+    const received = proposals.filter((p) => p.to_user_id === user.id).length;
+    return [
+      { key: 'all', label: 'Toutes', count: proposals.length },
+      { key: 'sent', label: 'Envoyées', count: sent },
+      { key: 'received', label: 'Reçues', count: received },
+    ];
+  }, [proposals, user]);
+
   const monthKeys = useMemo(() => {
     const set = new Set<string>();
-    proposals.forEach((p) => set.add(formatMonthKey(p.created_at)));
+    filteredByDirection.forEach((p) => set.add(formatMonthKey(p.created_at)));
     return Array.from(set).sort((a, b) => b.localeCompare(a));
-  }, [proposals]);
+  }, [filteredByDirection]);
 
   const filteredByMonth = useMemo(() => {
-    if (!monthKey) return proposals;
-    return proposals.filter((p) => formatMonthKey(p.created_at) === monthKey);
-  }, [proposals, monthKey]);
+    if (!monthKey) return filteredByDirection;
+    return filteredByDirection.filter((p) => formatMonthKey(p.created_at) === monthKey);
+  }, [filteredByDirection, monthKey]);
 
   const activeCount = useMemo(
     () => proposals.filter((p) => ['pending', 'countered', 'accepted'].includes(p.status)).length,
@@ -125,32 +139,46 @@ export function ProposalsPortal({ onSelectProposal }: ProposalsPortalProps) {
 
   return (
     <div className="relative min-h-[calc(100dvh-5.5rem)] w-full">
-      <nav className="mb-10 flex flex-wrap gap-4 border-b border-outline-variant/10 pb-6 md:gap-8">
-            {(['all', 'sent', 'received'] as const).map((f) => (
-              <button
-                key={f}
-                type="button"
-                onClick={() => setFilter(f)}
-                className={`py-1 text-sm font-medium transition-colors ${
-                  filter === f
-                    ? 'border-b-2 border-primary font-bold text-primary'
-                    : 'rounded px-2 text-slate-500 hover:bg-surface-container-high'
-                }`}
-              >
-                {f === 'all' ? 'Toutes' : f === 'sent' ? 'Envoyées' : 'Reçues'}
-              </button>
-            ))}
-      </nav>
+      <section className="mb-12">
+        <h1 className="mb-2 font-headline text-4xl font-extrabold tracking-tight text-on-surface md:text-5xl">
+          Mes propositions
+        </h1>
+        <p className="font-inter text-lg text-on-surface-variant opacity-90">
+          Retrouvez vos offres envoyées et reçues, et pilotez vos discussions jusqu&apos;à l&apos;échange.
+        </p>
+      </section>
+
+      <div className="mb-10 flex flex-wrap items-center gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {proposalFilterTabs.map((tab) => {
+          const active = filter === tab.key;
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setFilter(tab.key)}
+              className={`whitespace-nowrap rounded-full px-6 py-3 font-headline text-sm font-bold transition-colors ${
+                active
+                  ? 'bg-primary text-on-primary shadow-lg shadow-primary/20'
+                  : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+              }`}
+            >
+              {tab.key === 'all'
+                ? `${tab.label} (${tab.count})`
+                : `${tab.label}${tab.count > 0 ? ` (${tab.count})` : ''}`}
+            </button>
+          );
+        })}
+      </div>
 
       <div className="mb-12 grid grid-cols-1 gap-8 lg:grid-cols-12">
             <div className="glass-card relative flex min-h-[240px] flex-col justify-between overflow-hidden rounded-xl border border-white/40 p-8 shadow-sm md:col-span-8 md:p-10">
               <div className="relative z-10">
-                <h2 className="mb-2 font-headline text-3xl font-extrabold tracking-tight text-on-surface md:text-4xl">
+                <h2 className="mb-2 font-headline text-2xl font-bold tracking-tight text-on-surface md:text-3xl">
                   Bonjour{firstName ? `, ${firstName}` : ''}{' '}
                   <span aria-hidden>👋</span>
                 </h2>
-                <p className="max-w-md text-on-surface-variant">
-                  Gérez vos échanges et suivez l&apos;avancement de vos collaborations en cours sur BonTroc.
+                <p className="max-w-md font-inter text-base text-on-surface-variant opacity-90">
+                  Voici un aperçu de l&apos;activité de vos propositions.
                 </p>
               </div>
               <div className="relative z-10 mt-6 flex flex-wrap gap-4">

@@ -86,7 +86,8 @@ function AppContent() {
         .select(`
           *,
           user:users(*),
-          media:listing_media(*)
+          media:listing_media(*),
+          category:categories(name)
         `)
         .eq('status', 'published')
         .order('created_at', { ascending: false });
@@ -165,6 +166,14 @@ function AppContent() {
     view !== 'settings' &&
     view !== 'admin' &&
     ['listings', 'proposals', 'exchanges', 'profile'].includes(view);
+
+  /** Même écart sous le header que Propositions / Échanges (pas de dock mobile sur Paramètres). */
+  const mainContentPadding =
+    showMarketplaceChrome || showMobileDock
+      ? 'pb-28 pt-28 md:pb-20'
+      : view === 'settings'
+        ? 'pt-28 pb-24 md:pb-24'
+        : 'py-24';
 
   const handleSelectProposal = (p: Proposal, opts?: { openChat?: boolean }) => {
     setSelectedProposal(p);
@@ -348,9 +357,7 @@ function AppContent() {
       ) : null}
 
       <div className={showAppNavSidebar ? 'lg:pl-64' : ''}>
-        <main
-          className={`mx-auto max-w-screen-2xl px-6 md:px-8 ${showMarketplaceChrome || showMobileDock ? 'pb-28 pt-28 md:pb-20' : 'py-24'}`}
-        >
+        <main className={`mx-auto max-w-screen-2xl px-6 md:px-8 ${mainContentPadding}`}>
           {view === 'listings' ? (
             <section>
               <header className="mb-16">

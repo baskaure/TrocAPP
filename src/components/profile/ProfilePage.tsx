@@ -1,10 +1,9 @@
-import { useState, useEffect, ChangeEvent } from 'react';
-import { MapPin, Mail, Phone, Calendar, Edit2, X, Check, Camera, ImageUp, Loader2, Star, Shield, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { useState, useEffect, ChangeEvent, type FormEvent } from 'react';
 import { useAuth } from '../../lib/auth-context';
 import { supabase, Review } from '../../lib/supabase';
 
 type ReviewWithReviewer = Review & {
-  reviewer?: { display_name: string; avatar_url?: string };
+  reviewer?: { id: string; display_name: string; avatar_url?: string };
 };
 
 function VerificationUpload({ onSuccess }: { onSuccess: () => void }) {
@@ -15,24 +14,17 @@ function VerificationUpload({ onSuccess }: { onSuccess: () => void }) {
   const handleUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
-
     setUploading(true);
     setError('');
-
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}/verification_${Date.now()}.${fileExt}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('verification-documents')
+      const { error: uploadError } = await supabase.storage.from('verification-documents')
         .upload(fileName, file);
-
       if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('verification-documents')
-        .getPublicUrl(fileName);
-
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from('verification-documents').getPublicUrl(fileName);
       const { error: updateError } = await supabase
         .from('users')
         .update({
@@ -41,13 +33,14 @@ function VerificationUpload({ onSuccess }: { onSuccess: () => void }) {
           verification_submitted_at: new Date().toISOString(),
         })
         .eq('id', user.id);
-
       if (updateError) throw updateError;
-
       onSuccess();
-    } catch (err: any) {
-      console.error('Error uploading verification document:', err);
-      setError(err.message || 'Erreur lors du téléversement');
+    } catch (err: unknown) {
+      const msg =
+        err && typeof err === 'object' && 'message' in err
+          ? String((err as { message: string }).message)
+          : 'Erreur lors du téléversement';
+      setError(msg);
     } finally {
       setUploading(false);
     }
@@ -55,29 +48,33 @@ function VerificationUpload({ onSuccess }: { onSuccess: () => void }) {
 
   return (
     <div>
-      <label className="inline-flex items-center gap-2 px-4 py-2 bg-brand-blue text-white rounded-lg cursor-pointer hover:bg-sky-500 transition-colors">
-        <input
-          type="file"
-          accept="image/*,.pdf"
-          className="hidden"
-          onChange={handleUpload}
-          disabled={uploading}
-        />
+      <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-primary px-4 py-2 font-headline text-sm font-bold text-on-primary transition-colors hover:opacity-95">
+        <input type="file" accept="image/*,.pdf" className="hidden" onChange={handleUpload} disabled={uploading} />
         {uploading ? (
           <>
-            <Loader2 className="w-4 h-4 animate-spin" />
-            <span>Téléversement...</span>
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-on-primary border-t-transparent" />
+            <span>Téléversement…</span>
           </>
         ) : (
           <>
-            <Shield className="w-4 h-4" />
+            <span className="material-symbols-outlined text-[20px]">verified_user</span>
             <span>Envoyer un document</span>
           </>
         )}
       </label>
-      {error && <p className="text-red-600 text-sm mt-2">{error}</p>}
+      {error ? <p className="mt-2 text-sm text-error">{error}</p> : null}
     </div>
   );
+}
+
+function formatRelativeOrDate(iso: string) {
+  const d = new Date(iso);
+  const diff = Date.now() - d.getTime();
+  const days = Math.floor(diff / 86400000);
+  if (days === 0) return "Aujourd'hui";
+  if (days === 1) return 'Hier';
+  if (days < 7) return `Il y a ${days} jours`;
+  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 type ProfilePageProps = {
@@ -93,10 +90,7 @@ export function ProfilePage({ onUserClick }: ProfilePageProps) {
   const [reviews, setReviews] = useState<ReviewWithReviewer[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [listingsCount, setListingsCount] = useState(0);
-  const [mediaUploading, setMediaUploading] = useState({
-    avatar: false,
-    banner: false,
-  });
+  const [mediaUploading, setMediaUploading] = useState({ avatar: false, banner: false });
 
   const [formData, setFormData] = useState({
     display_name: '',
@@ -137,17 +131,14 @@ export function ProfilePage({ onUserClick }: ProfilePageProps) {
   async function loadListingsCount() {
     if (!user) return;
     try {
-      const { count, error } = await supabase
+      const { count, error: cErr } = await supabase
         .from('listings')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.id)
         .eq('status', 'published');
-
-      if (!error && count !== null) {
-        setListingsCount(count);
-      }
-    } catch (err) {
-      console.error('Error loading listings count:', err);
+      if (!cErr && count !== null) setListingsCount(count);
+    } catch (e) {
+      console.error(e);
     }
   }
 
@@ -155,19 +146,20 @@ export function ProfilePage({ onUserClick }: ProfilePageProps) {
     if (!user) return;
     setReviewsLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error: rErr } = await supabase
         .from('reviews')
-        .select(`
+        .select(
+          `
           *,
-          reviewer:users!reviews_reviewer_id_fkey(display_name, avatar_url)
-        `)
+          reviewer:users!reviews_reviewer_id_fkey(id, display_name, avatar_url)
+        `,
+        )
         .eq('reviewee_id', user.id)
         .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setReviews(data || []);
-    } catch (err) {
-      console.error('Error loading reviews:', err);
+      if (rErr) throw rErr;
+      setReviews((data as ReviewWithReviewer[]) || []);
+    } catch (e) {
+      console.error(e);
     } finally {
       setReviewsLoading(false);
     }
@@ -175,42 +167,25 @@ export function ProfilePage({ onUserClick }: ProfilePageProps) {
 
   const uploadProfileMedia = async (file: File, type: 'avatar' | 'banner') => {
     if (!user) return;
-
     setMediaUploading((prev) => ({ ...prev, [type]: true }));
     setError('');
-
     try {
       const folder = type === 'avatar' ? 'avatars' : 'banners';
       const fileExt = file.name.split('.').pop() || 'bin';
       const fileName = `${folder}/${user.id}-${Date.now()}.${fileExt}`;
-
       const { error: uploadError } = await supabase.storage
         .from('profile-media')
-        .upload(fileName, file, {
-          upsert: true,
-          contentType: file.type,
-          cacheControl: '3600',
-        });
-
+        .upload(fileName, file, { upsert: true, contentType: file.type, cacheControl: '3600' });
       if (uploadError) throw uploadError;
-
       const { data } = supabase.storage.from('profile-media').getPublicUrl(fileName);
-      if (!data?.publicUrl) {
-        throw new Error('Impossible de récupérer le lien de l’image');
-      }
-
+      if (!data?.publicUrl) throw new Error('Impossible de récupérer le lien de l’image');
       if (type === 'avatar') {
         setFormData((prev) => ({ ...prev, avatar_url: data.publicUrl }));
       } else {
         setFormData((prev) => ({ ...prev, banner_url: data.publicUrl }));
       }
     } catch (err) {
-      console.error(err);
-      if (err && typeof err === 'object' && 'message' in err) {
-        setError(String(err.message));
-      } else {
-        setError('Erreur lors du téléversement de l’image');
-      }
+      setError(err instanceof Error ? err.message : 'Erreur téléversement');
     } finally {
       setMediaUploading((prev) => ({ ...prev, [type]: false }));
     }
@@ -224,14 +199,12 @@ export function ProfilePage({ onUserClick }: ProfilePageProps) {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!user) return;
-
     setLoading(true);
     setError('');
     setSuccess('');
-
     try {
       const { error: updateError } = await supabase
         .from('users')
@@ -249,602 +222,594 @@ export function ProfilePage({ onUserClick }: ProfilePageProps) {
           banner_url: formData.banner_url,
         })
         .eq('id', user.id);
-
       if (updateError) throw updateError;
-
       await refreshUser();
-      setSuccess('Profil mis à jour avec succès!');
+      setSuccess('Profil mis à jour.');
       setIsEditing(false);
-
-      setTimeout(() => setSuccess(''), 3000);
+      window.setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
-      console.error(err);
-      if (err && typeof err === 'object' && 'message' in err) {
-        setError(String(err.message));
-      } else {
-        setError('Erreur lors de la mise à jour');
-      }
+      setError(err instanceof Error ? err.message : 'Erreur lors de la mise à jour');
     } finally {
       setLoading(false);
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('fr-FR', {
+  const formatDate = (dateString: string) =>
+    new Date(dateString).toLocaleDateString('fr-FR', {
       year: 'numeric',
       month: 'long',
-      day: 'numeric'
+      day: 'numeric',
     });
-  };
+
+  const avgDisplay =
+    user && user.rating_count > 0
+      ? user.rating_avg.toFixed(1)
+      : reviews.length > 0
+        ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)
+        : '—';
+
+  const showVerifiedBadge = user?.is_verified || user?.verification_status === 'verified';
 
   if (!user) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="text-center text-gray-500">
-          Veuillez vous connecter pour voir votre profil
-        </div>
-      </div>
+      <div className="w-full py-12 text-center text-on-surface-variant">
+        Veuillez vous connecter pour voir votre profil      </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <div className="bg-white rounded-3xl shadow-soft-lg overflow-hidden border border-gray-100">
-        <div className="relative h-40 bg-gradient-to-r from-brand-blue to-sky-500">
-          {formData.banner_url && (
-            <img
-              src={formData.banner_url}
-              alt="Bannière du profil"
-              className="w-full h-full object-cover"
-            />
+    <div className="w-full max-w-7xl">
+      {/* Hero bannière + avatar (carte unie : plus de bande grise du body sous le chevauchement) */}
+      <section className="relative mt-2 overflow-hidden rounded-xl border border-outline-variant/10 shadow-xl dark:border-slate-700 md:mt-4">
+        {/* Bannière uniquement (le pseudo est dans la barre blanche en dessous) */}
+        <div className="relative h-72 w-full overflow-hidden rounded-t-xl md:h-96">
+          {formData.banner_url ? (
+            <img src={formData.banner_url} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <div className="h-full w-full bg-gradient-to-br from-primary/40 via-primary-container/30 to-surface-container-high" />
           )}
-          {isEditing && (
-            <label className="absolute top-3 right-3 inline-flex items-center space-x-2 bg-black/60 text-white text-sm px-4 py-1.5 rounded-full cursor-pointer hover:bg-black/70 transition-colors">
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent" />
+          {isEditing ? (
+            <label className="absolute right-4 top-4 z-10 flex cursor-pointer items-center gap-2 rounded-full bg-black/55 px-4 py-2 text-sm font-semibold text-white backdrop-blur-sm">
               <input
                 type="file"
                 accept="image/*"
                 className="hidden"
-                onChange={(event) => handleFileChange(event, 'banner')}
+                onChange={(e) => handleFileChange(e, 'banner')}
               />
-              {mediaUploading.banner ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <ImageUp className="w-4 h-4" />
-              )}
-              <span>{mediaUploading.banner ? 'Téléversement...' : 'Changer la bannière'}</span>
+              <span className="material-symbols-outlined text-[18px]">image</span>
+              {mediaUploading.banner ? '…' : 'Bannière'}
             </label>
-          )}
+          ) : null}
         </div>
 
-        <div className="px-6 pb-6">
-          <div className="flex justify-between items-start mb-4">
-            <div className="flex items-end space-x-4">
-              <div className="relative w-32 h-32 -mt-20">
+        {/* Bandeau sous la bannière : avatar remonte sur la bannière, pseudo + bouton restent ici */}
+        <div className="relative z-10 rounded-b-xl bg-surface-container-lowest px-4 pb-8 pt-6 shadow-[0_-8px_32px_rgba(0,0,0,0.06)] dark:bg-slate-900 md:px-8 md:pt-8">
+          <div className="flex flex-col gap-6 md:flex-row md:items-end md:gap-8">
+            <div className="relative z-20 w-fit shrink-0 -mt-20 self-start md:-mt-24">
+              <div className="h-32 w-32 overflow-hidden rounded-full border-8 border-surface-container-lowest shadow-2xl dark:border-slate-900 md:h-44 md:w-44">
                 {formData.avatar_url ? (
-                  <img
-                    src={formData.avatar_url}
-                    alt={formData.display_name}
-                    className="w-32 h-32 rounded-full border-4 border-white shadow-lg object-cover"
-                  />
+                  <img src={formData.avatar_url} alt="" className="h-full w-full object-cover" />
                 ) : (
-                  <div className="w-32 h-32 bg-brand-yellow text-white rounded-full border-4 border-white shadow-lg flex items-center justify-center text-4xl font-bold">
+                  <div className="flex h-full w-full items-center justify-center bg-secondary-container font-headline text-4xl font-black text-on-secondary-container md:text-5xl">
                     {formData.display_name[0]?.toUpperCase() || 'U'}
                   </div>
                 )}
-
-                {isEditing && (
-                  <label className="absolute bottom-2 right-2 inline-flex items-center justify-center bg-brand-blue text-white rounded-full p-2 cursor-pointer hover:bg-sky-500 transition-colors shadow">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(event) => handleFileChange(event, 'avatar')}
-                    />
-                    {mediaUploading.avatar ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Camera className="w-4 h-4" />
-                    )}
-                  </label>
-                )}
               </div>
-
-              <div className="pb-2">
-                <h1 className="text-2xl font-heading font-semibold text-brand-text">{formData.display_name}</h1>
-                <p className="text-gray-500">@{formData.username}</p>
-              </div>
+              {showVerifiedBadge ? (
+                <div className="absolute bottom-2 right-2 rounded-full bg-secondary-container p-2 shadow-lg">
+                  <span
+                    className="material-symbols-outlined text-xl text-on-secondary-container"
+                    style={{ fontVariationSettings: "'FILL' 1" }}
+                  >
+                    verified
+                  </span>
+                </div>
+              ) : null}
+              {isEditing ? (
+                <label className="absolute bottom-12 right-0 flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-primary text-on-primary shadow-lg md:bottom-14">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => handleFileChange(e, 'avatar')}
+                  />
+                  <span className="material-symbols-outlined text-[20px]">
+                    {mediaUploading.avatar ? 'hourglass_empty' : 'photo_camera'}
+                  </span>
+                </label>
+              ) : null}
             </div>
 
-            {!isEditing ? (
-              <button
-                onClick={() => setIsEditing(true)}
-                className="mt-6 flex items-center space-x-2 btn-primary rounded-full px-5 py-2"
-              >
-                <Edit2 className="w-4 h-4" />
-                <span>Modifier</span>
-              </button>
-            ) : (
-              <div className="mt-16 flex space-x-2">
-                <button
-                  onClick={() => setIsEditing(false)}
-                  className="flex items-center space-x-2 bg-gray-100 text-gray-700 px-4 py-2 rounded-full hover:bg-gray-200 transition-colors text-sm"
-                >
-                  <X className="w-4 h-4" />
-                  <span>Annuler</span>
-                </button>
+            <div className="flex min-w-0 flex-1 flex-col gap-4 md:flex-row md:items-center md:justify-between md:pb-1">
+              <div>
+                <h1 className="font-headline text-4xl font-extrabold tracking-tight text-on-surface dark:text-slate-100">
+                  {formData.display_name}
+                </h1>
+                <p className="text-lg font-medium text-primary">@{formData.username}</p>
+                {!isEditing && formData.bio ? (
+                  <p className="mt-2 max-w-xl text-sm text-on-surface-variant">{formData.bio}</p>
+                ) : null}
               </div>
-            )}
+              {!isEditing ? (
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(true)}
+                  className="glass-card flex w-fit shrink-0 items-center gap-2 rounded-full border border-outline-variant/20 bg-white px-8 py-3 font-headline font-bold text-primary shadow-sm transition-all hover:bg-surface-container-low active:scale-95 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700"
+                >
+                  <span className="material-symbols-outlined">edit</span>
+                  Modifier
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(false)}
+                  className="w-fit rounded-full border border-outline-variant/30 bg-surface-container-high px-6 py-3 font-headline font-bold transition-colors hover:bg-surface-container-highest"
+                >
+                  Annuler
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {error ? (
+        <div className="mt-6 rounded-xl border border-error-container bg-error-container/20 p-3 text-sm text-on-error-container">
+          {error}
+        </div>
+      ) : null}
+      {success ? (
+        <div className="mt-6 rounded-xl border border-green-200 bg-green-50 p-3 text-sm text-green-800 dark:border-green-900 dark:bg-green-950/40 dark:text-green-200">
+          {success}
+        </div>
+      ) : null}
+
+      {isEditing ? (
+        <form
+          onSubmit={handleSubmit}
+          className="glass-card mt-10 space-y-6 rounded-xl border border-white/40 p-6 dark:border-white/10 md:p-8"
+        >
+          <h2 className="font-headline text-xl font-bold">Modifier le profil</h2>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-sm font-medium">Nom d&apos;affichage</label>
+              <input
+                required
+                value={formData.display_name}
+                onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
+                className="w-full rounded-xl border border-outline-variant/30 bg-surface-container-lowest px-3 py-2 dark:bg-slate-900"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">Nom d&apos;utilisateur</label>
+              <input
+                required
+                value={formData.username}
+                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                className="w-full rounded-xl border border-outline-variant/30 bg-surface-container-lowest px-3 py-2 dark:bg-slate-900"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">Ville</label>
+              <input
+                value={formData.city}
+                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                className="w-full rounded-xl border border-outline-variant/30 bg-surface-container-lowest px-3 py-2 dark:bg-slate-900"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">Pays</label>
+              <input
+                value={formData.country}
+                onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                className="w-full rounded-xl border border-outline-variant/30 bg-surface-container-lowest px-3 py-2 dark:bg-slate-900"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">Téléphone</label>
+              <input
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                className="w-full rounded-xl border border-outline-variant/30 bg-surface-container-lowest px-3 py-2 dark:bg-slate-900"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">Rayon (km)</label>
+              <input
+                type="number"
+                min={1}
+                max={500}
+                value={formData.search_radius_km}
+                onChange={(e) =>
+                  setFormData({ ...formData, search_radius_km: parseInt(e.target.value, 10) || 50 })
+                }
+                className="w-full rounded-xl border border-outline-variant/30 bg-surface-container-lowest px-3 py-2 dark:bg-slate-900"
+              />
+            </div>
           </div>
 
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600">
-              {error}
-            </div>
-          )}
-
-          {success && (
-            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-600">
-              {success}
-            </div>
-          )}
-
-          {isEditing ? (
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Nom d'affichage
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.display_name}
-                    onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue bg-gray-50 focus:bg-white"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Nom d'utilisateur
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.username}
-                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue bg-gray-50 focus:bg-white"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Ville
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.city}
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue bg-gray-50 focus:bg-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Pays
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.country}
-                    onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue bg-gray-50 focus:bg-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Téléphone
-                  </label>
-                  <input
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue bg-gray-50 focus:bg-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Rayon de recherche (km)
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="500"
-                    value={formData.search_radius_km}
-                    onChange={(e) => setFormData({ ...formData, search_radius_km: parseInt(e.target.value) || 50 })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue bg-gray-50 focus:bg-white"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Langues parlées
-                </label>
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {formData.languages.map((lang) => (
-                    <span key={lang} className="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">
-                      {lang}
-                      <button
-                        type="button"
-                        onClick={() => setFormData({ ...formData, languages: formData.languages.filter(l => l !== lang) })}
-                        className="ml-2 text-blue-500 hover:text-blue-700"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
-                </div>
-                <div className="flex space-x-2">
-                  <input
-                    type="text"
-                    value={newLanguage}
-                    onChange={(e) => setNewLanguage(e.target.value)}
-                    placeholder="Ajouter une langue"
-                    className="flex-1 px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue bg-gray-50 focus:bg-white"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && newLanguage.trim()) {
-                        e.preventDefault();
-                        if (!formData.languages.includes(newLanguage.trim())) {
-                          setFormData({ ...formData, languages: [...formData.languages, newLanguage.trim()] });
-                        }
-                        setNewLanguage('');
-                      }
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (newLanguage.trim() && !formData.languages.includes(newLanguage.trim())) {
-                        setFormData({ ...formData, languages: [...formData.languages, newLanguage.trim()] });
-                        setNewLanguage('');
-                      }
-                    }}
-                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 text-sm"
-                  >
-                    Ajouter
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Compétences / Tags
-                </label>
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {formData.skills.map((skill) => (
-                    <span key={skill} className="inline-flex items-center px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
-                      {skill}
-                      <button
-                        type="button"
-                        onClick={() => setFormData({ ...formData, skills: formData.skills.filter(s => s !== skill) })}
-                        className="ml-2 text-green-500 hover:text-green-700"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
-                </div>
-                <div className="flex space-x-2">
-                  <input
-                    type="text"
-                    value={newSkill}
-                    onChange={(e) => setNewSkill(e.target.value)}
-                    placeholder="Ajouter une compétence"
-                    className="flex-1 px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-blue bg-gray-50 focus:bg-white"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && newSkill.trim()) {
-                        e.preventDefault();
-                        if (!formData.skills.includes(newSkill.trim())) {
-                          setFormData({ ...formData, skills: [...formData.skills, newSkill.trim()] });
-                        }
-                        setNewSkill('');
-                      }
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (newSkill.trim() && !formData.skills.includes(newSkill.trim())) {
-                        setFormData({ ...formData, skills: [...formData.skills, newSkill.trim()] });
-                        setNewSkill('');
-                      }
-                    }}
-                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 text-sm"
-                  >
-                    Ajouter
-                  </button>
-                </div>
-              </div>
-
-              <div className="border border-dashed border-gray-300 rounded-lg p-4 bg-gray-50">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Photos du profil
-                </label>
-                <p className="text-sm text-gray-500 mb-4">
-                  Téléversez directement vos images (PNG, JPG ou WEBP). Elles sont enregistrées dans votre espace Supabase.
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <label className="flex flex-col items-center justify-center text-center px-3 py-4 border border-gray-200 rounded-lg bg-white hover:bg-gray-50 cursor-pointer">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(event) => handleFileChange(event, 'avatar')}
-                    />
-                    {mediaUploading.avatar ? (
-                      <Loader2 className="w-5 h-5 text-brand-blue animate-spin mb-2" />
-                    ) : (
-                      <Camera className="w-5 h-5 text-brand-blue mb-2" />
-                    )}
-                    <span className="text-sm font-medium text-gray-700">
-                      {mediaUploading.avatar ? 'Téléversement...' : 'Mettre à jour l’avatar'}
-                    </span>
-                  </label>
-
-                  <label className="flex flex-col items-center justify-center text-center px-3 py-4 border border-gray-200 rounded-lg bg-white hover:bg-gray-50 cursor-pointer">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(event) => handleFileChange(event, 'banner')}
-                    />
-                    {mediaUploading.banner ? (
-                      <Loader2 className="w-5 h-5 text-brand-blue animate-spin mb-2" />
-                    ) : (
-                      <ImageUp className="w-5 h-5 text-brand-blue mb-2" />
-                    )}
-                    <span className="text-sm font-medium text-gray-700">
-                      {mediaUploading.banner ? 'Téléversement...' : 'Mettre à jour la bannière'}
-                    </span>
-                  </label>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Biographie
-                </label>
-                <textarea
-                  value={formData.bio}
-                  onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                  rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Parlez-nous un peu de vous..."
-                />
-              </div>
-
-              <div className="flex justify-end">
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="flex items-center space-x-2 btn-primary rounded-full px-6 py-2"
+          <div>
+            <label className="mb-1 block text-sm font-medium">Langues</label>
+            <div className="mb-2 flex flex-wrap gap-2">
+              {formData.languages.map((lang) => (
+                <span                  key={lang}
+                  className="inline-flex items-center gap-1 rounded-full bg-primary-fixed/30 px-3 py-1 text-sm font-semibold"
                 >
-                  <Check className="w-4 h-4" />
-                  <span>{loading ? 'Enregistrement...' : 'Enregistrer'}</span>
-                </button>
-              </div>
-            </form>
-          ) : (
-            <div className="space-y-6">
-              {formData.bio && (
+                  {lang}
+                  <button
+                    type="button"
+                    className="text-primary"
+                    onClick={() =>
+                      setFormData({ ...formData, languages: formData.languages.filter((l) => l !== lang) })
+                    }
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input
+                value={newLanguage}
+                onChange={(e) => setNewLanguage(e.target.value)}
+                placeholder="Ajouter"
+                className="flex-1 rounded-xl border border-outline-variant/30 px-3 py-2 dark:bg-slate-900"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && newLanguage.trim()) {
+                    e.preventDefault();
+                    const v = newLanguage.trim();
+                    if (!formData.languages.includes(v)) {
+                      setFormData({ ...formData, languages: [...formData.languages, v] });
+                    }
+                    setNewLanguage('');
+                  }
+                }}
+              />
+              <button
+                type="button"
+                className="rounded-full bg-surface-container-high px-4 py-2 text-sm font-bold dark:bg-slate-700"
+                onClick={() => {
+                  const v = newLanguage.trim();
+                  if (v && !formData.languages.includes(v)) {
+                    setFormData({ ...formData, languages: [...formData.languages, v] });
+                    setNewLanguage('');
+                  }
+                }}
+              >
+                Ajouter
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium">Compétences</label>
+            <div className="mb-2 flex flex-wrap gap-2">
+              {formData.skills.map((skill) => (
+                <span
+                  key={skill}
+                  className="inline-flex items-center gap-1 rounded-full bg-secondary-container/40 px-3 py-1 text-sm font-bold text-on-secondary-container"
+                >
+                  {skill}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFormData({ ...formData, skills: formData.skills.filter((s) => s !== skill) })
+                    }
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input
+                value={newSkill}
+                onChange={(e) => setNewSkill(e.target.value)}
+                placeholder="Ajouter"
+                className="flex-1 rounded-xl border border-outline-variant/30 px-3 py-2 dark:bg-slate-900"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && newSkill.trim()) {
+                    e.preventDefault();
+                    const v = newSkill.trim();
+                    if (!formData.skills.includes(v)) {
+                      setFormData({ ...formData, skills: [...formData.skills, v] });
+                    }
+                    setNewSkill('');
+                  }
+                }}
+              />
+              <button
+                type="button"
+                className="rounded-full bg-surface-container-high px-4 py-2 text-sm font-bold dark:bg-slate-700"
+                onClick={() => {
+                  const v = newSkill.trim();
+                  if (v && !formData.skills.includes(v)) {
+                    setFormData({ ...formData, skills: [...formData.skills, v] });
+                    setNewSkill('');
+                  }
+                }}
+              >
+                Ajouter
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium">Biographie</label>
+            <textarea
+              value={formData.bio}
+              onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+              rows={4}
+              className="w-full rounded-xl border border-outline-variant/30 px-3 py-2 dark:bg-slate-900"
+              placeholder="Parlez-nous de vous…"
+            />
+          </div>
+
+          <div className="rounded-xl border border-dashed border-outline-variant/40 p-4">
+            <p className="mb-3 text-sm font-medium">Photos</p>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <label className="flex cursor-pointer flex-col items-center rounded-xl border border-outline-variant/30 bg-surface-container-lowest p-4 dark:bg-slate-900">
+                <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFileChange(e, 'avatar')} />
+                <span className="material-symbols-outlined mb-1 text-primary">face</span>
+                <span className="text-sm font-semibold">{mediaUploading.avatar ? '…' : 'Avatar'}</span>
+              </label>
+              <label className="flex cursor-pointer flex-col items-center rounded-xl border border-outline-variant/30 bg-surface-container-lowest p-4 dark:bg-slate-900">
+                <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFileChange(e, 'banner')} />
+                <span className="material-symbols-outlined mb-1 text-primary">panorama</span>
+                <span className="text-sm font-semibold">{mediaUploading.banner ? '…' : 'Bannière'}</span>
+              </label>
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex items-center gap-2 rounded-full bg-primary px-8 py-3 font-headline font-bold text-on-primary disabled:opacity-50"
+            >
+              <span className="material-symbols-outlined text-[20px]">check</span>
+              {loading ? 'Enregistrement…' : 'Enregistrer'}
+            </button>
+          </div>
+        </form>
+      ) : (
+        <div className="mt-24 grid grid-cols-1 gap-8 lg:grid-cols-12">
+          <aside className="space-y-8 lg:col-span-4">
+            {showVerifiedBadge ? (
+              <div className="flex items-center gap-4 rounded-xl border border-primary-fixed/30 bg-primary-fixed-dim/20 p-6 dark:bg-primary/10">
+                <div className="rounded-full bg-primary p-3 text-on-primary">
+                  <span className="material-symbols-outlined">verified_user</span>
+                </div>
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">Biographie</h3>
-                  <p className="text-gray-700">{formData.bio}</p>
+                  <p className="font-headline font-bold text-on-surface">Profil vérifié</p>
+                  <p className="text-sm text-on-surface-variant">Votre identité a été confirmée</p>
                 </div>
-              )}
+              </div>
+            ) : user.verification_status === 'pending' ? (
+              <div className="rounded-xl border border-secondary-container/40 bg-secondary-container/15 p-6">
+                <p className="font-headline font-bold text-on-surface">Vérification en cours</p>
+                <p className="mt-1 text-sm text-on-surface-variant">Document en examen.</p>
+              </div>
+            ) : user.verification_status === 'rejected' ? (
+              <div className="rounded-xl border border-error-container/40 bg-error-container/15 p-6">
+                <p className="font-headline font-bold text-on-error-container">Vérification refusée</p>
+                <VerificationUpload onSuccess={refreshUser} />
+              </div>
+            ) : (
+              <div className="rounded-xl border border-outline-variant/20 bg-surface-container-low p-6">
+                <p className="mb-3 text-sm text-on-surface-variant">
+                  Vérifiez votre profil pour renforcer la confiance.
+                </p>
+                <VerificationUpload onSuccess={refreshUser} />
+              </div>
+            )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex items-center space-x-3 text-gray-600">
-                  <Mail className="w-5 h-5" />
-                  <span>{user.email}</span>
-                </div>
-
+            <div className="rounded-xl border border-outline-variant/10 bg-surface-container-lowest p-8 shadow-sm dark:border-slate-700 dark:bg-slate-900/60">
+              <h3 className="mb-6 font-headline text-xl font-bold text-on-surface">Infos</h3>
+              <ul className="space-y-6">
+                <li className="flex items-center gap-4">
+                  <span className="material-symbols-outlined text-primary">mail</span>
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wider text-outline">Email</p>
+                    <p className="font-medium text-on-surface">{user.email}</p>
+                  </div>
+                </li>
                 {(formData.city || formData.country) && (
-                  <div className="flex items-center space-x-3 text-gray-600">
-                    <MapPin className="w-5 h-5" />
-                    <span>{[formData.city, formData.country].filter(Boolean).join(', ')}</span>
-                  </div>
+                  <li className="flex items-center gap-4">
+                    <span className="material-symbols-outlined text-primary">location_on</span>
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wider text-outline">Localisation</p>
+                      <p className="font-medium text-on-surface">
+                        {[formData.city, formData.country].filter(Boolean).join(', ')}
+                      </p>
+                    </div>
+                  </li>
                 )}
-
-                {formData.phone && (
-                  <div className="flex items-center space-x-3 text-gray-600">
-                    <Phone className="w-5 h-5" />
-                    <span>{formData.phone}</span>
+                {formData.phone ? (
+                  <li className="flex items-center gap-4">
+                    <span className="material-symbols-outlined text-primary">call</span>
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wider text-outline">Téléphone</p>
+                      <p className="font-medium text-on-surface">{formData.phone}</p>
+                    </div>
+                  </li>
+                ) : null}
+                <li className="flex items-center gap-4">
+                  <span className="material-symbols-outlined text-primary">calendar_month</span>
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wider text-outline">Membre depuis</p>
+                    <p className="font-medium text-on-surface">{formatDate(user.created_at)}</p>
                   </div>
-                )}
+                </li>
+              </ul>
 
-                <div className="flex items-center space-x-3 text-gray-600">
-                  <Calendar className="w-5 h-5" />
-                  <span>Membre depuis {formatDate(user.created_at)}</span>
-                </div>
-              </div>
-
-              {formData.languages.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">Langues</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {formData.languages.map((lang) => (
-                      <span key={lang} className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">
+              <div className="mt-8 border-t border-surface-container pt-8">
+                <p className="mb-4 text-xs font-bold uppercase tracking-wider text-outline">Langues</p>
+                <div className="flex flex-wrap gap-2">
+                  {formData.languages.length ? (
+                    formData.languages.map((lang) => (
+                      <span
+                        key={lang}
+                        className="rounded-full bg-surface-container-low px-4 py-2 text-sm font-semibold text-on-surface-variant dark:bg-slate-800"
+                      >
                         {lang}
                       </span>
-                    ))}
-                  </div>
+                    ))
+                  ) : (
+                    <span className="text-sm text-on-surface-variant">—</span>
+                  )}
                 </div>
-              )}
+              </div>
 
-              {formData.skills.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">Compétences</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {formData.skills.map((skill) => (
-                      <span key={skill} className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
+              <div className="mt-6">
+                <p className="mb-4 text-xs font-bold uppercase tracking-wider text-outline">Compétences</p>
+                <div className="flex flex-wrap gap-2">
+                  {formData.skills.length ? (
+                    formData.skills.map((skill) => (
+                      <span
+                        key={skill}
+                        className="rounded-full bg-secondary-container px-4 py-2 text-sm font-bold text-on-secondary-container shadow-sm"
+                      >
                         {skill}
                       </span>
-                    ))}
-                  </div>
+                    ))
+                  ) : (
+                    <span className="text-sm text-on-surface-variant">—</span>
+                  )}
                 </div>
-              )}
-
-              {/* Section Vérification */}
-              <div className="border-t pt-6">
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <Shield className="w-5 h-5" />
-                  Vérification du profil
-                </h3>
-                
-                {user.verification_status === 'verified' ? (
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
-                    <CheckCircle className="w-6 h-6 text-green-600" />
-                    <div>
-                      <p className="font-medium text-green-800">Profil vérifié</p>
-                      <p className="text-sm text-green-600">Votre identité a été confirmée</p>
-                    </div>
-                  </div>
-                ) : user.verification_status === 'pending' ? (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-center gap-3">
-                    <Clock className="w-6 h-6 text-yellow-600" />
-                    <div>
-                      <p className="font-medium text-yellow-800">Vérification en cours</p>
-                      <p className="text-sm text-yellow-600">Votre document est en cours d'examen</p>
-                    </div>
-                  </div>
-                ) : user.verification_status === 'rejected' ? (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                    <div className="flex items-center gap-3 mb-3">
-                      <XCircle className="w-6 h-6 text-red-600" />
-                      <div>
-                        <p className="font-medium text-red-800">Vérification refusée</p>
-                        <p className="text-sm text-red-600">Vous pouvez soumettre un nouveau document</p>
-                      </div>
-                    </div>
-                    <VerificationUpload onSuccess={refreshUser} />
-                  </div>
-                ) : (
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                    <p className="text-gray-700 mb-3">
-                      Faites vérifier votre profil pour gagner la confiance des autres membres.
-                      Uploadez une pièce d'identité (carte d'identité, passeport, permis de conduire).
-                    </p>
-                    <VerificationUpload onSuccess={refreshUser} />
-                  </div>
-                )}
-              </div>
-
-              <div className="border-t pt-6">
-                <h3 className="text-lg font-semibold mb-4">Statistiques</h3>
-                <div className="grid grid-cols-3 gap-4 text-center">
-                  <div className="bg-gray-50 p-4 rounded-2xl">
-                    <div className="text-2xl font-heading font-semibold text-brand-blue">{listingsCount}</div>
-                    <div className="text-sm text-gray-600">Annonces</div>
-                  </div>
-                  <div className="bg-gray-50 p-4 rounded-2xl">
-                    <div className="text-2xl font-heading font-semibold text-brand-blue">{reviews.length}</div>
-                    <div className="text-sm text-gray-600">Avis reçus</div>
-                  </div>
-                  <div className="bg-gray-50 p-4 rounded-2xl">
-                    <div className="text-2xl font-heading font-semibold text-brand-blue flex items-center justify-center space-x-1">
-                      {reviews.length > 0 ? (
-                        <>
-                          <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                          <span>{(reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)}</span>
-                        </>
-                      ) : (
-                        <span>-</span>
-                      )}
-                    </div>
-                    <div className="text-sm text-gray-600">Note moyenne</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="border-t pt-6">
-                <h3 className="text-lg font-semibold mb-4">Avis reçus ({reviews.length})</h3>
-                {reviewsLoading ? (
-                  <div className="flex justify-center py-8">
-                    <Loader2 className="w-6 h-6 animate-spin text-brand-blue" />
-                  </div>
-                ) : reviews.length === 0 ? (
-                  <p className="text-gray-500 text-center py-8">Aucun avis pour le moment</p>
-                ) : (
-                  <div className="space-y-4">
-                    {reviews.map((review) => (
-                      <div key={review.id} className="bg-gray-50 rounded-lg p-4">
-                        <div 
-                          className={`flex items-start space-x-3 ${onUserClick && review.reviewer?.id ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
-                          onClick={() => {
-                            if (onUserClick && review.reviewer?.id) {
-                              onUserClick(review.reviewer.id);
-                            }
-                          }}
-                        >
-                          {review.reviewer?.avatar_url ? (
-                            <img
-                              src={review.reviewer.avatar_url}
-                              alt={review.reviewer.display_name}
-                              className="w-10 h-10 rounded-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-10 h-10 bg-brand-yellow text-white rounded-full flex items-center justify-center text-sm font-medium">
-                              {review.reviewer?.display_name?.[0]?.toUpperCase() || '?'}
-                            </div>
-                          )}
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between">
-                              <span className={`font-medium ${onUserClick && review.reviewer?.id ? 'hover:text-brand-blue transition-colors' : ''}`}>{review.reviewer?.display_name}</span>
-                              <div className="flex items-center space-x-1">
-                                {[1, 2, 3, 4, 5].map((star) => (
-                                  <Star
-                                    key={star}
-                                    className={`w-4 h-4 ${
-                                      star <= review.rating
-                                        ? 'fill-yellow-400 text-yellow-400'
-                                        : 'text-gray-300'
-                                    }`}
-                                  />
-                                ))}
-                              </div>
-                            </div>
-                            {review.comment && (
-                              <p className="text-gray-700 mt-2">{review.comment}</p>
-                            )}
-                            {review.tags && review.tags.length > 0 && (
-                              <div className="flex flex-wrap gap-1 mt-2">
-                                {review.tags.map((tag) => (
-                                  <span
-                                    key={tag}
-                                    className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full"
-                                  >
-                                    {tag}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                            <p className="text-xs text-gray-500 mt-2">
-                              {new Date(review.created_at).toLocaleDateString('fr-FR')}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
             </div>
-          )}
+          </aside>
+
+          <div className="space-y-8 lg:col-span-8">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <div className="group rounded-xl border border-outline-variant/10 bg-white p-6 text-center shadow-sm transition-shadow hover:shadow-md dark:border-slate-700 dark:bg-slate-900">
+                <p className="mb-1 font-headline text-4xl font-black text-primary">{listingsCount}</p>
+                <p className="text-sm font-bold uppercase tracking-widest text-outline transition-colors group-hover:text-primary">
+                  Annonces
+                </p>
+              </div>
+              <div className="group rounded-xl border border-outline-variant/10 bg-white p-6 text-center shadow-sm transition-shadow hover:shadow-md dark:border-slate-700 dark:bg-slate-900">
+                <p className="mb-1 font-headline text-4xl font-black text-primary">{reviews.length}</p>
+                <p className="text-sm font-bold uppercase tracking-widest text-outline transition-colors group-hover:text-primary">
+                  Avis reçus
+                </p>
+              </div>
+              <div className="group rounded-xl bg-secondary-container p-6 text-center shadow-sm transition-transform hover:scale-[1.02]">
+                <p className="mb-1 font-headline text-4xl font-black text-on-secondary-container">
+                  {avgDisplay}
+                </p>
+                <p className="text-sm font-bold uppercase tracking-widest text-on-secondary-container">
+                  Note moyenne
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-xl bg-surface-container-low p-8 dark:bg-slate-800/50">
+              <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+                <h2 className="font-headline text-2xl font-extrabold tracking-tight text-on-surface dark:text-white">
+                  Avis reçus ({reviews.length})
+                </h2>
+                <div className="flex gap-0.5 text-secondary-container">
+                  {[1, 2, 3, 4, 5].map((s) => {
+                    const v = parseFloat(avgDisplay === '—' ? '0' : avgDisplay);
+                    const filled = v >= s - 0.25;
+                    return (
+                      <span
+                        key={s}
+                        className="material-symbols-outlined text-2xl"
+                        style={
+                          filled ? { fontVariationSettings: "'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24" } : undefined
+                        }
+                      >
+                        star
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {reviewsLoading ? (
+                <div className="flex justify-center py-12">
+                  <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                </div>
+              ) : reviews.length === 0 ? (
+                <p className="py-12 text-center text-on-surface-variant">Aucun avis pour le moment</p>
+              ) : (
+                <div className="space-y-4">
+                  {reviews.map((review) => (
+                    <div
+                      key={review.id}
+                      className="rounded-lg border border-outline-variant/5 bg-surface-container-lowest p-6 shadow-sm transition-all hover:border-primary/20 dark:border-slate-700 dark:bg-slate-900"
+                    >
+                      <div className="mb-4 flex items-start justify-between gap-4">
+                        <button
+                          type="button"
+                          className={`flex items-center gap-4 text-left ${onUserClick && review.reviewer?.id ? 'cursor-pointer rounded-xl hover:opacity-90' : ''}`}
+                          onClick={() => review.reviewer?.id && onUserClick?.(review.reviewer.id)}
+                          disabled={!onUserClick || !review.reviewer?.id}
+                        >
+                          <div className="h-12 w-12 overflow-hidden rounded-full">
+                            {review.reviewer?.avatar_url ? (
+                              <img
+                                src={review.reviewer.avatar_url}
+                                alt=""
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center bg-secondary-container/30 font-bold text-on-secondary-container">
+                                {review.reviewer?.display_name?.[0]?.toUpperCase() ?? '?'}
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-bold text-on-surface dark:text-white">
+                              {review.reviewer?.display_name ?? '—'}
+                            </p>
+                            <p className="text-xs text-outline">{formatRelativeOrDate(review.created_at)}</p>
+                          </div>
+                        </button>
+                        <div className="flex shrink-0 text-secondary-container">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <span
+                              key={star}
+                              className="material-symbols-outlined text-lg"
+                              style={
+                                star <= review.rating
+                                  ? { fontVariationSettings: "'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24" }
+                                  : undefined
+                              }
+                            >
+                              star
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      {review.comment ? (
+                        <p className="mb-4 italic text-on-surface-variant">&quot;{review.comment}&quot;</p>
+                      ) : null}
+                      {review.tags && review.tags.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {review.tags.map((tag) => (
+                            <span
+                              key={tag}
+                              className="rounded-full bg-primary-fixed px-3 py-1 text-[10px] font-bold uppercase tracking-tighter text-on-primary-fixed-variant dark:bg-primary/25 dark:text-primary-fixed"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
