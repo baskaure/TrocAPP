@@ -580,7 +580,7 @@ export function AdminPage() {
                             </div>
                             <button
                               onClick={() => setViewingListingId(report.listing_id!)}
-                              className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200 flex items-center gap-1"
+                              className="flex items-center gap-1 rounded bg-primary/15 px-3 py-1 text-sm text-primary hover:bg-primary/25"
                             >
                               <Eye className="w-4 h-4" />
                               Voir
@@ -1074,7 +1074,7 @@ export function AdminPage() {
                                   : req.status === 'failed'
                                   ? 'bg-red-100 text-red-700'
                                   : req.status === 'sent'
-                                  ? 'bg-blue-100 text-blue-700'
+                                  ? 'bg-primary/15 text-primary'
                                   : 'bg-yellow-100 text-yellow-700'
                               }`}
                             >

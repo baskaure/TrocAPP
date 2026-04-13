@@ -334,7 +334,7 @@ export function ChatWindow({ proposalId, onUserClick, variant = 'card' }: ChatWi
                       </button>
                     )}
                     <p className="whitespace-pre-wrap break-words">{message.body}</p>
-                    <p className={`mt-1 text-xs ${isOwn ? 'text-sky-100' : 'text-gray-500'}`}>
+                    <p className={`mt-1 text-xs ${isOwn ? 'text-white/75' : 'text-gray-500'}`}>
                       {formatTime(message.created_at)}
                     </p>
                   </div>

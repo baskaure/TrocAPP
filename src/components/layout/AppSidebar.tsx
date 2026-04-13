@@ -37,7 +37,7 @@ export function AppSidebar({
 }: AppSidebarProps) {
   const itemClass = (active: boolean) =>
     `flex w-full items-center gap-4 rounded-full px-4 py-3 text-left font-headline text-sm font-bold transition-all duration-300 ${
-      active ? 'bg-blue-50 text-primary dark:bg-slate-800 dark:text-blue-400' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80'
+      active ? 'bg-primary/10 text-primary dark:bg-slate-800 dark:text-primary' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80'
     }`;
 
   const visibilityClass = visible

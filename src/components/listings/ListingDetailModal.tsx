@@ -431,7 +431,7 @@ export function ListingDetailModal({
                         <div className="mt-1 flex items-center gap-1.5">
                           {listing.user.is_verified ? (
                             <span
-                              className="material-symbols-outlined text-sm text-blue-500"
+                              className="material-symbols-outlined text-sm text-primary"
                               style={{ fontVariationSettings: "'FILL' 1" }}
                             >
                               verified

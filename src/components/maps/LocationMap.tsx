@@ -36,10 +36,10 @@ function primaryPinIcon() {
       <svg width="40" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <filter id="loc-shadow" x="-40%" y="-40%" width="180%" height="180%">
-            <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#002de6" flood-opacity="0.45"/>
+            <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#2D8DBF" flood-opacity="0.45"/>
           </filter>
         </defs>
-        <path filter="url(#loc-shadow)" fill="#002de6" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+        <path filter="url(#loc-shadow)" fill="#2D8DBF" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
         <circle cx="12" cy="9" r="3" fill="white"/>
       </svg>
     </div>

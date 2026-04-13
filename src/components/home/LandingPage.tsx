@@ -27,14 +27,14 @@ export function LandingPage({ onExplore, onCreateAccount, onLogin }: LandingPage
       {/* TopNavBar */}
       <nav className="fixed top-0 z-50 w-full bg-white/70 shadow-[0_20px_40px_rgba(0,0,0,0.06)] backdrop-blur-xl dark:bg-slate-900/70">
         <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6 md:px-8">
-          <div className="font-manrope text-2xl font-black tracking-tighter text-primary dark:text-blue-400">
+          <div className="font-manrope text-2xl font-black tracking-tighter text-primary dark:text-primary">
             BonTroc
           </div>
           <div className="hidden items-center gap-10 md:flex">
             <button
               type="button"
               onClick={onExplore}
-              className="border-b-2 border-primary pb-1 font-manrope font-semibold tracking-tight text-primary transition-all duration-300 hover:opacity-80 dark:text-blue-400"
+              className="border-b-2 border-primary pb-1 font-manrope font-semibold tracking-tight text-primary transition-all duration-300 hover:opacity-80 dark:text-primary"
             >
               Marketplace
             </button>
@@ -64,7 +64,7 @@ export function LandingPage({ onExplore, onCreateAccount, onLogin }: LandingPage
             <button
               type="button"
               onClick={handleLogin}
-              className="px-3 py-2 font-manrope font-semibold text-primary transition-all hover:opacity-80 active:scale-90 dark:text-blue-400 sm:px-4"
+              className="px-3 py-2 font-manrope font-semibold text-primary transition-all hover:opacity-80 active:scale-90 dark:text-primary sm:px-4"
             >
               Connexion
             </button>
@@ -378,7 +378,7 @@ export function LandingPage({ onExplore, onCreateAccount, onLogin }: LandingPage
             <span className="text-sm tracking-wide text-slate-500 dark:text-slate-400 font-inter">CGU</span>
             <a
               href="mailto:contact@bontroc.fr"
-              className="text-sm tracking-wide text-slate-500 transition-colors hover:text-blue-500 dark:text-slate-400 font-inter"
+              className="text-sm tracking-wide text-slate-500 transition-colors hover:text-primary dark:text-slate-400 font-inter"
             >
               Contact
             </a>

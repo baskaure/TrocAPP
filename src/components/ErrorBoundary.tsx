@@ -60,7 +60,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
             onClick={() => window.location.reload()}
             style={{
               padding: '10px 20px',
-              backgroundColor: '#0066cc',
+              backgroundColor: '#2D8DBF',
               color: 'white',
               border: 'none',
               borderRadius: '4px',

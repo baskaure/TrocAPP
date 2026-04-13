@@ -329,7 +329,7 @@ export function ExchangeTracker({ exchange, onClose, onUpdate }: ExchangeTracker
                     <span className="material-symbols-outlined text-[22px]">{step.icon}</span>
                   </div>
                   <p
-                    className={`mt-3 text-xs sm:text-sm ${reached ? 'font-bold text-primary dark:text-blue-400' : 'font-medium text-on-surface-variant'} ${isFuture ? 'opacity-40' : ''}`}
+                    className={`mt-3 text-xs sm:text-sm ${reached ? 'font-bold text-primary dark:text-primary' : 'font-medium text-on-surface-variant'} ${isFuture ? 'opacity-40' : ''}`}
                   >
                     {step.label}
                   </p>

@@ -18,7 +18,7 @@ function HeaderInner({ onLogoClick, onCreateListing, onNavigate, onRequestAuth }
 
   return (
     <nav
-      className={`fixed inset-x-0 top-0 z-50 ${APP_HEADER_HEIGHT_CLASS} bg-white/70 shadow-xl shadow-primary/5 backdrop-blur-xl [transform:translateZ(0)] backface-hidden [contain:layout_style_paint]`}
+      className={`fixed inset-x-0 top-0 z-50 ${APP_HEADER_HEIGHT_CLASS} bg-white/70 shadow-xl shadow-primary/5 backdrop-blur-xl [transform:translateZ(0)] backface-hidden`}
     >
       <div className="mx-auto flex h-full max-w-screen-2xl items-center justify-between px-6 md:px-8">
         <div className="flex items-center">
