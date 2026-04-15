@@ -9,8 +9,7 @@ function scrollToSection(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
 }
 
-const heroImg =
-  'https://lh3.googleusercontent.com/aida-public/AB6AXuBWBhzIYd1n0zPdeemy9zzxK7M5BxhgPBXFQJPziQ-Nlmq3zCBUN27IMxfkpc8k57KCBZbTrZquHw6FQ12g7i2YK5b7T9bCzNibBJXaoVLF4_XJbd1V7Eymt5u64zOplVYxZmK7VA_vVOcv9fpSUfv-0VlaeDtoCD66tZV04h5MwHG7DNVNNgYUZ8B6hbQHGdkwckHxmUccHFLXvik-f6xIoLxIaBvBUz8seywx45TkwpHvsPuM8U4i2o0_5mZcFS7OxAsmb3J5U9Hr';
+const heroImg = '/logo/screen.png';
 const serviceImg =
   'https://lh3.googleusercontent.com/aida-public/AB6AXuBMlDT-sETkF7gBCse0MOESC24YFcgEdEm_cdYuyh-xMmPJmxXi_FLen4YpAxsp12-_P9g5TH7WLI-uwLxw7zdaYz73eIUlPlDJtYcoaXlnQ_vGPd5UH0X5FzZoOCMvDbWjxH3xuGOP5FKQh9JnbU8vNu1cJFswsN8iF6ksCSjD95vrnOUa68GFcxrl0G_QgQ2UrAl-A67UpXQZvEAIG-mm8aWxqNu86nHib8KOP5iY9fyqxtrz3tJacL2LVJl5OZ2FR_D99LrnI6eJ';
 const ctaImg =
