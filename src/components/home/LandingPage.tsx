@@ -12,8 +12,7 @@ function scrollToSection(id: string) {
 const heroImg = '/logo/screen.png';
 const serviceImg =
   'https://lh3.googleusercontent.com/aida-public/AB6AXuBMlDT-sETkF7gBCse0MOESC24YFcgEdEm_cdYuyh-xMmPJmxXi_FLen4YpAxsp12-_P9g5TH7WLI-uwLxw7zdaYz73eIUlPlDJtYcoaXlnQ_vGPd5UH0X5FzZoOCMvDbWjxH3xuGOP5FKQh9JnbU8vNu1cJFswsN8iF6ksCSjD95vrnOUa68GFcxrl0G_QgQ2UrAl-A67UpXQZvEAIG-mm8aWxqNu86nHib8KOP5iY9fyqxtrz3tJacL2LVJl5OZ2FR_D99LrnI6eJ';
-const ctaImg =
-  'https://lh3.googleusercontent.com/aida-public/AB6AXuDN4SQflEanNFHR4ouk2-5nfjjnYM_wa04bn0W8ECLv26AqQm0QXPNS0ovTGQG0xXvDlkFdqh3dcdTdct8_5Nb9EptkQHkjN58EDuaplXNaJnryjD7JTu-yPL13CRINVtHgQ-UqMGUD6T-2s2jtwOlIZ7ehmPMp0FAL3NP59OOKvT-JKq3mNovc3-Z7zddTRxSQ86s7zo92H012u_aAcYaMdI3IpOINW-DPWH7EspIWEipbmOyXvjir_H2H2ShZKUFVjInRnIo31Auk';
+const ctaImg = '/logo/cta.png';
 
 export function LandingPage({ onExplore, onCreateAccount, onLogin }: LandingPageProps) {
   const handleLogin = () => {
@@ -26,8 +25,8 @@ export function LandingPage({ onExplore, onCreateAccount, onLogin }: LandingPage
       {/* TopNavBar */}
       <nav className="fixed top-0 z-50 w-full bg-white/70 shadow-[0_20px_40px_rgba(0,0,0,0.06)] backdrop-blur-xl dark:bg-slate-900/70">
         <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6 md:px-8">
-          <div className="font-manrope text-2xl font-black tracking-tighter text-primary dark:text-primary">
-            BonTroc
+          <div>
+            <img src="/logo/5.png" alt="BonTroc" className="h-10 w-auto object-contain" />
           </div>
           <div className="hidden items-center gap-10 md:flex">
             <button
@@ -326,7 +325,7 @@ export function LandingPage({ onExplore, onCreateAccount, onLogin }: LandingPage
       {/* Final CTA Section */}
       <section id="cta" className="px-6 py-24">
         <div className="mx-auto max-w-7xl">
-          <div className="relative flex flex-col items-center overflow-hidden rounded-xl bg-primary shadow-2xl md:flex-row">
+          <div className="relative flex flex-col items-center overflow-hidden rounded-xl bg-primary shadow-2xl md:flex-row md:items-stretch">
             <div className="relative z-10 p-10 md:w-3/5 md:p-24">
               <h2 className="mb-6 text-4xl font-black leading-tight tracking-tighter text-white md:mb-8 md:text-5xl lg:text-6xl font-manrope">
                 Prêt à réinventer votre business ?
@@ -351,7 +350,7 @@ export function LandingPage({ onExplore, onCreateAccount, onLogin }: LandingPage
                 </a>
               </div>
             </div>
-            <div className="relative h-72 w-full md:h-auto md:min-h-[28rem] md:w-2/5">
+            <div className="relative h-72 w-full self-stretch md:h-auto md:min-h-[28rem] md:w-2/5">
               <img
                 src={ctaImg}
                 alt="Espace professionnel lumineux"
