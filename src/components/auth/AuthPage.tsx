@@ -238,22 +238,13 @@ export function AuthPage({ onBack, initialMode = 'login', variant = 'embedded', 
             Retour
           </button>
 
-          {/* Logo + tagline */}
-          <div className="flex h-full w-full flex-col items-center justify-center gap-6 px-10 text-center">
+          {/* Logo seul, centré */}
+          <div className="flex h-full w-full items-center justify-center px-10">
             <img
               src="/logo/5.png"
               alt="BonTroc"
-              className="h-20 w-auto object-contain brightness-0 invert"
+              className="h-16 w-auto object-contain brightness-0 invert md:h-18"
             />
-            <h2 className="font-manrope text-3xl font-bold tracking-tight text-white md:text-4xl">
-              L&apos;échange <span className="text-primary-fixed-dim">intelligent</span>
-              <br />
-              entre pros.
-            </h2>
-            <p className="max-w-sm text-sm leading-relaxed text-white/60">
-              Rejoignez le premier réseau de troc B2B mobile et transformez vos actifs dormants en ressources
-              stratégiques.
-            </p>
           </div>
         </BackgroundGradientAnimation>
 
