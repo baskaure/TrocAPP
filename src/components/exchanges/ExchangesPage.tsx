@@ -195,12 +195,12 @@ export function ExchangesPage({ onUserClick, onStartNewExchange }: ExchangesPage
       ) : (
         <>
           <PageBackRowSpacer />
-          <section className="mb-12">
-            <h1 className="mb-2 font-headline text-4xl font-extrabold tracking-tight text-on-surface md:text-5xl">
+          <section className="mb-10 md:mb-12">
+            <h1 className="mb-3 font-headline text-3xl font-extrabold tracking-tight text-on-surface sm:text-4xl md:text-5xl">
               Mes échanges
             </h1>
-            <p className="font-inter text-lg text-on-surface-variant opacity-90">
-              Suivez l&apos;état de vos échanges en cours et passés
+            <p className="font-inter text-base text-on-surface-variant opacity-90 md:text-lg">
+              Suivez l&apos;état de vos échanges en cours et passés.
             </p>
           </section>
 

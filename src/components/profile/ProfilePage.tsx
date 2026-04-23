@@ -325,10 +325,10 @@ export function ProfilePage({ onUserClick }: ProfilePageProps) {
 
             <div className="flex min-w-0 flex-1 flex-col gap-4 md:flex-row md:items-center md:justify-between md:pb-1">
               <div>
-                <h1 className="font-headline text-4xl font-extrabold tracking-tight text-on-surface dark:text-slate-100">
+                <h1 className="font-headline text-3xl font-extrabold tracking-tight text-on-surface sm:text-4xl md:text-5xl dark:text-slate-100">
                   {formData.display_name}
                 </h1>
-                <p className="text-lg font-medium text-primary">@{formData.username}</p>
+                <p className="text-base font-medium text-primary md:text-lg">@{formData.username}</p>
                 {!isEditing && formData.bio ? (
                   <p className="mt-2 max-w-xl text-sm text-on-surface-variant">{formData.bio}</p>
                 ) : null}

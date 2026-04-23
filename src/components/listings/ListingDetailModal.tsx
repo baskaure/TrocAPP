@@ -741,7 +741,7 @@ export function ListingDetailModal({
                     Ce qui est proposé
                   </h2>
                 </div>
-                <h1 className="mb-8 font-headline text-3xl font-black leading-[1.1] text-primary md:text-4xl">
+                <h1 className="mb-8 font-headline text-2xl font-black leading-[1.1] tracking-tight text-primary sm:text-3xl md:text-4xl">
                   {listing.title}
                 </h1>
                 <div className="space-y-6">

@@ -141,11 +141,11 @@ export function ProposalsPortal({ onSelectProposal }: ProposalsPortalProps) {
   return (
     <div className="relative min-h-[calc(100dvh-5.5rem)] w-full">
       <PageBackRowSpacer />
-      <section className="mb-12">
-        <h1 className="mb-2 font-headline text-4xl font-extrabold tracking-tight text-on-surface md:text-5xl">
+      <section className="mb-10 md:mb-12">
+        <h1 className="mb-3 font-headline text-3xl font-extrabold tracking-tight text-on-surface sm:text-4xl md:text-5xl">
           Mes propositions
         </h1>
-        <p className="font-inter text-lg text-on-surface-variant opacity-90">
+        <p className="font-inter text-base text-on-surface-variant opacity-90 md:text-lg">
           Retrouvez vos offres envoyées et reçues, et pilotez vos discussions jusqu&apos;à l&apos;échange.
         </p>
       </section>
@@ -213,11 +213,11 @@ export function ProposalsPortal({ onSelectProposal }: ProposalsPortalProps) {
             </div>
       </div>
 
-      <div className="mb-8 flex flex-wrap gap-3">
+      <div className="mb-8 flex flex-wrap gap-2">
             <button
               type="button"
               onClick={() => setMonthKey(null)}
-              className={`rounded-full px-4 py-2 text-xs font-bold shadow-sm ${
+              className={`inline-flex min-h-10 items-center rounded-full px-4 text-sm font-bold shadow-sm transition-colors ${
                 monthKey === null ? 'bg-primary text-on-primary' : 'border border-outline-variant/10 bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container-high'
               }`}
             >
@@ -228,7 +228,7 @@ export function ProposalsPortal({ onSelectProposal }: ProposalsPortalProps) {
                 key={key}
                 type="button"
                 onClick={() => setMonthKey(key)}
-                className={`rounded-full px-4 py-2 text-xs font-bold capitalize shadow-sm transition-colors ${
+                className={`inline-flex min-h-10 items-center rounded-full px-4 text-sm font-bold capitalize shadow-sm transition-colors ${
                   monthKey === key
                     ? 'bg-primary text-on-primary'
                     : 'border border-outline-variant/10 bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container-high'

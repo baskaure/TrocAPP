@@ -177,11 +177,11 @@ export function SettingsPage() {
   return (
     <div className="w-full max-w-7xl space-y-16 md:space-y-20">
       <PageBackRowSpacer />
-      <section className="mb-12">
-        <h1 className="mb-2 font-headline text-4xl font-extrabold tracking-tight text-on-surface md:text-5xl">
+      <section className="mb-10 md:mb-12">
+        <h1 className="mb-3 font-headline text-3xl font-extrabold tracking-tight text-on-surface sm:text-4xl md:text-5xl">
           Paramètres
         </h1>
-        <p className="font-inter text-lg text-on-surface-variant opacity-90">
+        <p className="font-inter text-base text-on-surface-variant opacity-90 md:text-lg">
           Gérez la sécurité, les notifications et la confidentialité de votre compte.
         </p>
       </section>

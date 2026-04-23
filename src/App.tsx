@@ -574,8 +574,8 @@ function AppContent() {
           ) : view === 'listings' ? (
             <section>
               <PageBackRowSpacer />
-              <header className="mb-16">
-                <h1 className="mb-8 font-headline text-5xl font-black leading-[1.1] tracking-tighter text-on-surface md:text-7xl">
+              <header className="mb-10 md:mb-12">
+                <h1 className="mb-6 font-headline text-3xl font-extrabold leading-[1.1] tracking-tight text-on-surface sm:text-4xl md:mb-8 md:text-5xl">
                   L&apos;échange <span className="text-primary">intelligent</span>
                   <br />
                   et local.

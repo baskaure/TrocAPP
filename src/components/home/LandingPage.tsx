@@ -83,11 +83,11 @@ export function LandingPage({ onExplore, onCreateAccount, onLogin }: LandingPage
           <span className="mb-8 rounded-full bg-primary-fixed px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-primary">
             L&apos;économie circulaire, version pro
           </span>
-          <h1 className="mb-8 max-w-4xl text-5xl font-extrabold leading-tight tracking-tighter text-on-surface md:text-7xl lg:text-8xl font-manrope">
+          <h1 className="mb-8 max-w-4xl font-manrope text-4xl font-extrabold leading-tight tracking-tight text-on-surface sm:text-5xl md:text-7xl lg:text-8xl">
             BonTroc — le troc <span className="italic text-primary">pro</span> et{' '}
             <span className="text-primary">mobile</span>
           </h1>
-          <p className="mb-12 max-w-2xl text-lg leading-relaxed text-on-surface-variant md:text-xl">
+          <p className="mb-12 max-w-2xl text-base leading-relaxed text-on-surface-variant sm:text-lg md:text-xl">
             Transformez vos actifs dormants en ressources stratégiques. Échangez des services, des équipements et du
             temps entre professionnels en toute sécurité.
           </p>
@@ -129,7 +129,7 @@ export function LandingPage({ onExplore, onCreateAccount, onLogin }: LandingPage
         <div className="mx-auto max-w-7xl px-6">
           <div className="mb-16 flex flex-col items-end justify-between gap-8 md:mb-20 md:flex-row">
             <div className="max-w-xl">
-              <h2 className="mb-6 text-4xl font-extrabold tracking-tighter text-on-surface md:text-5xl font-manrope">
+              <h2 className="mb-6 font-manrope text-3xl font-extrabold tracking-tight text-on-surface sm:text-4xl md:text-5xl">
                 Un écosystème pour chaque besoin
               </h2>
               <p className="text-lg text-on-surface-variant">
@@ -223,7 +223,7 @@ export function LandingPage({ onExplore, onCreateAccount, onLogin }: LandingPage
       <section id="fonctionnalites" className="bg-background py-24 md:py-32">
         <div className="mx-auto max-w-7xl px-6">
           <div className="mb-16 text-center md:mb-24">
-            <h2 className="mb-6 text-4xl font-extrabold tracking-tighter text-on-surface md:text-5xl font-manrope">
+            <h2 className="mb-6 font-manrope text-3xl font-extrabold tracking-tight text-on-surface sm:text-4xl md:text-5xl">
               La technologie au service de la confiance
             </h2>
             <p className="mx-auto max-w-2xl text-lg text-on-surface-variant">
@@ -272,7 +272,7 @@ export function LandingPage({ onExplore, onCreateAccount, onLogin }: LandingPage
         <div className="mx-auto max-w-7xl">
           <div className="relative overflow-hidden rounded-xl bg-surface-container-low p-10 md:p-24">
             <div className="absolute -right-20 -top-20 rounded-full bg-primary/5 p-24" />
-            <h2 className="mb-12 text-center text-3xl font-extrabold tracking-tighter text-on-surface md:mb-20 md:text-4xl font-manrope">
+            <h2 className="mb-12 text-center font-manrope text-3xl font-extrabold tracking-tight text-on-surface sm:text-4xl md:mb-20 md:text-5xl">
               Comment ça marche ?
             </h2>
             <div className="relative flex flex-col items-start justify-between gap-10 md:flex-row md:gap-12">
@@ -327,7 +327,7 @@ export function LandingPage({ onExplore, onCreateAccount, onLogin }: LandingPage
         <div className="mx-auto max-w-7xl">
           <div className="relative flex flex-col items-center overflow-hidden rounded-xl bg-primary shadow-2xl md:flex-row md:items-stretch">
             <div className="relative z-10 p-10 md:w-3/5 md:p-24">
-              <h2 className="mb-6 text-4xl font-black leading-tight tracking-tighter text-white md:mb-8 md:text-5xl lg:text-6xl font-manrope">
+              <h2 className="mb-6 font-manrope text-3xl font-black leading-tight tracking-tight text-white sm:text-4xl md:mb-8 md:text-5xl lg:text-6xl">
                 Prêt à réinventer votre business ?
               </h2>
               <p className="mb-10 max-w-lg text-lg text-primary-fixed/80 md:mb-12 md:text-xl">

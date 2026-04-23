@@ -212,10 +212,10 @@ export function ProposalDetailModal({
             </span>
             <span className="text-xs font-semibold uppercase tracking-wide text-outline">ID : {shortRef}</span>
           </div>
-          <h1 className="font-headline text-3xl font-extrabold leading-tight tracking-tight text-on-surface md:text-5xl">
+          <h1 className="font-headline text-2xl font-extrabold leading-tight tracking-tight text-on-surface sm:text-3xl md:text-4xl">
             {proposal.listing?.title ?? 'Proposition'}
           </h1>
-          <p className="text-lg font-medium text-on-surface-variant">
+          <p className="text-base font-medium text-on-surface-variant md:text-lg">
             Proposition {isReceiver ? 'de' : 'pour'}{' '}
             <button
               type="button"

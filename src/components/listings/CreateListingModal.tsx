@@ -192,11 +192,11 @@ export function CreateListingModal({ onBack, onSuccess, categories = [] }: Creat
         <PageBackLink onClick={onBack} label="Retour aux annonces" />
 
         {/* En-tête */}
-        <div className="mb-12">
-          <h1 className="mb-4 font-headline text-4xl font-extrabold tracking-tighter text-on-surface md:text-5xl">
+        <div className="mb-10 md:mb-12">
+          <h1 className="mb-3 font-headline text-3xl font-extrabold tracking-tight text-on-surface sm:text-4xl md:text-5xl">
             Créer une annonce
           </h1>
-          <p className="max-w-2xl text-lg leading-relaxed text-on-surface-variant">
+          <p className="max-w-2xl font-inter text-base leading-relaxed text-on-surface-variant md:text-lg">
             Partagez ce que vous proposez et ce que vous cherchez en échange — le troc local et équitable, sans friction.
           </p>
         </div>
