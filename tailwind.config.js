@@ -5,10 +5,6 @@ export default {
   theme: {
     extend: {
       colors: {
-        'brand-blue': '#2D8DBF',
-        'brand-yellow': '#F2BE3C',
-        'brand-text': '#333333',
-        'brand-bg': '#F8F8F8',
         primary: '#2D8DBF',
         'secondary-fixed-dim': '#e9c400',
         'surface-bright': '#f8f9fa',

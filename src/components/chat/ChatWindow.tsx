@@ -309,10 +309,10 @@ export function ChatWindow({ proposalId, onUserClick, variant = 'card' }: ChatWi
   }
 
   return (
-    <div className="mt-4 border-t border-gray-100 pt-4">
-      <div className="mb-4 max-h-96 overflow-y-auto rounded-2xl bg-gray-50 p-4">
+    <div className="mt-4 border-t border-outline-variant/20 pt-4">
+      <div className="mb-4 max-h-96 overflow-y-auto rounded-2xl bg-surface-container-low p-4">
         {messages.length === 0 ? (
-          <p className="py-8 text-center text-gray-500">Aucun message pour le moment</p>
+          <p className="py-8 text-center text-on-surface-variant">Aucun message pour le moment</p>
         ) : (
           <div className="space-y-4">
             {messages.map((message) => {
@@ -321,20 +321,22 @@ export function ChatWindow({ proposalId, onUserClick, variant = 'card' }: ChatWi
                 <div key={message.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
                   <div
                     className={`max-w-[70%] rounded-2xl px-4 py-2 ${
-                      isOwn ? 'bg-brand-blue text-white' : 'border border-gray-100 bg-white text-gray-900'
+                      isOwn
+                        ? 'bg-primary text-on-primary'
+                        : 'border border-outline-variant/15 bg-surface-container-lowest text-on-surface'
                     }`}
                   >
                     {!isOwn && (
                       <button
                         type="button"
                         onClick={() => message.sender_id && onUserClick?.(message.sender_id)}
-                        className={`mb-1 text-xs font-medium opacity-75 ${onUserClick && message.sender_id ? 'cursor-pointer hover:text-brand-blue' : ''}`}
+                        className={`mb-1 text-xs font-medium opacity-75 ${onUserClick && message.sender_id ? 'cursor-pointer hover:text-primary' : ''}`}
                       >
                         {message.sender?.display_name}
                       </button>
                     )}
                     <p className="whitespace-pre-wrap break-words">{message.body}</p>
-                    <p className={`mt-1 text-xs ${isOwn ? 'text-white/75' : 'text-gray-500'}`}>
+                    <p className={`mt-1 text-xs ${isOwn ? 'text-on-primary/75' : 'text-on-surface-variant'}`}>
                       {formatTime(message.created_at)}
                     </p>
                   </div>
@@ -359,7 +361,7 @@ export function ChatWindow({ proposalId, onUserClick, variant = 'card' }: ChatWi
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
           placeholder="Écrivez votre message..."
-          className="flex-1 rounded-full border border-gray-200 bg-white px-4 py-2 focus:outline-none focus:ring-2 focus:ring-brand-blue"
+          className="flex-1 rounded-full border border-outline-variant/30 bg-surface-container-lowest px-4 py-2 text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           disabled={loading}
         />
         <button
