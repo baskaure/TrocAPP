@@ -109,6 +109,14 @@ function AppContent() {
     }
   }, [authLoading, user, view]);
 
+  // Si l'utilisateur s'authentifie alors qu'il est sur la page d'auth (ex. flux Google
+  // OAuth qui restaure la session), on le redirige immédiatement vers sa vue de retour.
+  useEffect(() => {
+    if (!authLoading && user && view === 'auth') {
+      setView(pageReturnView === 'landing' || pageReturnView === 'auth' ? 'listings' : pageReturnView);
+    }
+  }, [authLoading, user, view, pageReturnView]);
+
   useEffect(() => {
     if (view === 'listing-detail' && !selectedListing) {
       setView('listings');
@@ -337,13 +345,15 @@ function AppContent() {
     );
   }
 
-  if (!user && view === 'auth' && pageReturnView === 'landing') {
+  if (!user && view === 'auth') {
     return (
       <AuthPage
         variant="standalone"
         initialMode={authModalMode}
-        onBack={() => setView('landing')}
-        onAuthenticated={() => setView('listings')}
+        onBack={() => setView(pageReturnView === 'auth' ? 'listings' : pageReturnView)}
+        onAuthenticated={() =>
+          setView(pageReturnView === 'landing' || pageReturnView === 'auth' ? 'listings' : pageReturnView)
+        }
       />
     );
   }
@@ -524,16 +534,7 @@ function AppContent() {
         }`}
       >
         <main className={`mx-auto max-w-screen-2xl px-6 md:px-8 ${mainContentPadding}`}>
-          {view === 'auth' ? (
-            <AuthPage
-              variant="embedded"
-              initialMode={authModalMode}
-              onBack={() => setView(pageReturnView)}
-              onAuthenticated={() =>
-                setView(pageReturnView === 'landing' || pageReturnView === 'auth' ? 'listings' : pageReturnView)
-              }
-            />
-          ) : view === 'create-listing' && user ? (
+          {view === 'create-listing' && user ? (
             <CreateListingModal
               categories={categories}
               onBack={closeCreateListing}
