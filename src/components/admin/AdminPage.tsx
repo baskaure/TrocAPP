@@ -42,7 +42,7 @@ export function AdminPage() {
   
   // Banned words
   const [bannedWords, setBannedWords] = useState<{ id: string; word: string; severity: string }[]>([]);
-  const [bannedWordsLoading, setBannedWordsLoading] = useState(false);
+  const [_bannedWordsLoading, setBannedWordsLoading] = useState(false);
   const [newWord, setNewWord] = useState('');
   const [newSeverity, setNewSeverity] = useState<'warning' | 'block'>('warning');
 

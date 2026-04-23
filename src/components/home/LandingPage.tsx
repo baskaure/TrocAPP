@@ -368,7 +368,7 @@ export function LandingPage({ onExplore, onCreateAccount, onLogin }: LandingPage
           <div className="flex flex-col items-center gap-2 md:items-start">
             <span className="font-manrope text-xl font-bold text-slate-900 dark:text-slate-100">BonTroc</span>
             <p className="text-center text-sm tracking-wide text-slate-500 dark:text-slate-400 font-inter md:text-left">
-              © {new Date().getFullYear()} BonTroc. Built for the modern architect.
+              © {new Date().getFullYear()} BonTroc. L&apos;échange intelligent.
             </p>
           </div>
           <div className="flex flex-wrap justify-center gap-6 md:gap-8">

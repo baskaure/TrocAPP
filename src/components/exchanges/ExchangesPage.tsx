@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, type MouseEvent } from 'react';
 import { useAuth } from '../../lib/auth-context';
-import { supabase, Exchange, Contract, Dispute } from '../../lib/supabase';
+import { supabase, Exchange, Contract, Dispute, Proposal } from '../../lib/supabase';
 import { ExchangeTracker } from './ExchangeTracker';
 import { ReviewModal } from './ReviewModal';
 import { ContractModal } from '../contracts/ContractModal';
@@ -15,7 +15,7 @@ type ExchangeWithDetails = Exchange & {
       to_user_id: string;
       from_user?: PartyUser;
       to_user?: PartyUser;
-      listing?: { title: string; type?: string };
+      listing?: { title: string; type?: 'service' | 'product' };
     };
   };
   dispute?: Dispute | null;
@@ -185,16 +185,7 @@ export function ExchangesPage({ onUserClick, onStartNewExchange }: ExchangesPage
             ) : null}
             {selectedContract ? (
               <ContractModal
-                contract={
-                  selectedContract as Contract & {
-                    proposal?: {
-                      from_user_id: string;
-                      to_user_id: string;
-                      from_user?: { display_name: string };
-                      to_user?: { display_name: string };
-                    };
-                  }
-                }
+                contract={selectedContract as Contract & { proposal?: Partial<Proposal> }}
                 onClose={() => setSelectedContract(null)}
                 onAccepted={loadExchanges}
               />
@@ -386,7 +377,7 @@ export function ExchangesPage({ onUserClick, onStartNewExchange }: ExchangesPage
                       <button
                         type="button"
                         onClick={() => setSelectedExchange(exchange)}
-                        className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 font-headline text-xs font-bold text-on-primary transition-colors hover:bg-primary-container"
+                        className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 font-headline text-xs font-bold text-on-primary transition-colors hover:opacity-95"
                       >
                         <span className="material-symbols-outlined text-base">trending_up</span>
                         Voir le suivi

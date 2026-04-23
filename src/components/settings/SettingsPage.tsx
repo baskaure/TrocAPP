@@ -45,7 +45,7 @@ export function SettingsPage() {
   });
 
   useEffect(() => {
-    const v = user?.user_metadata?.profile_visibility;
+    const v = (user as unknown as { user_metadata?: { profile_visibility?: string } })?.user_metadata?.profile_visibility;
     if (v === 'private' || v === 'public') setProfileVisibility(v);
   }, [user]);
 
@@ -215,7 +215,7 @@ export function SettingsPage() {
                     type="password"
                     value={passwordData.newPassword}
                     onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-                    className="w-full rounded-sm border-none bg-surface-container-low px-4 py-3 text-on-surface placeholder:text-outline focus:ring-2 focus:ring-primary/40 dark:bg-slate-800"
+                    className="w-full rounded-xl border border-outline-variant/30 bg-surface-container-lowest px-4 py-3 text-on-surface placeholder:text-outline focus:ring-2 focus:ring-primary/40 dark:bg-slate-900"
                     placeholder="••••••••"
                     required
                     minLength={6}
@@ -229,7 +229,7 @@ export function SettingsPage() {
                     type="password"
                     value={passwordData.confirmPassword}
                     onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-                    className="w-full rounded-sm border-none bg-surface-container-low px-4 py-3 text-on-surface placeholder:text-outline focus:ring-2 focus:ring-primary/40 dark:bg-slate-800"
+                    className="w-full rounded-xl border border-outline-variant/30 bg-surface-container-lowest px-4 py-3 text-on-surface placeholder:text-outline focus:ring-2 focus:ring-primary/40 dark:bg-slate-900"
                     placeholder="••••••••"
                     required
                   />

@@ -22,9 +22,7 @@ import { PageBackRowSpacer } from './components/layout/PageBackLink';
 import { APP_MAIN_PADDING_TOP_CLASS, APP_SIDEBAR_CONTENT_INSET_LG } from './components/layout/app-layout';
 
 function AppContent() {
-  console.log('AppContent rendering...');
   const { user, loading: authLoading } = useAuth();
-  console.log('Auth state:', { user: !!user, authLoading });
   const [listings, setListings] = useState<Listing[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
