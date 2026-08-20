@@ -158,7 +158,7 @@ export function ProposalsPortal({ onSelectProposal }: ProposalsPortalProps) {
               key={tab.key}
               type="button"
               onClick={() => setFilter(tab.key)}
-              className={`whitespace-nowrap rounded-full px-6 py-3 font-headline text-sm font-bold transition-colors ${
+              className={`inline-flex min-h-10 items-center whitespace-nowrap rounded-full px-4 font-headline text-sm font-bold transition-colors ${
                 active
                   ? 'bg-primary text-on-primary shadow-lg shadow-primary/20'
                   : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
@@ -173,7 +173,7 @@ export function ProposalsPortal({ onSelectProposal }: ProposalsPortalProps) {
       </div>
 
       <div className="mb-12 grid grid-cols-1 gap-8 lg:grid-cols-12">
-            <div className="glass-card relative flex min-h-[240px] flex-col justify-between overflow-hidden rounded-xl border border-white/40 p-8 shadow-sm lg:col-span-8 lg:p-10">
+            <div className="relative flex min-h-[240px] flex-col justify-between overflow-hidden rounded-3xl border border-outline-variant/15 bg-surface-container-lowest p-8 shadow-soft-lg lg:col-span-8 lg:p-10">
               <div className="relative z-10">
                 <h2 className="mb-2 font-headline text-2xl font-bold tracking-tight text-on-surface md:text-3xl">
                   Bonjour{firstName ? `, ${firstName}` : ''}{' '}
@@ -195,7 +195,7 @@ export function ProposalsPortal({ onSelectProposal }: ProposalsPortalProps) {
               </div>
               <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-primary/5 blur-3xl" />
             </div>
-            <div className="flex flex-col items-center justify-center rounded-xl bg-secondary-container p-8 text-center lg:col-span-4 lg:p-10">
+            <div className="flex flex-col items-center justify-center rounded-3xl bg-secondary-container/40 p-8 text-center lg:col-span-4 lg:p-10">
               <span
                 className="material-symbols-outlined mb-4 text-6xl text-on-secondary-container"
                 style={{ fontVariationSettings: "'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}
@@ -269,7 +269,7 @@ export function ProposalsPortal({ onSelectProposal }: ProposalsPortalProps) {
                         onSelectProposal(proposal);
                       }
                     }}
-                    className={`glass-card flex cursor-pointer items-center justify-between rounded-xl border border-white/50 p-6 transition-all duration-300 hover:shadow-lg ${
+                    className={`flex cursor-pointer items-center justify-between rounded-2xl border border-outline-variant/15 bg-surface-container-lowest p-6 transition-all duration-300 hover:shadow-lg ${
                       doneLike ? 'opacity-60 grayscale hover:opacity-100 hover:grayscale-0' : ''
                     } group`}
                   >

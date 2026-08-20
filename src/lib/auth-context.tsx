@@ -110,9 +110,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.warn('Erreur lors de la déconnexion:', error);
         }
       }
-    } catch (err: any) {
+    } catch (err) {
       // Si l'erreur est "Auth session missing", c'est normal (session déjà expirée)
-      if (err?.message?.includes('session missing') || err?.message?.includes('Auth session missing')) {
+      const message = err instanceof Error ? err.message : '';
+      if (message.includes('session missing') || message.includes('Auth session missing')) {
         // Rien à faire, la session n'existe déjà plus
       } else {
         console.warn('Exception lors de la déconnexion:', err);

@@ -168,14 +168,14 @@ export function SettingsPage() {
 
   if (!user) {
     return (
-      <div className="w-full max-w-7xl py-12 text-center text-on-surface-variant">
+      <div className="w-full max-w-5xl py-12 text-center text-on-surface-variant">
         Connectez-vous pour accéder aux paramètres.
       </div>
     );
   }
 
   return (
-    <div className="w-full max-w-7xl space-y-16 md:space-y-20">
+    <div className="w-full max-w-5xl space-y-16 md:space-y-20">
       <PageBackRowSpacer />
       <section className="mb-10 md:mb-12">
         <h1 className="mb-3 font-headline text-3xl font-extrabold tracking-tight text-on-surface sm:text-4xl md:text-5xl">
@@ -199,12 +199,12 @@ export function SettingsPage() {
 
       <section id="security" className="max-w-2xl scroll-mt-28 space-y-8">
           <div className="space-y-2">
-            <h2 className="font-headline text-3xl font-extrabold tracking-tight text-on-surface">
+            <h2 className="font-headline text-xl font-bold tracking-tight text-on-surface sm:text-2xl">
               Sécurité du compte
             </h2>
             <p className="text-on-surface-variant">Protégez votre compte avec un mot de passe solide.</p>
           </div>
-          <div className="rounded-xl border border-outline-variant/15 bg-surface-container-lowest p-8 shadow-[0px_20px_40px_rgba(25,28,29,0.06)] dark:border-slate-700 dark:bg-slate-900">
+          <div className="rounded-3xl border border-outline-variant/15 bg-surface-container-lowest p-8 shadow-soft-lg dark:border-slate-700 dark:bg-slate-900">
             <form onSubmit={handlePasswordChange} className="space-y-6">
               <div className="space-y-4">
                 <div className="flex flex-col gap-2">
@@ -248,7 +248,7 @@ export function SettingsPage() {
 
         <section id="notifications" className="scroll-mt-28 space-y-8">
           <div className="space-y-2">
-            <h2 className="font-headline text-3xl font-extrabold tracking-tight text-on-surface">Notifications</h2>
+            <h2 className="font-headline text-xl font-bold tracking-tight text-on-surface sm:text-2xl">Notifications</h2>
             <p className="text-on-surface-variant">
               Restez informé de vos propositions d&apos;échange et de vos messages.
             </p>
@@ -280,7 +280,7 @@ export function SettingsPage() {
             ).map(({ key, title, desc }) => (
               <div
                 key={key}
-                className="flex items-start justify-between gap-4 rounded-xl border border-outline-variant/15 bg-surface-container-lowest p-6 dark:border-slate-700 dark:bg-slate-900"
+                className="flex items-start justify-between gap-4 rounded-2xl border border-outline-variant/15 bg-surface-container-lowest p-6 dark:border-slate-700 dark:bg-slate-900"
               >
                 <div className="min-w-0 space-y-1">
                   <h3 className="font-headline text-lg font-bold text-on-surface">{title}</h3>
@@ -297,7 +297,7 @@ export function SettingsPage() {
 
         <section id="privacy" className="scroll-mt-28 space-y-8">
           <div className="space-y-2">
-            <h2 className="font-headline text-3xl font-extrabold tracking-tight text-on-surface">
+            <h2 className="font-headline text-xl font-bold tracking-tight text-on-surface sm:text-2xl">
               Confidentialité et données
             </h2>
             <p className="text-on-surface-variant">
@@ -305,7 +305,7 @@ export function SettingsPage() {
             </p>
           </div>
           <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-            <div className="space-y-6 rounded-xl bg-surface-container-lowest p-8 shadow-[0px_20px_40px_rgba(25,28,29,0.06)] dark:bg-slate-900">
+            <div className="space-y-6 rounded-3xl border border-outline-variant/15 bg-surface-container-lowest p-8 shadow-soft-lg dark:bg-slate-900">
               <div className="flex items-center gap-4">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-secondary-container text-on-secondary-container">
                   <span className="material-symbols-outlined">visibility</span>
@@ -330,7 +330,7 @@ export function SettingsPage() {
               </button>
             </div>
 
-            <div className="space-y-6 rounded-xl bg-surface-container-lowest p-8 shadow-[0px_20px_40px_rgba(25,28,29,0.06)] dark:bg-slate-900">
+            <div className="space-y-6 rounded-3xl border border-outline-variant/15 bg-surface-container-lowest p-8 shadow-soft-lg dark:bg-slate-900">
               <div className="flex items-center gap-4">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary-fixed text-primary">
                   <span className="material-symbols-outlined">download</span>
@@ -354,10 +354,10 @@ export function SettingsPage() {
 
         <section id="danger" className="scroll-mt-28 space-y-8 pb-8">
           <div className="space-y-2">
-            <h2 className="font-headline text-3xl font-extrabold tracking-tight text-error">Zone sensible</h2>
+            <h2 className="font-headline text-xl font-bold tracking-tight text-error sm:text-2xl">Zone sensible</h2>
             <p className="text-on-surface-variant">Actions irréversibles — à utiliser avec précaution.</p>
           </div>
-          <div className="flex flex-col items-stretch gap-6 rounded-xl border-2 border-error/20 bg-error-container/20 p-8 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col items-stretch gap-6 rounded-3xl border-2 border-error/20 bg-error-container/20 p-8 md:flex-row md:items-center md:justify-between">
             <div className="space-y-2 text-center md:text-left">
               <h3 className="font-headline text-xl font-bold text-on-error-container">Supprimer mon compte</h3>
               <p className="max-w-md text-on-error-container/80">

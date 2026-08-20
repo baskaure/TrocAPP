@@ -259,7 +259,7 @@ export function ProfilePage({ onUserClick }: ProfilePageProps) {
   }
 
   return (
-    <div className="w-full max-w-7xl">
+    <div className="w-full max-w-5xl">
       <PageBackRowSpacer />
       {/* Hero bannière + avatar (carte unie : plus de bande grise du body sous le chevauchement) */}
       <section className="relative overflow-hidden rounded-xl border border-outline-variant/10 shadow-xl dark:border-slate-700">
@@ -337,7 +337,7 @@ export function ProfilePage({ onUserClick }: ProfilePageProps) {
                 <button
                   type="button"
                   onClick={() => setIsEditing(true)}
-                  className="glass-card flex w-fit shrink-0 items-center gap-2 rounded-full border border-outline-variant/20 bg-white px-8 py-3 font-headline font-bold text-primary shadow-sm transition-all hover:bg-surface-container-low active:scale-95 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700"
+                  className="glass-card flex w-fit shrink-0 items-center gap-2 rounded-full border border-outline-variant/20 bg-surface-container-lowest px-8 py-3 font-headline font-bold text-primary shadow-sm transition-all hover:bg-surface-container-low active:scale-95 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700"
                 >
                   <span className="material-symbols-outlined">edit</span>
                   Modifier
@@ -687,13 +687,13 @@ export function ProfilePage({ onUserClick }: ProfilePageProps) {
 
           <div className="space-y-8 lg:col-span-8">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <div className="group rounded-xl border border-outline-variant/10 bg-white p-6 text-center shadow-sm transition-shadow hover:shadow-md dark:border-slate-700 dark:bg-slate-900">
+              <div className="group rounded-xl border border-outline-variant/10 bg-surface-container-lowest p-6 text-center shadow-sm transition-shadow hover:shadow-md dark:border-slate-700 dark:bg-slate-900">
                 <p className="mb-1 font-headline text-4xl font-black text-primary">{listingsCount}</p>
                 <p className="text-sm font-bold uppercase tracking-widest text-outline transition-colors group-hover:text-primary">
                   Annonces
                 </p>
               </div>
-              <div className="group rounded-xl border border-outline-variant/10 bg-white p-6 text-center shadow-sm transition-shadow hover:shadow-md dark:border-slate-700 dark:bg-slate-900">
+              <div className="group rounded-xl border border-outline-variant/10 bg-surface-container-lowest p-6 text-center shadow-sm transition-shadow hover:shadow-md dark:border-slate-700 dark:bg-slate-900">
                 <p className="mb-1 font-headline text-4xl font-black text-primary">{reviews.length}</p>
                 <p className="text-sm font-bold uppercase tracking-widest text-outline transition-colors group-hover:text-primary">
                   Avis reçus

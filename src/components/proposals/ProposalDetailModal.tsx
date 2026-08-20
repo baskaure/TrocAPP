@@ -166,6 +166,7 @@ export function ProposalDetailModal({
       onClose();
     } catch (e) {
       console.error('Error refusing proposal:', e);
+      setError('Impossible de refuser la proposition. Veuillez réessayer.');
     } finally {
       setLoading(false);
     }
@@ -196,6 +197,7 @@ export function ProposalDetailModal({
       onClose();
     } catch (e) {
       console.error('Error countering proposal:', e);
+      setError("Impossible d'envoyer la contre-proposition. Veuillez réessayer.");
     } finally {
       setLoading(false);
     }
@@ -231,7 +233,7 @@ export function ProposalDetailModal({
 
         <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
           <div className="space-y-6 lg:col-span-4">
-            <div className="rounded-xl border border-outline-variant/10 bg-surface-container-lowest p-6 shadow-[0px_20px_40px_rgba(25,28,29,0.04)] md:p-8">
+            <div className="rounded-3xl border border-outline-variant/15 bg-surface-container-lowest p-6 shadow-soft-lg md:p-8">
               <h3 className="mb-6 text-xs font-bold uppercase tracking-widest text-outline">Détails de l&apos;échange</h3>
               <div className="space-y-6">
                 <div className="space-y-2">

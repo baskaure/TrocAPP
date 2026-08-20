@@ -20,7 +20,7 @@ export function ListingCard({ listing, onClick }: ListingCardProps) {
     <button
       type="button"
       onClick={() => onClick(listing)}
-      className="group flex flex-col overflow-hidden rounded-xl bg-surface-container-lowest text-left transition-all duration-500 hover:shadow-2xl hover:shadow-primary/5"
+      className="group flex flex-col overflow-hidden rounded-3xl border border-outline-variant/15 bg-surface-container-lowest text-left shadow-soft-lg transition-all duration-500 hover:-translate-y-1 hover:shadow-2xl hover:shadow-primary/10"
     >
       <div className="relative h-64 overflow-hidden bg-surface-container">
         {imageUrl ? (
@@ -36,14 +36,14 @@ export function ListingCard({ listing, onClick }: ListingCardProps) {
         )}
         <div className="absolute left-4 top-4 flex flex-wrap gap-2">
           {city ? (
-            <span className="rounded bg-white/90 px-2 py-1 text-[10px] font-black uppercase tracking-widest text-on-surface shadow-sm backdrop-blur">
+            <span className="rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-on-surface shadow-sm backdrop-blur">
               {city}
             </span>
           ) : null}
           {verified ? (
-            <span className="flex items-center gap-1 rounded bg-primary px-2 py-1 text-[10px] font-black uppercase tracking-widest text-white shadow-sm">
+            <span className="flex items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-on-primary shadow-sm">
               <span
-                className="material-symbols-outlined text-[12px] leading-none text-white"
+                className="material-symbols-outlined text-[12px] leading-none text-on-primary"
                 style={{ fontVariationSettings: "'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}
               >
                 verified
@@ -56,10 +56,10 @@ export function ListingCard({ listing, onClick }: ListingCardProps) {
 
       <div className="flex flex-grow flex-col p-6">
         <div className="mb-4 flex flex-wrap gap-2">
-          <span className="rounded bg-surface-container px-2 py-0.5 text-[10px] font-bold uppercase tracking-tight text-on-surface-variant">
+          <span className="rounded-full bg-surface-container px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-tight text-on-surface-variant">
             {listing.type === 'service' ? 'Service' : 'Produit'}
           </span>
-          <span className="rounded bg-surface-container px-2 py-0.5 text-[10px] font-bold uppercase tracking-tight text-on-surface-variant">
+          <span className="rounded-full bg-surface-container px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-tight text-on-surface-variant">
             {modeLabel(listing.mode)}
           </span>
         </div>
@@ -79,7 +79,7 @@ export function ListingCard({ listing, onClick }: ListingCardProps) {
           </div>
         </div>
 
-        <span className="mt-auto w-full rounded-xl border-2 border-primary/10 py-4 text-center font-headline text-base font-extrabold text-primary transition-all duration-300 group-hover:bg-primary group-hover:text-white">
+        <span className="mt-auto w-full rounded-full border-2 border-primary/10 py-4 text-center font-headline text-base font-extrabold text-primary transition-all duration-300 group-hover:bg-primary group-hover:text-on-primary">
           Voir l&apos;offre
         </span>
       </div>

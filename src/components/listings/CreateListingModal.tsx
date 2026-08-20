@@ -205,7 +205,7 @@ export function CreateListingModal({ onBack, onSuccess, categories = [] }: Creat
           {/* Colonne formulaire */}
           <div className="space-y-8 lg:col-span-8">
             {/* Section identité */}
-            <section className="space-y-8 rounded-xl bg-surface-container-lowest p-8 shadow-sm dark:border dark:border-outline-variant/10 dark:bg-slate-900 md:p-12">
+            <section className="space-y-8 rounded-3xl border border-outline-variant/15 bg-surface-container-lowest p-8 shadow-soft-lg dark:border dark:border-outline-variant/10 dark:bg-slate-900 md:p-12">
               <div className="space-y-4">
                 <span className={sectionLabelClass}>Type de troc</span>
                 <div className="flex max-w-sm rounded-xl bg-surface-container-low p-1 dark:bg-slate-800">
@@ -275,7 +275,7 @@ export function CreateListingModal({ onBack, onSuccess, categories = [] }: Creat
             </section>
 
             {/* Section contenu */}
-            <section className="space-y-8 rounded-xl bg-surface-container-lowest p-8 shadow-sm dark:border dark:border-outline-variant/10 dark:bg-slate-900 md:p-12">
+            <section className="space-y-8 rounded-3xl border border-outline-variant/15 bg-surface-container-lowest p-8 shadow-soft-lg dark:border dark:border-outline-variant/10 dark:bg-slate-900 md:p-12">
               <div className="space-y-4">
                 <label htmlFor="create-offer" className={sectionLabelClass}>
                   Ce que vous offrez
@@ -295,7 +295,7 @@ export function CreateListingModal({ onBack, onSuccess, categories = [] }: Creat
                   <label htmlFor="create-wanted" className={sectionLabelClass}>
                     Ce que vous recherchez
                   </label>
-                  <span className="rounded bg-secondary-container/15 px-2 py-1 text-xs font-bold text-on-secondary-container">
+                  <span className="rounded bg-secondary-container/40 px-2 py-1 text-xs font-bold text-on-secondary-container">
                     Optionnel
                   </span>
                 </div>
@@ -311,7 +311,7 @@ export function CreateListingModal({ onBack, onSuccess, categories = [] }: Creat
             </section>
 
             {/* Section logistique */}
-            <section className="space-y-8 rounded-xl bg-surface-container-lowest p-8 shadow-sm dark:border dark:border-outline-variant/10 dark:bg-slate-900 md:p-12">
+            <section className="space-y-8 rounded-3xl border border-outline-variant/15 bg-surface-container-lowest p-8 shadow-soft-lg dark:border dark:border-outline-variant/10 dark:bg-slate-900 md:p-12">
               <div className="space-y-4">
                 <span className={sectionLabelClass}>Mode d&apos;échange</span>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -409,7 +409,7 @@ export function CreateListingModal({ onBack, onSuccess, categories = [] }: Creat
 
           {/* Sidebar */}
           <aside className="space-y-6 lg:col-span-4 lg:sticky lg:top-28">
-            <div className="space-y-6 rounded-xl bg-surface-container-lowest p-6 shadow-sm dark:border dark:border-outline-variant/10 dark:bg-slate-900">
+            <div className="space-y-6 rounded-2xl border border-outline-variant/15 bg-surface-container-lowest p-6 dark:border dark:border-outline-variant/10 dark:bg-slate-900">
               <span className={sectionLabelClass}>Visuel de l&apos;annonce</span>
               <div className="group relative aspect-square overflow-hidden rounded-xl bg-surface-container-high dark:bg-slate-800">
                 <img src={previewUrl} alt="" className="h-full w-full object-cover" />
@@ -442,15 +442,15 @@ export function CreateListingModal({ onBack, onSuccess, categories = [] }: Creat
                   Réinitialiser l’image suggérée
                 </button>
               ) : null}
-              <div className="flex items-start gap-3 rounded-xl bg-secondary-container/10 p-4 dark:bg-secondary-container/20">
-                <span className="material-symbols-outlined shrink-0 text-secondary-container">lightbulb</span>
+              <div className="flex items-start gap-3 rounded-xl bg-secondary-container/40 p-4 dark:bg-secondary-container/20">
+                <span className="material-symbols-outlined shrink-0 text-on-secondary-container">lightbulb</span>
                 <p className="text-xs font-medium leading-tight text-on-secondary-container">
                   Une photo claire augmente les chances qu’on vous contacte pour un échange.
                 </p>
               </div>
             </div>
 
-            <div className="space-y-6 rounded-xl bg-surface-container-low p-8 dark:bg-slate-800/80">
+            <div className="space-y-6 rounded-2xl bg-surface-container-low p-8 dark:bg-slate-800/80">
               <h3 className="font-headline text-xl font-extrabold tracking-tight text-on-surface">Conseils</h3>
               <ul className="space-y-4">
                 {[

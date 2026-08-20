@@ -85,7 +85,7 @@ export function AuthPage({ onBack, initialMode = 'login', variant = 'embedded', 
       type="button"
       onClick={handleGoogleSignIn}
       disabled={googleLoading}
-      className="mb-5 flex w-full items-center justify-center gap-2.5 rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+      className="mb-5 flex w-full items-center justify-center gap-2.5 rounded-lg border border-outline-variant/30 bg-surface-container-lowest px-4 py-3 text-sm font-medium text-on-surface transition-colors hover:bg-surface-container-low disabled:cursor-not-allowed disabled:opacity-60"
     >
       <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <path
@@ -111,9 +111,9 @@ export function AuthPage({ onBack, initialMode = 'login', variant = 'embedded', 
 
   const divider = (
     <div className="mb-5 flex items-center gap-3">
-      <div className="h-px flex-1 bg-slate-200" />
-      <span className="text-xs uppercase tracking-wider text-slate-400">ou</span>
-      <div className="h-px flex-1 bg-slate-200" />
+      <div className="h-px flex-1 bg-surface-container-high" />
+      <span className="text-xs uppercase tracking-wider text-on-surface-variant/70">ou</span>
+      <div className="h-px flex-1 bg-surface-container-high" />
     </div>
   );
 
@@ -122,7 +122,7 @@ export function AuthPage({ onBack, initialMode = 'login', variant = 'embedded', 
       {!isLogin && (
         <>
           <div>
-            <label htmlFor="auth-display-name" className="mb-1.5 block text-xs font-medium text-slate-700">
+            <label htmlFor="auth-display-name" className="mb-1.5 block text-xs font-medium text-on-surface">
               Nom d&apos;affichage
             </label>
             <input
@@ -131,12 +131,12 @@ export function AuthPage({ onBack, initialMode = 'login', variant = 'embedded', 
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               placeholder="Jean Dupont"
-              className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-300 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className="w-full rounded-lg border border-outline-variant/30 bg-surface-container-lowest px-3.5 py-2.5 text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               required
             />
           </div>
           <div>
-            <label htmlFor="auth-username" className="mb-1.5 block text-xs font-medium text-slate-700">
+            <label htmlFor="auth-username" className="mb-1.5 block text-xs font-medium text-on-surface">
               Nom d&apos;utilisateur
             </label>
             <input
@@ -145,7 +145,7 @@ export function AuthPage({ onBack, initialMode = 'login', variant = 'embedded', 
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="jeandupont"
-              className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-300 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className="w-full rounded-lg border border-outline-variant/30 bg-surface-container-lowest px-3.5 py-2.5 text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
               required
             />
           </div>
@@ -153,7 +153,7 @@ export function AuthPage({ onBack, initialMode = 'login', variant = 'embedded', 
       )}
 
       <div>
-        <label htmlFor="auth-email" className="mb-1.5 block text-xs font-medium text-slate-700">
+        <label htmlFor="auth-email" className="mb-1.5 block text-xs font-medium text-on-surface">
           Adresse e-mail
         </label>
         <input
@@ -162,13 +162,13 @@ export function AuthPage({ onBack, initialMode = 'login', variant = 'embedded', 
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="hello@bontroc.fr"
-          className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-300 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+          className="w-full rounded-lg border border-outline-variant/30 bg-surface-container-lowest px-3.5 py-2.5 text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           required
         />
       </div>
 
       <div>
-        <label htmlFor="auth-password" className="mb-1.5 block text-xs font-medium text-slate-700">
+        <label htmlFor="auth-password" className="mb-1.5 block text-xs font-medium text-on-surface">
           Mot de passe
         </label>
         <input
@@ -177,7 +177,7 @@ export function AuthPage({ onBack, initialMode = 'login', variant = 'embedded', 
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="••••••••"
-          className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-300 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+          className="w-full rounded-lg border border-outline-variant/30 bg-surface-container-lowest px-3.5 py-2.5 text-sm text-on-surface placeholder:text-on-surface-variant/50 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           required
           minLength={6}
         />
@@ -200,12 +200,12 @@ export function AuthPage({ onBack, initialMode = 'login', variant = 'embedded', 
   );
 
   const switchModeLink = (
-    <p className="mt-7 text-center text-sm text-slate-500">
+    <p className="mt-7 text-center text-sm text-on-surface-variant">
       {isLogin ? "Vous n'avez pas de compte ? " : 'Vous avez déjà un compte ? '}
       <button
         type="button"
         onClick={() => setMode(isLogin ? 'register' : 'login')}
-        className="font-semibold text-slate-900 hover:underline"
+        className="font-semibold text-on-surface hover:underline"
       >
         {isLogin ? "S'inscrire" : 'Se connecter'}
       </button>
@@ -215,7 +215,7 @@ export function AuthPage({ onBack, initialMode = 'login', variant = 'embedded', 
   // ── Variante standalone : split-screen plein écran ────────────────────────
   if (variant === 'standalone') {
     return (
-      <div className="flex min-h-screen w-full bg-white font-inter">
+      <div className="flex min-h-screen w-full bg-surface-container-lowest font-inter">
         {/* Panneau gauche (visuel) */}
         <BackgroundGradientAnimation
           gradientBackgroundStart="rgb(13, 15, 20)"
@@ -256,10 +256,10 @@ export function AuthPage({ onBack, initialMode = 'login', variant = 'embedded', 
               <PageBackLink onClick={onBack} label="Retour" />
             </div>
 
-            <h1 className="mb-2 text-center font-manrope text-2xl font-semibold tracking-tight text-slate-900 md:text-[28px]">
+            <h1 className="mb-2 text-center font-headline text-2xl font-bold tracking-tight text-on-surface sm:text-3xl">
               {isLogin ? 'Connexion' : 'Créer un compte'}
             </h1>
-            <p className="mb-7 text-center text-sm text-slate-500">
+            <p className="mb-7 text-center text-sm text-on-surface-variant">
               {isLogin
                 ? 'Bon retour ! Connectez-vous pour continuer.'
                 : "Lancez-vous en quelques secondes — c'est gratuit."}
@@ -270,9 +270,9 @@ export function AuthPage({ onBack, initialMode = 'login', variant = 'embedded', 
             {formFields}
             {switchModeLink}
 
-            <p className="mt-8 text-center text-xs text-slate-400">
-              © BonTroc · <a href="#" className="hover:text-slate-600">Confidentialité</a> ·{' '}
-              <a href="#" className="hover:text-slate-600">CGU</a>
+            <p className="mt-8 text-center text-xs text-on-surface-variant/70">
+              © BonTroc · <a href="#" className="hover:text-on-surface">Confidentialité</a> ·{' '}
+              <a href="#" className="hover:text-on-surface">CGU</a>
             </p>
           </div>
         </div>
@@ -285,7 +285,7 @@ export function AuthPage({ onBack, initialMode = 'login', variant = 'embedded', 
     <div className="w-full max-w-md">
       <PageBackLink onClick={onBack} label="Retour" />
       <div className="relative w-full rounded-3xl border border-outline-variant/15 bg-surface-container-lowest p-6 shadow-soft-lg dark:border-slate-700 dark:bg-slate-900 sm:p-8">
-        <h2 className="mb-1 font-manrope text-2xl font-semibold text-on-surface">
+        <h2 className="mb-1 font-headline text-2xl font-semibold text-on-surface">
           {isLogin ? 'Connexion' : 'Créer un compte'}
         </h2>
         <p className="mb-6 text-sm text-on-surface-variant">

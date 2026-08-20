@@ -37,7 +37,7 @@ export function AppSidebar({
 }: AppSidebarProps) {
   const itemClass = (active: boolean) =>
     `flex w-full items-center gap-4 rounded-full px-4 py-3 text-left font-headline text-sm font-bold transition-all duration-300 ${
-      active ? 'bg-primary/10 text-primary dark:bg-slate-800 dark:text-primary' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80'
+      active ? 'bg-primary/10 text-primary dark:bg-slate-800 dark:text-primary' : 'text-on-surface-variant/70 hover:bg-surface-container-high dark:hover:bg-slate-800/80'
     }`;
 
   const visibilityClass = visible
@@ -47,11 +47,11 @@ export function AppSidebar({
   return (
     <aside
       aria-hidden={!visible}
-      className={`fixed left-0 top-0 z-40 mt-20 hidden h-[calc(100dvh-5rem)] w-64 flex-col rounded-r-xl bg-slate-50 p-8 pb-6 shadow-[12px_0_32px_rgba(0,0,0,0.04)] transition-[transform,opacity] duration-200 ease-out will-change-transform dark:bg-slate-950 lg:flex ${visibilityClass}`}
+      className={`fixed left-0 top-0 z-40 mt-20 hidden h-[calc(100dvh-5rem)] w-64 flex-col rounded-r-xl bg-surface-container-low p-8 pb-6 shadow-[12px_0_32px_rgba(0,0,0,0.04)] transition-[transform,opacity] duration-200 ease-out will-change-transform dark:bg-slate-950 lg:flex ${visibilityClass}`}
     >
       <div className="mb-8">
         <h4 className="mb-1 font-headline text-xl font-extrabold text-primary">Mon espace</h4>
-        <p className="text-xs text-slate-400 dark:text-slate-500">Navigation</p>
+        <p className="text-xs text-on-surface-variant/70 dark:text-slate-500">Navigation</p>
       </div>
 
       <nav className="flex flex-1 flex-col gap-1.5 overflow-y-auto pr-1">
@@ -86,14 +86,14 @@ export function AppSidebar({
           type="button"
           disabled
           title="Bientôt disponible"
-          className="flex cursor-not-allowed items-center gap-4 rounded-full px-4 py-3 font-headline text-sm font-bold text-slate-300 opacity-60 dark:text-slate-600"
+          className="flex cursor-not-allowed items-center gap-4 rounded-full px-4 py-3 font-headline text-sm font-bold text-on-surface-variant/70 opacity-60 dark:text-slate-600"
         >
           <span className="material-symbols-outlined text-[22px]">favorite</span>
           <span>Favoris</span>
         </button>
       </nav>
 
-      <div className="mt-4 shrink-0 space-y-3 border-t border-slate-200/80 pt-5 dark:border-slate-800">
+      <div className="mt-4 shrink-0 space-y-3 border-t border-outline-variant/15 pt-5 dark:border-slate-800">
         <button
           type="button"
           onClick={onCreateListing}
@@ -104,7 +104,7 @@ export function AppSidebar({
         <button
           type="button"
           onClick={onSupport}
-          className="w-full px-4 py-2.5 text-left font-headline text-sm font-bold text-slate-400 transition-colors hover:text-primary dark:text-slate-500"
+          className="w-full px-4 py-2.5 text-left font-headline text-sm font-bold text-on-surface-variant/70 transition-colors hover:text-primary dark:text-slate-500"
         >
           Aide &amp; support
         </button>

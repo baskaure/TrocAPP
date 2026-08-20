@@ -3,11 +3,6 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-console.log('Supabase Config:', {
-  url: supabaseUrl ? `${supabaseUrl.substring(0, 30)}...` : 'MISSING',
-  keyLength: supabaseAnonKey?.length || 0
-});
-
 if (!supabaseUrl || !supabaseAnonKey) {
   const error = `Missing Supabase environment variables: URL=${!!supabaseUrl}, Key=${!!supabaseAnonKey}`;
   console.error(error);
@@ -86,7 +81,7 @@ export type Proposal = {
   from_user_id: string;
   to_user_id: string;
   message: string;
-  offer_payload: any;
+  offer_payload: { description?: string } | null;
   estimation_min?: number;
   estimation_max?: number;
   status: 'pending' | 'countered' | 'accepted' | 'refused' | 'cancelled';
@@ -204,7 +199,7 @@ export type EsignRequest = {
   provider: 'signrequest';
   status: 'pending' | 'sent' | 'completed' | 'failed';
   envelope_id?: string | null;
-  metadata?: Record<string, any> | null;
+  metadata?: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
 };

@@ -66,7 +66,7 @@ export function LocationMap({ lat, lng, zoom = 14, popupLabel, className = '' }:
   if (!ready) {
     return (
       <div
-        className={`flex h-full min-h-[200px] w-full animate-pulse items-center justify-center rounded-[inherit] bg-slate-100 dark:bg-slate-800 ${className}`}
+        className={`flex h-full min-h-[200px] w-full animate-pulse items-center justify-center rounded-[inherit] bg-surface-container dark:bg-slate-800 ${className}`}
         aria-hidden
       />
     );

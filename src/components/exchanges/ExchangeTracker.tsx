@@ -276,7 +276,7 @@ export function ExchangeTracker({ exchange, onClose, onUpdate }: ExchangeTracker
     <div className="w-full pb-16">
       <PageBackLink onClick={onClose} label="Retour aux échanges" />
       <div
-        className="relative w-full max-w-4xl overflow-x-hidden rounded-xl border border-white/40 bg-surface-container-lowest shadow-xl shadow-slate-200/50 dark:border-white/10 dark:bg-slate-900 dark:shadow-none"
+        className="relative w-full max-w-4xl overflow-x-hidden rounded-3xl border border-outline-variant/15 bg-surface-container-lowest shadow-soft-lg dark:border-white/10 dark:bg-slate-900 dark:shadow-none"
         role="region"
         aria-labelledby="exchange-tracker-title"
       >
@@ -294,7 +294,7 @@ export function ExchangeTracker({ exchange, onClose, onUpdate }: ExchangeTracker
             </span>
             <h1
               id="exchange-tracker-title"
-              className="font-headline text-3xl font-extrabold tracking-tighter text-on-surface sm:text-4xl"
+              className="font-headline text-3xl font-extrabold tracking-tight text-on-surface sm:text-4xl"
             >
               Détails de l&apos;échange
             </h1>
@@ -339,13 +339,13 @@ export function ExchangeTracker({ exchange, onClose, onUpdate }: ExchangeTracker
           </div>
 
           {/* Statut + actions */}
-          <div className="grid items-center gap-8 rounded-lg border border-white bg-surface-container-low p-6 md:grid-cols-12 md:p-8 dark:border-white/10 dark:bg-slate-800/60">
+          <div className="grid items-center gap-8 rounded-2xl border border-outline-variant/15 bg-surface-container-low p-6 md:grid-cols-12 md:p-8 dark:border-white/10 dark:bg-slate-800/60">
             <div className="md:col-span-8">
               <div className="mb-4 flex items-center gap-3">
                 <div className="rounded-lg bg-secondary-container p-2">
                   <span className="material-symbols-outlined text-on-secondary-container">info</span>
                 </div>
-                <h2 className="font-headline text-xl font-bold text-on-surface">{statusBody.title}</h2>
+                <h2 className="font-headline text-xl font-bold tracking-tight text-on-surface">{statusBody.title}</h2>
               </div>
               <p className="mb-6 text-lg leading-relaxed text-on-surface-variant">{statusBody.text}</p>
               {exchange.due_date ? (
@@ -402,7 +402,7 @@ export function ExchangeTracker({ exchange, onClose, onUpdate }: ExchangeTracker
           </div>
 
           {shouldShowDisputeSection ? (
-            <div className="mt-8 rounded-xl border border-error-container/40 bg-error-container/15 p-6 dark:bg-red-950/20">
+            <div className="mt-8 rounded-2xl border border-error-container/40 bg-error-container/15 p-6 dark:bg-red-950/20">
               {exchange.dispute ? (
                 <div className="flex gap-3 text-on-error-container">
                   <span className="material-symbols-outlined flex-shrink-0">gavel</span>
@@ -457,7 +457,7 @@ export function ExchangeTracker({ exchange, onClose, onUpdate }: ExchangeTracker
 
           {/* Détails annonce */}
           <div className="mt-10 grid gap-6 md:grid-cols-2">
-            <div className="flex gap-4 rounded-lg border border-surface-container-high bg-surface-container-lowest p-6 dark:border-slate-700 dark:bg-slate-900/50">
+            <div className="flex gap-4 rounded-2xl border border-outline-variant/15 bg-surface-container-lowest p-6 dark:border-slate-700 dark:bg-slate-900/50">
               <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl bg-surface-container-high dark:bg-slate-800">
                 {heroImageUrl ? (
                   <img src={heroImageUrl} alt="" className="h-full w-full object-cover" />
@@ -473,7 +473,7 @@ export function ExchangeTracker({ exchange, onClose, onUpdate }: ExchangeTracker
                 </p>
               </div>
             </div>
-            <div className="flex gap-4 rounded-lg border border-surface-container-high bg-surface-container-lowest p-6 dark:border-slate-700 dark:bg-slate-900/50">
+            <div className="flex gap-4 rounded-2xl border border-outline-variant/15 bg-surface-container-lowest p-6 dark:border-slate-700 dark:bg-slate-900/50">
               <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl bg-surface-container-high dark:bg-slate-800">
                 <span className="material-symbols-outlined text-3xl text-primary">swap_horiz</span>
               </div>

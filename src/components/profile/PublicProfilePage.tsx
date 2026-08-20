@@ -63,7 +63,9 @@ export function PublicProfilePage({
         .eq('reviewee_id', userId)
         .order('created_at', { ascending: false });
 
-      console.log('Reviews loaded:', reviewsData, 'Error:', reviewsError);
+      if (reviewsError) {
+        console.error('Erreur lors du chargement des avis:', reviewsError);
+      }
       if (reviewsData) setReviews(reviewsData);
     } catch (err) {
       console.error('Error loading profile:', err);
@@ -264,11 +266,19 @@ export function PublicProfilePage({
                 {reviews.map((review) => (
                   <div key={review.id} className="rounded-2xl bg-surface-container-low p-4">
                     <div
+                      role={onUserClick && review.reviewer?.id ? 'button' : undefined}
+                      tabIndex={onUserClick && review.reviewer?.id ? 0 : undefined}
                       className={`flex items-start gap-3 ${
                         onUserClick && review.reviewer?.id ? 'cursor-pointer transition-opacity hover:opacity-80' : ''
                       }`}
                       onClick={() => {
                         if (onUserClick && review.reviewer?.id) {
+                          onUserClick(review.reviewer.id);
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if ((e.key === 'Enter' || e.key === ' ') && onUserClick && review.reviewer?.id) {
+                          e.preventDefault();
                           onUserClick(review.reviewer.id);
                         }
                       }}

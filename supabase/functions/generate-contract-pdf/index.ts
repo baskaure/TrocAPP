@@ -10,6 +10,16 @@ interface ContractRequest {
   proposal_id: string;
 }
 
+/** Échappe le HTML pour éviter toute injection XSS via les données utilisateur. */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 200, headers: corsHeaders });
@@ -89,11 +99,11 @@ Deno.serve(async (req: Request) => {
       variables.shipping_terms = 'Chacun assume ses frais de transport';
     }
 
-    // Remplacer les variables dans le template HTML
+    // Remplacer les variables dans le template HTML (valeurs échappées : données utilisateur)
     let html_content = template.html_template;
     for (const [key, value] of Object.entries(variables)) {
       const regex = new RegExp(`{{${key}}}`, 'g');
-      html_content = html_content.replace(regex, value);
+      html_content = html_content.replace(regex, escapeHtml(value));
     }
 
     // En MVP: pas de génération PDF réelle (nécessite Puppeteer)

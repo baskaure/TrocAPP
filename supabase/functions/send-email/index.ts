@@ -12,6 +12,16 @@ interface EmailRequest {
   variables: Record<string, string>;
 }
 
+/** Échappe le HTML pour éviter toute injection dans le corps HTML des emails. */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 200, headers: corsHeaders });
@@ -43,7 +53,7 @@ Deno.serve(async (req: Request) => {
     for (const [key, value] of Object.entries(variables)) {
       const regex = new RegExp(`{{${key}}}`, 'g');
       subject = subject.replace(regex, value);
-      html_body = html_body.replace(regex, value);
+      html_body = html_body.replace(regex, escapeHtml(value));
       text_body = text_body.replace(regex, value);
     }
 

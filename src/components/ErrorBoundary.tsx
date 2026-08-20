@@ -27,49 +27,58 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
     if (this.state.hasError) {
       return (
         <div style={{
-          padding: '40px',
-          maxWidth: '600px',
-          margin: '40px auto',
-          backgroundColor: '#fee',
-          borderRadius: '8px',
-          border: '2px solid #fcc'
+          minHeight: '100vh',
+          padding: '40px 20px',
+          backgroundColor: '#f8f9fa'
         }}>
-          <h1 style={{ color: '#c00', marginBottom: '20px' }}>Erreur de chargement</h1>
-          <p style={{ marginBottom: '20px' }}>Une erreur s'est produite lors du chargement de l'application.</p>
-          <details style={{
-            padding: '15px',
-            backgroundColor: 'white',
-            borderRadius: '4px',
-            marginBottom: '20px'
+          <div style={{
+            padding: '40px',
+            maxWidth: '560px',
+            margin: '40px auto',
+            backgroundColor: '#ffffff',
+            borderRadius: '16px',
+            border: '1px solid #c3c5d9',
+            color: '#191c1d'
           }}>
-            <summary style={{ cursor: 'pointer', fontWeight: 'bold' }}>Détails de l'erreur</summary>
-            <pre style={{
-              marginTop: '10px',
-              overflow: 'auto',
-              fontSize: '12px',
-              padding: '10px',
-              backgroundColor: '#f5f5f5',
-              borderRadius: '4px'
+            <h1 style={{ color: '#ba1a1a', marginBottom: '20px' }}>Erreur de chargement</h1>
+            <p style={{ marginBottom: '20px' }}>Une erreur s'est produite lors du chargement de l'application.</p>
+            <details style={{
+              padding: '16px',
+              backgroundColor: '#f8f9fa',
+              borderRadius: '12px',
+              border: '1px solid #c3c5d9',
+              marginBottom: '24px'
             }}>
-              {this.state.error?.toString()}
-              {'\n\n'}
-              {this.state.error?.stack}
-            </pre>
-          </details>
-          <button
-            onClick={() => window.location.reload()}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: '#2D8DBF',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '14px'
-            }}
-          >
-            Recharger la page
-          </button>
+              <summary style={{ cursor: 'pointer', fontWeight: 'bold' }}>Détails de l'erreur</summary>
+              <pre style={{
+                marginTop: '12px',
+                overflow: 'auto',
+                fontSize: '12px',
+                padding: '12px',
+                backgroundColor: '#ffffff',
+                borderRadius: '8px'
+              }}>
+                {this.state.error?.toString()}
+                {'\n\n'}
+                {this.state.error?.stack}
+              </pre>
+            </details>
+            <button
+              onClick={() => window.location.reload()}
+              style={{
+                padding: '12px 24px',
+                backgroundColor: '#2D8DBF',
+                color: 'white',
+                border: 'none',
+                borderRadius: '999px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 600
+              }}
+            >
+              Recharger la page
+            </button>
+          </div>
         </div>
       );
     }

@@ -55,7 +55,7 @@ async function createSignRequestDocument(
   return data.uuid; // SignRequest document UUID
 }
 
-serve(async (req: Request) => {
+serve(async (_req: Request) => {
   console.log('process-esign-requests function called');
 
   try {
@@ -86,7 +86,7 @@ serve(async (req: Request) => {
     // Enrichir les demandes avec les données du contrat
     const pendingRequests = await Promise.all(
       pendingRequestsBase.map(async (req) => {
-        const { data: contract, error: contractError } = await supabase
+        const { data: contract } = await supabase
           .from('contracts')
           .select(`
             html_content,

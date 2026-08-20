@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { AuthProvider, useAuth } from './lib/auth-context';
 import { supabase, Listing, Category, Proposal } from './lib/supabase';
 import { Header, type AppNavView } from './components/layout/Header';
@@ -52,6 +52,7 @@ function AppContent() {
   const [showFilters, setShowFilters] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
   const [viewingUserId, setViewingUserId] = useState<string | null>(null);
+  const listingsRequestIdRef = useRef(0);
   const [previousView, setPreviousView] = useState<
     'landing' | 'listings' | 'proposals' | 'profile' | 'settings' | 'exchanges' | 'admin'
   >('listings');
@@ -148,6 +149,7 @@ function AppContent() {
   }
 
   async function loadListings() {
+    const requestId = ++listingsRequestIdRef.current;
     setLoading(true);
     try {
       let query = supabase
@@ -173,18 +175,25 @@ function AppContent() {
         query = query.eq('category_id', filterCategory);
       }
 
-      if (searchQuery) {
-        query = query.or(`title.ilike.%${searchQuery}%,description_offer.ilike.%${searchQuery}%`);
+      // Neutraliser les caractères de syntaxe PostgREST pour éviter de casser le filtre .or()
+      const sanitizedSearch = searchQuery.replace(/[,()"'\\]/g, ' ').trim();
+      if (sanitizedSearch) {
+        query = query.or(`title.ilike.%${sanitizedSearch}%,description_offer.ilike.%${sanitizedSearch}%`);
       }
 
       const { data, error } = await query;
+
+      // Ignorer les réponses obsolètes (une requête plus récente est en cours ou terminée)
+      if (requestId !== listingsRequestIdRef.current) return;
 
       if (error) throw error;
       setListings(data || []);
     } catch (error) {
       console.error('Error loading listings:', error);
     } finally {
-      setLoading(false);
+      if (requestId === listingsRequestIdRef.current) {
+        setLoading(false);
+      }
     }
   }
 

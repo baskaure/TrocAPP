@@ -33,7 +33,7 @@ function statusBadgeClass(status: Exchange['status']) {
     case 'in_progress':
       return 'bg-secondary-container text-on-secondary-container';
     case 'delivered':
-      return 'bg-amber-100 text-amber-900 dark:bg-amber-900/35 dark:text-amber-100';
+      return 'bg-secondary-container/40 text-on-secondary-container dark:bg-amber-900/35 dark:text-amber-100';
     case 'confirmed':
       return 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300';
     case 'cancelled':
@@ -233,7 +233,7 @@ export function ExchangesPage({ onUserClick, onStartNewExchange }: ExchangesPage
           ) : (
             <>
           {filteredExchanges.length === 0 ? (
-            <div className="mb-10 rounded-xl border border-outline-variant/20 bg-surface-container-low/80 py-12 text-center dark:bg-slate-900/40">
+            <div className="mb-10 rounded-2xl border border-outline-variant/15 bg-surface-container-low py-12 text-center dark:bg-slate-900/40">
               <span className="material-symbols-outlined mx-auto mb-4 block text-5xl text-outline">inventory_2</span>
               <h3 className="font-headline text-lg font-bold text-on-surface">Aucun échange</h3>
               <p className="mt-2 text-sm text-on-surface-variant">
@@ -261,7 +261,7 @@ export function ExchangesPage({ onUserClick, onStartNewExchange }: ExchangesPage
               return (
                 <div
                   key={exchange.id}
-                  className={`glass-card flex flex-col gap-6 rounded-xl border border-white/40 p-8 shadow-xl shadow-slate-200/40 transition-all duration-300 dark:border-white/10 dark:shadow-none ${
+                  className={`flex flex-col gap-6 rounded-3xl border border-outline-variant/15 bg-surface-container-lowest p-8 shadow-soft-lg transition-all duration-300 dark:border-white/10 dark:shadow-none ${
                     doneLike ? 'opacity-80 hover:opacity-100' : 'group hover:shadow-2xl'
                   }`}
                 >
@@ -391,7 +391,7 @@ export function ExchangesPage({ onUserClick, onStartNewExchange }: ExchangesPage
             <button
               type="button"
               onClick={() => onStartNewExchange?.()}
-              className="group flex cursor-pointer flex-col items-center justify-center gap-4 rounded-xl border-2 border-dashed border-outline-variant/30 p-8 text-center transition-colors hover:border-primary/50 dark:border-slate-600 dark:hover:border-primary/40"
+              className="group flex cursor-pointer flex-col items-center justify-center gap-4 rounded-3xl border-2 border-dashed border-outline-variant/30 p-8 text-center transition-colors hover:border-primary/50 dark:border-slate-600 dark:hover:border-primary/40"
             >
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-surface-container-low text-outline transition-colors group-hover:bg-primary-fixed dark:bg-slate-800">
                 <span className="material-symbols-outlined text-3xl">add_circle</span>

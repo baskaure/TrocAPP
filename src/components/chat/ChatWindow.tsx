@@ -254,7 +254,7 @@ export function ChatWindow({ proposalId, onUserClick, variant = 'card' }: ChatWi
 
   if (variant === 'immersive') {
     return (
-      <div className="glass-panel flex h-full min-h-[420px] flex-col overflow-hidden rounded-xl border border-outline-variant/20 shadow-2xl md:min-h-[700px]">
+      <div className="flex h-full min-h-[420px] flex-col overflow-hidden rounded-3xl border border-outline-variant/15 bg-surface-container-lowest shadow-soft-lg md:min-h-[700px]">
         <div className="flex items-center justify-between border-b border-outline-variant/10 px-4 py-4 md:px-6">
           <div className="flex min-w-0 items-center gap-4">
             <div className="relative flex-shrink-0">
@@ -273,7 +273,7 @@ export function ChatWindow({ proposalId, onUserClick, variant = 'card' }: ChatWi
           </div>
         </div>
 
-        <div className="flex flex-1 flex-col overflow-hidden bg-[radial-gradient(circle_at_top_right,rgba(0,45,230,0.03),transparent_40%)]">
+        <div className="flex flex-1 flex-col overflow-hidden bg-[radial-gradient(circle_at_top_right,rgba(45,141,191,0.03),transparent_40%)]">
           <div className="flex-1 overflow-y-auto p-4 md:p-6">{messagesBody}</div>
 
           {contentWarning ? (
@@ -283,14 +283,14 @@ export function ChatWindow({ proposalId, onUserClick, variant = 'card' }: ChatWi
             </div>
           ) : null}
 
-          <div className="border-t border-outline-variant/10 bg-white/50 p-4 md:p-6">
+          <div className="border-t border-outline-variant/10 bg-surface-container-low p-4 md:p-6">
             <form onSubmit={handleSend} className="relative flex items-center">
               <input
                 type="text"
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 placeholder="Écrivez votre message..."
-                className="w-full rounded-full border-0 bg-surface-container-low py-4 pl-5 pr-16 text-sm text-on-surface placeholder:text-outline/50 focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-full border-0 bg-surface-container-lowest py-4 pl-5 pr-16 text-sm text-on-surface placeholder:text-outline/50 focus:ring-2 focus:ring-primary/20"
                 disabled={loading}
               />
               <button
@@ -349,7 +349,7 @@ export function ChatWindow({ proposalId, onUserClick, variant = 'card' }: ChatWi
       </div>
 
       {contentWarning && (
-        <div className="mb-2 flex items-start gap-2 rounded-xl border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800">
+        <div className="mb-2 flex items-start gap-2 rounded-xl border border-secondary-container bg-secondary-container/20 p-3 text-sm text-on-secondary-container">
           <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
           <span>{contentWarning}</span>
         </div>
@@ -367,6 +367,7 @@ export function ChatWindow({ proposalId, onUserClick, variant = 'card' }: ChatWi
         <button
           type="submit"
           disabled={loading || !newMessage.trim()}
+          aria-label="Envoyer le message"
           className="btn-primary flex h-10 w-10 items-center justify-center rounded-full p-2 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Send className="h-5 w-5" />

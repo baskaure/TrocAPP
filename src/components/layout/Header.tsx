@@ -20,7 +20,7 @@ function HeaderInner({ onLogoClick, onCreateListing, onNavigate, onRequestAuth }
     <nav
       className={`fixed inset-x-0 top-0 z-50 ${APP_HEADER_HEIGHT_CLASS} bg-white/70 shadow-xl shadow-primary/5 backdrop-blur-xl [transform:translateZ(0)] backface-hidden`}
     >
-      <div className="mx-auto flex h-full max-w-screen-2xl items-center justify-between px-6 md:px-8">
+      <div className="mx-auto flex h-full max-w-screen-2xl items-center justify-between px-4 sm:px-6 md:px-8">
         <div className="flex items-center">
           <button
             type="button"
@@ -50,7 +50,7 @@ function HeaderInner({ onLogoClick, onCreateListing, onNavigate, onRequestAuth }
             <>
               <button
                 type="button"
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-surface-container-high dark:text-slate-400"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full text-on-surface-variant transition-colors hover:bg-surface-container-high dark:text-slate-400"
                 aria-label="Notifications"
               >
                 <span className="material-symbols-outlined text-[22px] md:text-[24px]">notifications</span>
@@ -58,7 +58,7 @@ function HeaderInner({ onLogoClick, onCreateListing, onNavigate, onRequestAuth }
               <button
                 type="button"
                 onClick={() => onNavigate?.('settings')}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-surface-container-high dark:text-slate-400"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full text-on-surface-variant transition-colors hover:bg-surface-container-high dark:text-slate-400"
                 aria-label="Paramètres"
               >
                 <span className="material-symbols-outlined text-[22px] md:text-[24px]">settings</span>
@@ -74,6 +74,7 @@ function HeaderInner({ onLogoClick, onCreateListing, onNavigate, onRequestAuth }
                 className="h-10 w-10 overflow-hidden rounded-full border-2 border-white shadow-sm"
                 aria-expanded={showUserMenu}
                 aria-haspopup="true"
+                aria-label="Menu utilisateur"
               >
                 {user.avatar_url ? (
                   <img src={user.avatar_url} alt="" className="h-full w-full object-cover" />

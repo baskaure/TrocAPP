@@ -125,14 +125,14 @@ export function ReviewModal({ exchange, onClose, onSuccess }: ReviewModalProps) 
   if (success) {
     return (
       <div className="flex w-full justify-center py-12">
-        <div className="glass-panel w-full max-w-md rounded-xl border border-white/40 p-10 text-center shadow-[0_20px_40px_rgba(25,28,29,0.08)] dark:border-white/10">
+        <div className="w-full max-w-md rounded-3xl border border-outline-variant/15 bg-surface-container-lowest p-10 text-center shadow-soft-lg dark:border-white/10">
           <span
             className="material-symbols-outlined mx-auto mb-4 block text-6xl text-green-600 dark:text-green-400"
             style={{ fontVariationSettings: "'FILL' 1" }}
           >
             check_circle
           </span>
-          <h2 className="mb-2 font-headline text-2xl font-extrabold text-on-surface">Merci pour votre avis !</h2>
+          <h2 className="mb-2 font-headline text-2xl font-extrabold tracking-tight text-on-surface">Merci pour votre avis !</h2>
           <p className="text-sm text-on-surface-variant">
             Votre retour a été publié et aide la communauté BonTroc.
           </p>
@@ -149,12 +149,12 @@ export function ReviewModal({ exchange, onClose, onSuccess }: ReviewModalProps) 
         <div className="absolute -left-12 -top-12 -z-10 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
         <div className="absolute -bottom-24 -right-24 -z-10 h-80 w-80 rounded-full bg-secondary/10 blur-3xl" />
 
-        <section className="glass-panel rounded-xl border border-white/40 p-8 shadow-[0_20px_40px_rgba(25,28,29,0.06)] dark:border-white/10 md:p-12">
+        <section className="rounded-3xl border border-outline-variant/15 bg-surface-container-lowest p-8 shadow-soft-lg dark:border-white/10 md:p-12">
           <div className="mb-10 text-center md:text-left">
             <span className="mb-4 inline-block rounded-full bg-primary-fixed px-4 py-1.5 font-headline text-xs font-bold uppercase tracking-widest text-on-primary-fixed dark:bg-primary/25 dark:text-primary-fixed">
               Laissez un avis
             </span>
-            <h1 className="font-headline text-4xl font-extrabold leading-tight tracking-tight text-on-surface md:text-5xl">
+            <h1 className="font-headline text-2xl font-black leading-tight tracking-tight text-on-surface sm:text-3xl md:text-4xl">
               Comment s&apos;est passé votre échange avec{' '}
               <span className="text-primary">{revieweeName}</span> ?
             </h1>
@@ -178,7 +178,7 @@ export function ReviewModal({ exchange, onClose, onSuccess }: ReviewModalProps) 
                     </div>
                   )}
                 </div>
-                <h2 className="mb-2 text-xl font-bold text-on-surface">Note globale</h2>
+                <h2 className="mb-2 font-headline text-xl font-bold tracking-tight text-on-surface">Note globale</h2>
                 <div className="mb-4 flex gap-2">
                   {[1, 2, 3, 4, 5].map((star) => {
                     const active = star <= displayRating;

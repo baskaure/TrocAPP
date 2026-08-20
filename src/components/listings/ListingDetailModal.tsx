@@ -48,7 +48,7 @@ function wantedItems(text: string): string[] {
   return [t];
 }
 
-const HERO_SHADOW = '[box-shadow:0_40px_100px_-20px_rgba(0,0,0,0.15)]';
+const HERO_SHADOW = 'shadow-soft-lg';
 
 export function ListingDetailModal({
   listing,
@@ -363,18 +363,18 @@ export function ListingDetailModal({
   const typeLabel = listing.type === 'service' ? 'Service' : 'Produit';
 
   return (
-    <div className="relative w-full max-w-7xl bg-slate-50 text-on-surface dark:bg-slate-950">
+    <div className="relative w-full max-w-7xl bg-background text-on-surface dark:bg-slate-950">
         <div className="pb-28 pt-0 md:pb-24">
           <PageBackLink onClick={onClose} label="Retour aux annonces" />
           <div className="mb-10 flex flex-col justify-between gap-4 md:mb-12 md:flex-row md:items-center">
-            <nav className="flex flex-wrap items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-slate-400">
+            <nav className="flex flex-wrap items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-on-surface-variant/70">
               {categoryName ? (
                 <span className="text-on-surface dark:text-slate-300">{categoryName}</span>
               ) : (
                 <span className="text-on-surface-variant">Annonce</span>
               )}
             </nav>
-            <div className="inline-flex w-fit items-center gap-2.5 rounded-full border border-slate-100 bg-white px-5 py-2.5 text-xs font-bold text-slate-500 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+            <div className="inline-flex w-fit items-center gap-2.5 rounded-full border border-outline-variant/15 bg-surface-container-lowest px-5 py-2.5 text-xs font-bold text-on-surface-variant shadow-sm dark:border-slate-700 dark:bg-slate-900">
               <span className="material-symbols-outlined text-sm text-primary">calendar_today</span>
               Publié le {formatDate(listing.created_at)}
             </div>
@@ -384,7 +384,7 @@ export function ListingDetailModal({
           <div className="mb-12 grid grid-cols-1 gap-10 lg:mb-16 lg:grid-cols-12">
             <div className="group lg:col-span-8">
               <div
-                className={`relative aspect-[16/9] overflow-hidden rounded-3xl bg-white ${HERO_SHADOW} dark:bg-slate-900`}
+                className={`relative aspect-[16/9] overflow-hidden rounded-3xl bg-surface-container-lowest ${HERO_SHADOW} dark:bg-slate-900`}
               >
                 <img
                   src={imageUrl}
@@ -404,12 +404,12 @@ export function ListingDetailModal({
             </div>
 
             <div className="lg:col-span-4">
-              <div className="glass-card flex h-full flex-col justify-between rounded-[2.5rem] border border-white/40 p-8 dark:border-white/10 md:p-10">
+              <div className="flex h-full flex-col justify-between rounded-3xl border border-outline-variant/15 bg-surface-container-lowest p-8 shadow-soft-lg dark:border-white/10 md:p-10">
                 <div>
                   {listing.user ? (
                     <button
                       type="button"
-                      className={`mb-8 flex w-full items-center gap-5 text-left ${onUserClick ? 'cursor-pointer rounded-2xl transition-colors hover:bg-white/40 dark:hover:bg-slate-800/50' : ''}`}
+                      className={`mb-8 flex w-full items-center gap-5 text-left ${onUserClick ? 'cursor-pointer rounded-2xl transition-colors hover:bg-surface-container-low dark:hover:bg-slate-800/50' : ''}`}
                       onClick={() => onUserClick?.(listing.user!.id)}
                       disabled={!onUserClick}
                     >
@@ -437,12 +437,12 @@ export function ListingDetailModal({
                               verified
                             </span>
                           ) : null}
-                          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">
                             {listing.user.is_verified ? 'Membre vérifié' : 'Membre'}
                           </span>
                         </div>
                         {listing.user.rating_count > 0 ? (
-                          <p className="mt-1 text-xs font-semibold text-slate-500">
+                          <p className="mt-1 text-xs font-semibold text-on-surface-variant">
                             {listing.user.rating_avg.toFixed(1)} · {listing.user.rating_count} avis
                           </p>
                         ) : null}
@@ -450,12 +450,12 @@ export function ListingDetailModal({
                     </button>
                   ) : null}
 
-                  <div className="mb-8 flex items-center gap-4 rounded-2xl border border-white/60 bg-white/50 p-5 dark:border-slate-700 dark:bg-slate-800/50">
+                  <div className="mb-8 flex items-center gap-4 rounded-2xl border border-outline-variant/15 bg-surface-container-low p-5 dark:border-slate-700 dark:bg-slate-800/50">
                     <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-primary/10">
                       <span className="material-symbols-outlined text-primary">location_on</span>
                     </div>
                     <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/70">
                         Localisation
                       </p>
                       <span className="font-bold text-on-surface dark:text-slate-100">{locationLabel}</span>
@@ -479,7 +479,7 @@ export function ListingDetailModal({
                           setShowDeleteConfirm(true);
                           setEditError('');
                         }}
-                        className="flex w-full items-center justify-center gap-3 rounded-full border border-slate-100 bg-white py-5 font-headline text-sm font-black uppercase tracking-widest text-error transition-all hover:bg-error-container/20 active:scale-[0.98] dark:border-slate-700 dark:bg-slate-900"
+                        className="flex w-full items-center justify-center gap-3 rounded-full border border-outline-variant/15 bg-surface-container-lowest py-5 font-headline text-sm font-black uppercase tracking-widest text-error transition-all hover:bg-error-container/20 active:scale-[0.98] dark:border-slate-700 dark:bg-slate-900"
                       >
                         <span className="material-symbols-outlined text-lg">delete</span>
                         Supprimer
@@ -500,7 +500,7 @@ export function ListingDetailModal({
                       <button
                         type="button"
                         onClick={() => setShowReportModal(true)}
-                        className="w-full py-2 text-center text-sm font-semibold text-slate-500 transition-colors hover:text-error"
+                        className="w-full py-2 text-center text-sm font-semibold text-on-surface-variant transition-colors hover:text-error"
                       >
                         Signaler cette annonce
                       </button>
@@ -508,7 +508,7 @@ export function ListingDetailModal({
                   ) : null}
 
                   {!user ? (
-                    <div className="rounded-2xl border border-slate-100 bg-white/60 p-4 text-center dark:border-slate-700 dark:bg-slate-900/60">
+                    <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low p-4 text-center dark:border-slate-700 dark:bg-slate-900/60">
                       <p className="mb-3 text-sm text-on-surface-variant">Connectez-vous pour proposer un échange</p>
                       <button
                         type="button"
@@ -532,7 +532,7 @@ export function ListingDetailModal({
                           onChange={(e) => setProposalOffer(e.target.value)}
                           rows={4}
                           required
-                          className="w-full resize-none rounded-2xl border border-slate-200 bg-white p-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-slate-600 dark:bg-slate-900"
+                          className="w-full resize-none rounded-2xl border border-outline-variant/30 bg-surface-container-lowest p-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-slate-600 dark:bg-slate-900"
                           placeholder="Décrivez votre contrepartie…"
                         />
                       </div>
@@ -545,7 +545,7 @@ export function ListingDetailModal({
                           onChange={(e) => setProposalMessage(e.target.value)}
                           rows={3}
                           required
-                          className="w-full resize-none rounded-2xl border border-slate-200 bg-white p-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-slate-600 dark:bg-slate-900"
+                          className="w-full resize-none rounded-2xl border border-outline-variant/30 bg-surface-container-lowest p-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-slate-600 dark:bg-slate-900"
                           placeholder="Message personnalisé…"
                         />
                       </div>
@@ -579,7 +579,7 @@ export function ListingDetailModal({
           {isOwnListing && editMode ? (
             <form
               onSubmit={handleUpdateListing}
-              className="glass-card mb-12 space-y-4 rounded-[2.5rem] border border-white/40 p-6 dark:border-white/10 md:p-8"
+              className="mb-12 space-y-4 rounded-3xl border border-outline-variant/15 bg-surface-container-lowest p-6 shadow-soft-lg dark:border-white/10 md:p-8"
             >
               <h3 className="font-headline text-lg font-black">Modifier l’annonce</h3>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -590,7 +590,7 @@ export function ListingDetailModal({
                     onChange={(e) =>
                       setEditForm({ ...editForm, type: e.target.value as 'service' | 'product' })
                     }
-                    className="w-full rounded-2xl border border-slate-200 px-3 py-2 dark:border-slate-600 dark:bg-slate-900"
+                    className="w-full rounded-2xl border border-outline-variant/30 px-3 py-2 dark:border-slate-600 dark:bg-slate-900"
                   >
                     <option value="service">Service</option>
                     <option value="product">Produit</option>
@@ -606,7 +606,7 @@ export function ListingDetailModal({
                         mode: e.target.value as 'remote' | 'on_site' | 'both',
                       })
                     }
-                    className="w-full rounded-2xl border border-slate-200 px-3 py-2 dark:border-slate-600 dark:bg-slate-900"
+                    className="w-full rounded-2xl border border-outline-variant/30 px-3 py-2 dark:border-slate-600 dark:bg-slate-900"
                   >
                     <option value="both">Présentiel & à distance</option>
                     <option value="on_site">Présentiel</option>
@@ -621,7 +621,7 @@ export function ListingDetailModal({
                   value={editForm.title}
                   onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
                   required
-                  className="w-full rounded-2xl border border-slate-200 px-3 py-2 dark:border-slate-600 dark:bg-slate-900"
+                  className="w-full rounded-2xl border border-outline-variant/30 px-3 py-2 dark:border-slate-600 dark:bg-slate-900"
                 />
               </div>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -632,7 +632,7 @@ export function ListingDetailModal({
                     onChange={(e) => setEditForm({ ...editForm, description_offer: e.target.value })}
                     rows={4}
                     required
-                    className="w-full rounded-2xl border border-slate-200 px-3 py-2 dark:border-slate-600 dark:bg-slate-900"
+                    className="w-full rounded-2xl border border-outline-variant/30 px-3 py-2 dark:border-slate-600 dark:bg-slate-900"
                   />
                 </div>
                 <div>
@@ -642,21 +642,21 @@ export function ListingDetailModal({
                     onChange={(e) => setEditForm({ ...editForm, desired_exchange_desc: e.target.value })}
                     rows={4}
                     required
-                    className="w-full rounded-2xl border border-slate-200 px-3 py-2 dark:border-slate-600 dark:bg-slate-900"
+                    className="w-full rounded-2xl border border-outline-variant/30 px-3 py-2 dark:border-slate-600 dark:bg-slate-900"
                   />
                 </div>
               </div>
-              <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-600">
+              <div className="rounded-2xl border border-outline-variant/30 p-4 dark:border-slate-600">
                 <p className="mb-2 text-sm font-medium">Photo</p>
                 <div className="flex flex-wrap gap-4">
-                  <div className="h-20 w-28 overflow-hidden rounded-xl bg-slate-100">
+                  <div className="h-20 w-28 overflow-hidden rounded-xl bg-surface-container">
                     <img
                       src={newImageUrl || imageUrl}
                       alt=""
                       className="h-full w-full object-cover"
                     />
                   </div>
-                  <label className="cursor-pointer rounded-xl border border-slate-300 px-3 py-2 text-sm dark:border-slate-600">
+                  <label className="cursor-pointer rounded-xl border border-outline-variant px-3 py-2 text-sm dark:border-slate-600">
                     {uploadingImage ? 'Téléversement…' : 'Changer l’image'}
                     <input
                       type="file"
@@ -679,14 +679,14 @@ export function ListingDetailModal({
                   placeholder="Min (€)"
                   value={editForm.estimation_min}
                   onChange={(e) => setEditForm({ ...editForm, estimation_min: e.target.value })}
-                  className="rounded-2xl border border-slate-200 px-3 py-2 dark:border-slate-600 dark:bg-slate-900"
+                  className="rounded-2xl border border-outline-variant/30 px-3 py-2 dark:border-slate-600 dark:bg-slate-900"
                 />
                 <input
                   type="number"
                   placeholder="Max (€)"
                   value={editForm.estimation_max}
                   onChange={(e) => setEditForm({ ...editForm, estimation_max: e.target.value })}
-                  className="rounded-2xl border border-slate-200 px-3 py-2 dark:border-slate-600 dark:bg-slate-900"
+                  className="rounded-2xl border border-outline-variant/30 px-3 py-2 dark:border-slate-600 dark:bg-slate-900"
                 />
               </div>
               <div className="flex flex-wrap gap-3">
@@ -716,7 +716,7 @@ export function ListingDetailModal({
                 >
                   {deleteLoading ? '…' : 'Confirmer'}
                 </button>
-                <button type="button" onClick={() => setShowDeleteConfirm(false)} className="rounded-full bg-slate-200 px-4 py-2 text-sm font-bold dark:bg-slate-700">
+                <button type="button" onClick={() => setShowDeleteConfirm(false)} className="rounded-full bg-surface-container-high px-4 py-2 text-sm font-bold dark:bg-slate-700">
                   Annuler
                 </button>
               </div>
@@ -732,7 +732,7 @@ export function ListingDetailModal({
           {/* Grille détails */}
           {!editMode && (
             <div className="grid grid-cols-1 gap-10 md:grid-cols-2">
-              <div className="glass-card rounded-[2.5rem] border border-white/40 border-l-[6px] border-l-primary p-8 dark:border-white/10 md:p-10">
+              <div className="rounded-3xl border border-outline-variant/15 border-l-[6px] border-l-primary bg-surface-container-lowest p-8 shadow-soft-lg dark:border-white/10 md:p-10">
                 <div className="mb-8 flex items-center gap-4">
                   <div className="rounded-2xl bg-primary/10 p-3">
                     <span className="material-symbols-outlined text-2xl text-primary">handshake</span>
@@ -750,13 +750,13 @@ export function ListingDetailModal({
                       <div className="mt-1 rounded-full bg-primary/10 p-1">
                         <span className="material-symbols-outlined text-lg font-bold text-primary">check</span>
                       </div>
-                      <p className="leading-relaxed text-slate-600 dark:text-slate-400">{point}</p>
+                      <p className="leading-relaxed text-on-surface-variant dark:text-slate-400">{point}</p>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="glass-card rounded-[2.5rem] border border-white/40 border-l-[6px] border-l-secondary-container p-8 dark:border-white/10 md:p-10">
+              <div className="rounded-3xl border border-outline-variant/15 border-l-[6px] border-l-secondary-container bg-surface-container-lowest p-8 shadow-soft-lg dark:border-white/10 md:p-10">
                 <div className="mb-8 flex items-center gap-4">
                   <div className="rounded-2xl bg-secondary-container/20 p-3">
                     <span className="material-symbols-outlined text-2xl text-on-secondary-container">
@@ -771,7 +771,7 @@ export function ListingDetailModal({
                   {wanted.map((item, i) => (
                     <div
                       key={i}
-                      className="group flex cursor-default items-center justify-between rounded-2xl border border-slate-100 bg-white p-5 transition-all hover:shadow-lg dark:border-slate-700 dark:bg-slate-900"
+                      className="group flex cursor-default items-center justify-between rounded-2xl border border-outline-variant/15 bg-surface-container-lowest p-5 transition-all hover:shadow-lg dark:border-slate-700 dark:bg-slate-900"
                     >
                       <div className="flex items-center gap-5">
                         <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-secondary-container/10 transition-colors group-hover:bg-secondary-container/25 dark:bg-yellow-900/20">
@@ -783,7 +783,7 @@ export function ListingDetailModal({
                           {item}
                         </span>
                       </div>
-                      <span className="material-symbols-outlined text-slate-300 dark:text-slate-600">
+                      <span className="material-symbols-outlined text-on-surface-variant/70 dark:text-slate-600">
                         chevron_right
                       </span>
                     </div>
@@ -801,7 +801,7 @@ export function ListingDetailModal({
                   <span className="material-symbols-outlined text-primary">map</span>
                   Localisation
                 </h2>
-                <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                <p className="text-xs font-bold uppercase tracking-widest text-on-surface-variant/70">
                   {mapCaption}
                   {mapIsApproximate ? (
                     <span className="mt-1 block font-inter text-[10px] font-semibold normal-case text-primary">
@@ -811,12 +811,12 @@ export function ListingDetailModal({
                 </p>
               </div>
               <div
-                className={`relative h-[280px] w-full overflow-hidden rounded-[2.5rem] border border-white bg-white md:h-[400px] dark:border-slate-700 dark:bg-slate-900 ${HERO_SHADOW}`}
+                className={`relative h-[280px] w-full overflow-hidden rounded-3xl border border-outline-variant/15 bg-surface-container-lowest md:h-[400px] dark:border-slate-700 dark:bg-slate-900 ${HERO_SHADOW}`}
               >
                 {geocodeLoading && !showMap ? (
-                  <div className="flex h-full flex-col items-center justify-center bg-slate-100 dark:bg-slate-800">
+                  <div className="flex h-full flex-col items-center justify-center bg-surface-container dark:bg-slate-800">
                     <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                    <p className="mt-3 text-sm font-medium text-slate-500">Chargement de la carte…</p>
+                    <p className="mt-3 text-sm font-medium text-on-surface-variant">Chargement de la carte…</p>
                   </div>
                 ) : showMap ? (
                   <LocationMap
@@ -825,12 +825,12 @@ export function ListingDetailModal({
                     lng={mapLng}
                     zoom={mapIsApproximate ? 12 : 14}
                     popupLabel={mapPopupLabel}
-                    className="z-[1] h-full min-h-[260px] w-full rounded-[2.5rem]"
+                    className="z-[1] h-full min-h-[260px] w-full rounded-3xl"
                   />
                 ) : (
-                  <div className="flex h-full flex-col items-center justify-center bg-slate-100 px-6 text-center dark:bg-slate-800">
-                    <span className="material-symbols-outlined mb-2 text-4xl text-slate-400">map</span>
-                    <p className="text-sm font-semibold text-slate-500">
+                  <div className="flex h-full flex-col items-center justify-center bg-surface-container px-6 text-center dark:bg-slate-800">
+                    <span className="material-symbols-outlined mb-2 text-4xl text-on-surface-variant/70">map</span>
+                    <p className="text-sm font-semibold text-on-surface-variant">
                       {listing.user?.city
                         ? `Zone : ${listing.user.city} (carte indisponible)`
                         : 'Indiquez une ville sur le profil pour afficher la carte'}

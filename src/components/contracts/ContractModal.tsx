@@ -168,7 +168,7 @@ export function ContractModal({ contract, onClose, onAccepted }: ContractModalPr
         <button
           type="button"
           onClick={downloadContract}
-          className="flex items-center gap-2 rounded-full bg-surface-container-high px-3 py-2 font-headline text-xs font-semibold text-on-surface-variant transition-all hover:bg-slate-200/80 dark:bg-slate-800 dark:hover:bg-slate-700 sm:px-4 sm:text-sm"
+          className="flex items-center gap-2 rounded-full bg-surface-container-high px-3 py-2 font-headline text-xs font-semibold text-on-surface-variant transition-all hover:bg-surface-container-highest dark:bg-slate-800 dark:hover:bg-slate-700 sm:px-4 sm:text-sm"
         >
           <span className="material-symbols-outlined text-[20px]">download</span>
           <span className="hidden sm:inline">Télécharger une copie</span>
@@ -177,15 +177,15 @@ export function ContractModal({ contract, onClose, onAccepted }: ContractModalPr
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto pb-40 pt-2">
-        <div className="w-full max-w-5xl overflow-hidden rounded-xl border border-white/40 bg-surface-container-lowest shadow-2xl shadow-slate-200/50 dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
+        <div className="w-full max-w-5xl overflow-hidden rounded-3xl border border-outline-variant/15 bg-surface-container-lowest shadow-soft-lg dark:border-white/10 dark:bg-slate-900 dark:shadow-none">
           {/* En-tête document */}
-          <div className="border-b border-outline-variant/10 bg-slate-50 p-8 dark:border-slate-700 dark:bg-slate-800/80 md:p-12">
+          <div className="border-b border-outline-variant/10 bg-surface-container-low p-8 dark:border-slate-700 dark:bg-slate-800/80 md:p-12">
             <div className="flex flex-col items-start justify-between gap-6 md:flex-row">
               <div>
                 <div className="mb-4 inline-block rounded-full bg-primary-fixed px-3 py-1 font-headline text-[10px] font-bold uppercase tracking-widest text-on-primary-fixed dark:bg-primary/30 dark:text-primary-fixed">
                   Document officiel
                 </div>
-                <h1 className="font-headline text-3xl font-extrabold leading-tight tracking-tight text-on-surface md:text-4xl">
+                <h1 className="font-headline text-2xl font-black leading-tight tracking-tight text-on-surface sm:text-3xl md:text-4xl">
                   {listing?.type === 'product'
                     ? "CONTRAT D'ÉCHANGE DE BIENS"
                     : "CONTRAT D'ÉCHANGE DE SERVICES"}
@@ -195,7 +195,7 @@ export function ContractModal({ contract, onClose, onAccepted }: ContractModalPr
                 </p>
               </div>
               <div className="flex w-full flex-col items-stretch gap-3 md:w-auto md:items-end">
-                <div className="flex items-center gap-3 rounded-lg bg-white p-3 shadow-sm dark:bg-slate-900">
+                <div className="flex items-center gap-3 rounded-lg bg-surface-container-lowest p-3 shadow-sm dark:bg-slate-900">
                   <div className="flex -space-x-2">
                     <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-primary text-xs font-bold text-on-primary dark:border-slate-900">
                       {initials(fromUser?.display_name)}
@@ -406,7 +406,7 @@ export function ContractModal({ contract, onClose, onAccepted }: ContractModalPr
                   </div>
                   <div>
                     <p className="mb-2 text-xs font-bold uppercase tracking-wider text-outline">Point de rencontre</p>
-                    <div className="h-32 overflow-hidden rounded-lg bg-white shadow-inner dark:bg-slate-900">
+                    <div className="h-32 overflow-hidden rounded-lg bg-surface-container-lowest shadow-inner dark:bg-slate-900">
                       <div className="flex h-full items-center justify-center px-4 text-center text-xs text-outline">
                         Carte / lieu à convenir dans la messagerie BonTroc
                       </div>
@@ -468,7 +468,7 @@ export function ContractModal({ contract, onClose, onAccepted }: ContractModalPr
       </div>
 
       {/* Pied fixe */}
-      <footer className="fixed bottom-0 left-0 z-[61] w-full border-t border-outline-variant/20 bg-white/90 shadow-[0_-10px_40px_rgba(0,0,0,0.04)] backdrop-blur-lg dark:border-slate-700 dark:bg-slate-900/90">
+      <footer className="fixed bottom-0 left-0 z-[61] w-full border-t border-outline-variant/20 bg-surface-container-lowest/90 shadow-soft-lg backdrop-blur-lg dark:border-slate-700 dark:bg-slate-900/90">
         <div className="flex w-full max-w-5xl flex-col items-center justify-between gap-4 px-4 py-5 sm:flex-row sm:px-6">
           <div className="flex items-center gap-4">
             <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary-fixed text-primary dark:bg-primary/30 dark:text-primary-fixed">

@@ -13,7 +13,7 @@ export function MobileBottomNav({ active, onExplore, onCategory, onAdd, onChat, 
       type="button"
       onClick={onClick}
       className={`inline-flex min-h-11 min-w-11 flex-1 flex-col items-center justify-center rounded-full py-1 transition-colors ${
-        isActive ? 'text-primary' : 'text-slate-400 hover:text-slate-600'
+        isActive ? 'text-primary' : 'text-on-surface-variant/70 hover:text-on-surface'
       }`}
       aria-label={label}
     >
@@ -38,10 +38,10 @@ export function MobileBottomNav({ active, onExplore, onCategory, onAdd, onChat, 
         <button
           type="button"
           onClick={onAdd}
-          className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-lg shadow-primary/40 transition-transform active:scale-95"
+          className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-on-primary shadow-lg shadow-primary/40 transition-transform active:scale-95"
           aria-label="Proposer un échange"
         >
-          <span className="material-symbols-outlined text-[28px] text-white">add</span>
+          <span className="material-symbols-outlined text-[28px] text-on-primary">add</span>
         </button>
       </div>
       {iconBtn(active === 'chat', 'chat', onChat, 'Mes conversations')}
