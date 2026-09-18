@@ -1,45 +1,18 @@
 /*
-  # Fix du schedule pour review-reminders
-  
-  Alternative si net.http_post n'est pas disponible.
-  Utilise directement l'appel HTTP via une fonction SQL.
+  # Obsolète et dangereuse — ne fait plus rien
+
+  Cette migration demandait de coller la vraie clé `service_role` dans le fichier
+  (`service_role_key TEXT := 'TON_SERVICE_ROLE_KEY_ICI'`), donc de la committer et de
+  l'inscrire en clair dans `cron.job.command`. Telle quelle, elle planifiait en plus un
+  job qui envoyait littéralement « Bearer TON_SERVICE_ROLE_KEY_ICI ».
+
+  Remplacée par `20260917103000_review_reminders_cron.sql`, qui lit la clé dans Vault.
+  Le contenu d'origine est conservé dans `supabase/scripts/` pour référence.
+
+  Si une vraie clé a déjà été collée ici puis exécutée : la révoquer dans
+  Settings → API, puis vérifier `SELECT jobname, command FROM cron.job;`.
 */
-
--- Vérifier si le schedule existe
-SELECT jobname, schedule, command 
-FROM cron.job 
-WHERE jobname = 'review-reminders';
-
--- Si net.http_post n'est pas disponible, utilise cette version alternative :
--- (Remplace <SERVICE_ROLE_KEY> par ta clé service role depuis Supabase Dashboard > Settings > API)
-
 DO $$
-DECLARE
-  service_role_key TEXT := 'TON_SERVICE_ROLE_KEY_ICI'; -- À remplacer par ta vraie clé
 BEGIN
-  -- Supprimer l'ancien schedule s'il existe
-  PERFORM cron.unschedule('review-reminders') WHERE EXISTS (
-    SELECT 1 FROM cron.job WHERE jobname = 'review-reminders'
-  );
-
-  -- Créer le nouveau schedule avec appel HTTP direct
-  PERFORM cron.schedule(
-    'review-reminders',
-    '0 7 * * *', -- Tous les jours à 7h UTC
-    format(
-      $$
-      SELECT
-        net.http_post(
-          url := 'https://cuxypeejwglisqidxwfj.supabase.co/functions/v1/send-review-reminders',
-          headers := jsonb_build_object(
-            'Content-Type', 'application/json',
-            'Authorization', 'Bearer %s'
-          ),
-          body := '{}'::jsonb
-        ) AS request_id;
-      $$,
-      service_role_key
-    )
-  );
+  RAISE NOTICE 'Migration obsolète : la planification est faite par 20260917103000_review_reminders_cron.sql.';
 END $$;
-

@@ -1,44 +1,14 @@
 /*
-  # Planification automatique des rappels d'avis
-  
-  Cette migration crée un cron job qui exécute la fonction send-review-reminders
-  tous les jours à 7h UTC.
-  
-  Note: Nécessite que l'extension pg_cron soit activée dans Supabase.
-*/
+  # Obsolète — ne fait plus rien
 
--- Vérifier si pg_cron est disponible
+  Cette migration planifiait le job `review-reminders` avec
+  `current_setting('app.settings.service_role_key')`, un paramètre qui n'existe pas sur
+  Supabase : l'en-tête valait « Bearer  » et la fonction répondait 401 chaque matin.
+
+  Remplacée par `20260917103000_review_reminders_cron.sql`, qui lit la clé dans Vault.
+  Le contenu d'origine est conservé dans `supabase/scripts/` pour référence.
+*/
 DO $$
 BEGIN
-  -- Activer l'extension si elle n'existe pas
-  CREATE EXTENSION IF NOT EXISTS pg_cron;
-EXCEPTION
-  WHEN insufficient_privilege THEN
-    RAISE NOTICE 'pg_cron nécessite des privilèges administrateur. Créez le schedule via le dashboard Supabase.';
-  WHEN OTHERS THEN
-    RAISE NOTICE 'pg_cron non disponible. Créez le schedule via le dashboard Supabase.';
+  RAISE NOTICE 'Migration obsolète : la planification est faite par 20260917103000_review_reminders_cron.sql.';
 END $$;
-
--- Supprimer le schedule existant s'il existe
-SELECT cron.unschedule('review-reminders') WHERE EXISTS (
-  SELECT 1 FROM cron.job WHERE jobname = 'review-reminders'
-);
-
--- Créer le schedule (tous les jours à 7h UTC)
--- Remplace <PROJECT_REF> par ton project ref: cuxypeejwglisqidxwfj
-SELECT cron.schedule(
-  'review-reminders',
-  '0 7 * * *', -- Tous les jours à 7h UTC
-  $$
-  SELECT
-    net.http_post(
-      url := 'https://cuxypeejwglisqidxwfj.supabase.co/functions/v1/send-review-reminders',
-      headers := jsonb_build_object(
-        'Content-Type', 'application/json',
-        'Authorization', 'Bearer ' || current_setting('app.settings.service_role_key', true)
-      ),
-      body := '{}'::jsonb
-    ) AS request_id;
-  $$
-);
-
