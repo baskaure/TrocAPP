@@ -1,15 +1,16 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { ReportFormPanel } from '../reports/ReportModal';
 import { LocationMap } from '../maps/LocationMap';
-import { Listing, supabase } from '../../lib/supabase';
+import { Listing, supabase, errorMessage } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth-context';
 import { sendTransactionalEmail } from '../../lib/notifications';
 import { PageBackLink } from '../layout/PageBackLink';
 import { geocodeCity } from '../../lib/geocode';
-
-type ListingWithCategory = Listing & {
-  category?: { name: string } | null;
-};
+import { useNotice } from '../ui/Toast';
+import { checkContent } from '../../lib/moderation';
+import { IMAGE_ACCEPT, prepareImage, storagePathFromPublicUrl } from '../../lib/image';
+import { LISTING_STATUS_LABEL, MODE_LABEL, formatDateFr } from '../../lib/labels';
+import { listingPlaceholder } from './placeholders';
 
 type ListingDetailModalProps = {
   listing: Listing | null;
@@ -19,15 +20,9 @@ type ListingDetailModalProps = {
   onUserClick?: (userId: string) => void;
 };
 
-const WANTED_ICONS = [
-  'potted_plant',
-  'cleaning_services',
-  'support_agent',
-  'handyman',
-  'eco',
-  'build',
-  'directions_bike',
-] as const;
+const WANTED_ICONS = ['potted_plant', 'cleaning_services', 'support_agent', 'handyman', 'eco', 'build', 'directions_bike'] as const;
+
+const viewedThisSession = new Set<string>();
 
 function offerBulletPoints(description: string): string[] {
   const t = description.trim();
@@ -50,26 +45,21 @@ function wantedItems(text: string): string[] {
 
 const HERO_SHADOW = 'shadow-soft-lg';
 
-export function ListingDetailModal({
-  listing,
-  onClose,
-  onProposalSuccess,
-  onRequestAuth,
-  onUserClick,
-}: ListingDetailModalProps) {
+export function ListingDetailModal({ listing, onClose, onProposalSuccess, onRequestAuth, onUserClick }: ListingDetailModalProps) {
   const { user } = useAuth();
+  const { toast, confirm } = useNotice();
   const [showProposalForm, setShowProposalForm] = useState(false);
   const [proposalMessage, setProposalMessage] = useState('');
   const [proposalOffer, setProposalOffer] = useState('');
   const [proposalLoading, setProposalLoading] = useState(false);
   const [proposalError, setProposalError] = useState('');
+  const [existingProposalId, setExistingProposalId] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
   const [newImageUrl, setNewImageUrl] = useState<string | null>(null);
-  const [deleteLoading, setDeleteLoading] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [archiveLoading, setArchiveLoading] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [geocodedCoords, setGeocodedCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [geocodeLoading, setGeocodeLoading] = useState(false);
@@ -83,54 +73,76 @@ export function ListingDetailModal({
     estimation_max: listing?.estimation_max?.toString() ?? '',
   });
 
-  const hydrateEditForm = () => {
+  const listingId = listing?.id;
+  const isOwnListing = Boolean(user && listing && user.id === listing.user_id);
+
+  const hydrateEditForm = useCallback(() => {
     if (!listing) return;
     setEditForm({
       type: listing.type,
       title: listing.title,
       description_offer: listing.description_offer,
-      desired_exchange_desc: listing.desired_exchange_desc,
+      desired_exchange_desc: listing.desired_exchange_desc ?? '',
       mode: listing.mode,
-      estimation_min: listing.estimation_min != null ? listing.estimation_min.toString() : '',
-      estimation_max: listing.estimation_max != null ? listing.estimation_max.toString() : '',
+      estimation_min: listing.estimation_min != null ? String(listing.estimation_min) : '',
+      estimation_max: listing.estimation_max != null ? String(listing.estimation_max) : '',
     });
-  };
+  }, [listing]);
 
   useEffect(() => {
     hydrateEditForm();
     setEditMode(false);
     setEditError('');
-    setShowDeleteConfirm(false);
     setShowProposalForm(false);
-  }, [listing]);
-
-  useEffect(() => {
+    setNewImageUrl(null);
     setGeocodedCoords(null);
-  }, [listing?.id]);
+  }, [listingId, hydrateEditForm]);
 
+  // Compteur de vues (une fois par annonce et par session, jamais pour le propriétaire).
   useEffect(() => {
-    if (!listing) {
-      setGeocodeLoading(false);
-      return;
-    }
-    const latRaw = listing.location_lat ?? listing.user?.geo_lat;
-    const lngRaw = listing.location_lng ?? listing.user?.geo_lng;
-    const latN = latRaw != null && String(latRaw) !== '' ? Number(latRaw) : NaN;
-    const lngN = lngRaw != null && String(lngRaw) !== '' ? Number(lngRaw) : NaN;
-    if (Number.isFinite(latN) && Number.isFinite(lngN)) {
-      setGeocodeLoading(false);
-      return;
-    }
+    if (!listingId || isOwnListing || viewedThisSession.has(listingId)) return;
+    viewedThisSession.add(listingId);
+    void supabase.rpc('increment_listing_views', { p_listing_id: listingId });
+  }, [listingId, isOwnListing]);
 
-    const city = listing.user?.city?.trim();
-    if (!city) {
+  // Une proposition ouverte existe-t-elle déjà de ma part ?
+  useEffect(() => {
+    if (!user || !listingId || isOwnListing) {
+      setExistingProposalId(null);
+      return;
+    }
+    let cancelled = false;
+    supabase
+      .from('proposals')
+      .select('id')
+      .eq('listing_id', listingId)
+      .eq('from_user_id', user.id)
+      .in('status', ['pending', 'countered'])
+      .limit(1)
+      .then(({ data }) => {
+        if (!cancelled) setExistingProposalId(data && data.length > 0 ? data[0].id : null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user, listingId, isOwnListing]);
+
+  // Carte : coordonnées de l'annonce, sinon ville du membre (géocodée, en cache).
+  const listingLat = listing?.location_lat;
+  const listingLng = listing?.location_lng;
+  const userCity = listing?.user?.city?.trim();
+  const userCountry = listing?.user?.country ?? undefined;
+  useEffect(() => {
+    if (!listingId) return;
+    const latN = listingLat != null ? Number(listingLat) : NaN;
+    const lngN = listingLng != null ? Number(listingLng) : NaN;
+    if ((Number.isFinite(latN) && Number.isFinite(lngN)) || !userCity) {
       setGeocodeLoading(false);
       return;
     }
-
     let cancelled = false;
     setGeocodeLoading(true);
-    geocodeCity(city, listing.user?.country).then((coords) => {
+    geocodeCity(userCity, userCountry).then((coords) => {
       if (cancelled) return;
       if (coords) setGeocodedCoords(coords);
       setGeocodeLoading(false);
@@ -138,84 +150,78 @@ export function ListingDetailModal({
     return () => {
       cancelled = true;
     };
-  }, [
-    listing?.id,
-    listing?.location_lat,
-    listing?.location_lng,
-    listing?.user?.geo_lat,
-    listing?.user?.geo_lng,
-    listing?.user?.city,
-    listing?.user?.country,
-  ]);
+  }, [listingId, listingLat, listingLng, userCity, userCountry]);
+
+  /** Retire du stockage une photo téléversée qui ne sera finalement pas rattachée à l'annonce. */
+  const discardPendingImage = useCallback((url: string | null) => {
+    const path = storagePathFromPublicUrl(url, 'listing-media');
+    if (path) void supabase.storage.from('listing-media').remove([path]);
+  }, []);
 
   if (!listing) return null;
 
-  const lc = listing as ListingWithCategory;
-  const categoryName = lc.category?.name;
+  const categoryName = listing.category?.name;
+  const placeholder = listingPlaceholder(listing);
+  const imageUrl = listing.media && listing.media.length > 0 ? listing.media[0].url : null;
 
-  const imageUrl =
-    listing.media && listing.media.length > 0
-      ? listing.media[0].url
-      : 'https://images.pexels.com/photos/1181406/pexels-photo-1181406.jpeg?auto=compress&cs=tinysrgb&w=1200';
-
-  const latRaw = listing.location_lat ?? listing.user?.geo_lat;
-  const lngRaw = listing.location_lng ?? listing.user?.geo_lng;
-  const preciseLat = latRaw != null && String(latRaw) !== '' ? Number(latRaw) : NaN;
-  const preciseLng = lngRaw != null && String(lngRaw) !== '' ? Number(lngRaw) : NaN;
+  const preciseLat = listing.location_lat != null ? Number(listing.location_lat) : NaN;
+  const preciseLng = listing.location_lng != null ? Number(listing.location_lng) : NaN;
   const hasPreciseCoords = Number.isFinite(preciseLat) && Number.isFinite(preciseLng);
   const mapLat = hasPreciseCoords ? preciseLat : geocodedCoords?.lat;
   const mapLng = hasPreciseCoords ? preciseLng : geocodedCoords?.lng;
   const showMap = mapLat != null && mapLng != null && Number.isFinite(mapLat) && Number.isFinite(mapLng);
   const mapIsApproximate = showMap && !hasPreciseCoords;
 
-  const locationLabel = listing.user?.city?.trim() || 'Non précisée';
-  const mapCaption = listing.user?.city
-    ? `${listing.user.city}${listing.user?.country ? ` — ${listing.user.country}` : ''}`
-    : 'Localisation indicative';
-  const mapPopupLabel = mapIsApproximate
-    ? `${mapCaption} — position approximative (ville)`
-    : mapCaption;
+  const locationLabel = userCity || 'Non précisée';
+  const mapCaption = userCity ? `${userCity}${listing.user?.country ? ` — ${listing.user.country}` : ''}` : 'Localisation indicative';
+  const mapPopupLabel = mapIsApproximate ? `${mapCaption} — position approximative (ville)` : mapCaption;
 
   const bullets = offerBulletPoints(listing.description_offer);
-  const wanted = wantedItems(listing.desired_exchange_desc);
+  const wanted = wantedItems(listing.desired_exchange_desc ?? '');
+  const ownerName = listing.user?.display_name ?? 'Membre';
+  const ownerDeleted = listing.user?.status === 'deleted';
+  const isPublished = listing.status === 'published';
 
   const handleSubmitProposal = async (e: FormEvent) => {
     e.preventDefault();
     if (!user) return;
     setProposalError('');
+    const offer = proposalOffer.trim();
+    const message = proposalMessage.trim();
+    if (offer.length < 5) return setProposalError('Décrivez votre contrepartie (5 caractères minimum).');
     setProposalLoading(true);
     try {
+      const moderation = await checkContent(`${offer}\n${message}`, user.id);
+      if (moderation.hasBlock) {
+        setProposalError(`Votre proposition contient un terme interdit (${moderation.blockWords.join(', ')}).`);
+        return;
+      }
       const { data, error: insertError } = await supabase
         .from('proposals')
         .insert({
           listing_id: listing.id,
           from_user_id: user.id,
           to_user_id: listing.user_id,
-          message: proposalMessage,
-          offer_payload: { description: proposalOffer },
+          message,
+          offer_payload: { description: offer },
           status: 'pending',
         })
-        .select()
+        .select('id')
         .single();
       if (insertError) throw insertError;
       setProposalMessage('');
       setProposalOffer('');
       setShowProposalForm(false);
-      if (listing.user?.email) {
-        sendTransactionalEmail('new_proposal', listing.user.email, {
-          listing_title: listing.title,
-          proposer_name: user.display_name,
-          proposal_id: data.id,
-        });
-      }
+      setExistingProposalId(data.id);
+      void sendTransactionalEmail('new_proposal', listing.user_id, {
+        listing_title: listing.title,
+        proposer_name: user.display_name,
+        proposal_id: data.id,
+      });
+      toast.success('Proposition envoyée. Vous serez prévenu de la réponse.');
       onProposalSuccess();
-      onClose();
     } catch (err: unknown) {
-      const msg =
-        err && typeof err === 'object' && 'message' in err
-          ? String((err as { message: string }).message)
-          : "Une erreur est survenue lors de la création de la proposition";
-      setProposalError(msg);
+      setProposalError(errorMessage(err, 'Impossible d’envoyer la proposition'));
     } finally {
       setProposalLoading(false);
     }
@@ -228,10 +234,12 @@ export function ListingDetailModal({
       return next;
     });
     setEditError('');
+    discardPendingImage(newImageUrl);
     setNewImageUrl(null);
   };
 
   const handleCancelEdit = () => {
+    discardPendingImage(newImageUrl);
     hydrateEditForm();
     setEditMode(false);
     setEditError('');
@@ -243,25 +251,18 @@ export function ListingDetailModal({
     setUploadingImage(true);
     setEditError('');
     try {
-      const ext = file.name.split('.').pop() || 'jpg';
-      const fileName = `${listing.id}-${Date.now()}.${ext}`;
+      const prepared = await prepareImage(file);
+      const path = `images/${user.id}-${Date.now()}.${prepared.ext}`;
       const { error: uploadError } = await supabase.storage
         .from('listing-media')
-        .upload(`images/${fileName}`, file, {
-          upsert: true,
-          contentType: file.type,
-          cacheControl: '3600',
-        });
+        .upload(path, prepared.blob, { contentType: prepared.contentType, cacheControl: '31536000', upsert: false });
       if (uploadError) throw uploadError;
-      const { data } = supabase.storage.from('listing-media').getPublicUrl(`images/${fileName}`);
-      if (!data?.publicUrl) throw new Error("Impossible de récupérer l'URL publique");
+      const { data } = supabase.storage.from('listing-media').getPublicUrl(path);
+      if (!data?.publicUrl) throw new Error("Impossible de récupérer l'URL de l'image");
+      discardPendingImage(newImageUrl);
       setNewImageUrl(data.publicUrl);
     } catch (err: unknown) {
-      const msg =
-        err && typeof err === 'object' && 'message' in err
-          ? String((err as { message: string }).message)
-          : "Échec du téléversement de l'image";
-      setEditError(msg);
+      setEditError(errorMessage(err, "Échec du téléversement de l'image"));
     } finally {
       setUploadingImage(false);
     }
@@ -269,24 +270,38 @@ export function ListingDetailModal({
 
   const handleUpdateListing = async (e: FormEvent) => {
     e.preventDefault();
-    if (!isOwnListing) return;
+    if (!isOwnListing || !user) return;
     setEditError('');
+    const title = editForm.title.trim();
+    const offer = editForm.description_offer.trim();
+    const wantedText = editForm.desired_exchange_desc.trim();
+    const min = editForm.estimation_min ? parseFloat(editForm.estimation_min) : null;
+    const max = editForm.estimation_max ? parseFloat(editForm.estimation_max) : null;
+    if (title.length < 3) return setEditError('Le titre doit contenir au moins 3 caractères.');
+    if (min !== null && max !== null && min > max) return setEditError('La valeur minimale doit être inférieure à la valeur maximale.');
     setEditLoading(true);
     try {
+      const moderation = await checkContent([title, offer, wantedText].join('\n'), user.id);
+      if (moderation.hasBlock) {
+        setEditError(`Le texte contient un terme interdit (${moderation.blockWords.join(', ')}).`);
+        return;
+      }
       const { error: updateError } = await supabase
         .from('listings')
         .update({
           type: editForm.type,
-          title: editForm.title,
-          description_offer: editForm.description_offer,
-          desired_exchange_desc: editForm.desired_exchange_desc,
+          title,
+          description_offer: offer,
+          desired_exchange_desc: wantedText,
           mode: editForm.mode,
-          estimation_min: editForm.estimation_min ? parseFloat(editForm.estimation_min) : null,
-          estimation_max: editForm.estimation_max ? parseFloat(editForm.estimation_max) : null,
+          estimation_min: min,
+          estimation_max: max,
+          updated_at: new Date().toISOString(),
         })
         .eq('id', listing.id)
-        .eq('user_id', user!.id);
+        .eq('user_id', user.id);
       if (updateError) throw updateError;
+
       if (newImageUrl) {
         const currentMedia = listing.media && listing.media.length > 0 ? listing.media[0] : null;
         if (currentMedia?.id) {
@@ -296,562 +311,491 @@ export function ListingDetailModal({
             .eq('id', currentMedia.id)
             .eq('listing_id', listing.id);
           if (mediaUpdateError) throw mediaUpdateError;
+          const oldPath = storagePathFromPublicUrl(currentMedia.url, 'listing-media');
+          if (oldPath) void supabase.storage.from('listing-media').remove([oldPath]);
         } else {
-          const { error: mediaInsertError } = await supabase.from('listing_media').insert({
-            listing_id: listing.id,
-            url: newImageUrl,
-            type: 'image',
-            sort_order: 0,
-          });
+          const { error: mediaInsertError } = await supabase
+            .from('listing_media')
+            .insert({ listing_id: listing.id, url: newImageUrl, type: 'image', sort_order: 0 });
           if (mediaInsertError) throw mediaInsertError;
         }
       }
       setEditMode(false);
       setNewImageUrl(null);
+      toast.success('Annonce mise à jour.');
       await onProposalSuccess();
     } catch (err: unknown) {
-      const msg =
-        err && typeof err === 'object' && 'message' in err
-          ? String((err as { message: string }).message)
-          : 'Impossible de mettre à jour l’annonce';
-      setEditError(msg);
+      setEditError(errorMessage(err, 'Impossible de mettre à jour l’annonce'));
     } finally {
       setEditLoading(false);
     }
   };
 
-  const handleDeleteListing = async () => {
-    if (!isOwnListing) return;
+  const handleArchiveListing = async () => {
+    if (!isOwnListing || !user) return;
+    const ok = await confirm({
+      title: 'Retirer cette annonce ?',
+      description: 'Elle ne sera plus visible sur le marché. Les échanges déjà engagés ne sont pas affectés.',
+      confirmLabel: 'Retirer l’annonce',
+      danger: true,
+    });
+    if (!ok) return;
     setEditError('');
-    setDeleteLoading(true);
+    setArchiveLoading(true);
     try {
-      const { error: deleteError } = await supabase
+      const { error: updateError } = await supabase
         .from('listings')
-        .delete()
+        .update({ status: 'archived', updated_at: new Date().toISOString() })
         .eq('id', listing.id)
-        .eq('user_id', user!.id);
-      if (deleteError) throw deleteError;
+        .eq('user_id', user.id);
+      if (updateError) throw updateError;
+      toast.success('Annonce retirée.');
       await onProposalSuccess();
       onClose();
     } catch (err: unknown) {
-      const msg =
-        err && typeof err === 'object' && 'message' in err
-          ? String((err as { message: string }).message)
-          : 'Impossible de supprimer l’annonce';
-      setEditError(msg);
+      setEditError(errorMessage(err, 'Impossible de retirer l’annonce'));
     } finally {
-      setDeleteLoading(false);
+      setArchiveLoading(false);
     }
   };
 
-  const formatDate = (date: string) =>
-    new Date(date).toLocaleDateString('fr-FR', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    });
-
-  const isOwnListing = user?.id === listing.user_id;
-
-  const modeLabel =
-    listing.mode === 'remote'
-      ? 'À distance'
-      : listing.mode === 'on_site'
-        ? 'Présentiel'
-        : 'Présentiel & à distance';
-
-  const typeLabel = listing.type === 'service' ? 'Service' : 'Produit';
+  const typeLabel = listing.type === 'service' ? 'Service' : 'Objet';
+  const inputClass = 'w-full rounded-2xl border border-outline-variant/30 bg-surface-container-lowest px-3 py-2 text-on-surface';
 
   return (
-    <div className="relative w-full max-w-7xl bg-background text-on-surface dark:bg-slate-950">
-        <div className="pb-28 pt-0 md:pb-24">
-          <PageBackLink onClick={onClose} label="Retour aux annonces" />
-          <div className="mb-10 flex flex-col justify-between gap-4 md:mb-12 md:flex-row md:items-center">
-            <nav className="flex flex-wrap items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-on-surface-variant/70">
-              {categoryName ? (
-                <span className="text-on-surface dark:text-slate-300">{categoryName}</span>
+    <div className="relative w-full max-w-7xl bg-background text-on-surface">
+      <div className="pb-28 pt-0 md:pb-24">
+        <PageBackLink onClick={onClose} label="Retour aux annonces" />
+
+        <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-start">
+          <div className="min-w-0">
+            <p className="mb-3 text-[11px] font-bold uppercase tracking-widest text-on-surface-variant">
+              {categoryName ?? 'Annonce'} · {typeLabel} · {MODE_LABEL[listing.mode]}
+            </p>
+            <h1 className="font-headline text-2xl font-black leading-[1.1] tracking-tight text-on-surface sm:text-3xl md:text-4xl">{listing.title}</h1>
+          </div>
+          <div className="inline-flex w-fit shrink-0 items-center gap-2.5 rounded-full border border-outline-variant/15 bg-surface-container-lowest px-5 py-2.5 text-xs font-bold text-on-surface-variant shadow-sm">
+            <span className="material-symbols-outlined text-sm text-primary" aria-hidden>
+              calendar_today
+            </span>
+            Publiée le {formatDateFr(listing.created_at)}
+          </div>
+        </div>
+
+        {!isPublished ? (
+          <div role="status" className="mb-8 rounded-2xl border border-secondary-container bg-secondary-container/30 p-4 text-sm text-on-secondary-container">
+            Cette annonce est {LISTING_STATUS_LABEL[listing.status].toLowerCase()} : elle n’apparaît plus sur le marché.
+          </div>
+        ) : null}
+
+        <div className="mb-12 grid grid-cols-1 gap-10 lg:mb-16 lg:grid-cols-12">
+          <div className="group lg:col-span-8">
+            <div className={`relative aspect-[16/9] overflow-hidden rounded-3xl bg-surface-container-lowest ${HERO_SHADOW}`}>
+              {imageUrl ? (
+                <img
+                  src={newImageUrl || imageUrl}
+                  alt={`Photo de l’annonce ${listing.title}`}
+                  width={1200}
+                  height={675}
+                  decoding="async"
+                  className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                />
               ) : (
-                <span className="text-on-surface-variant">Annonce</span>
+                <div className={`flex h-full w-full items-center justify-center bg-gradient-to-br ${placeholder.gradient}`} aria-hidden>
+                  <span className="material-symbols-outlined text-8xl text-primary/70">{placeholder.icon}</span>
+                </div>
               )}
-            </nav>
-            <div className="inline-flex w-fit items-center gap-2.5 rounded-full border border-outline-variant/15 bg-surface-container-lowest px-5 py-2.5 text-xs font-bold text-on-surface-variant shadow-sm dark:border-slate-700 dark:bg-slate-900">
-              <span className="material-symbols-outlined text-sm text-primary">calendar_today</span>
-              Publié le {formatDate(listing.created_at)}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent" aria-hidden />
+              <div className="absolute bottom-6 left-6 flex flex-wrap gap-2 sm:bottom-8 sm:left-8 sm:gap-3">
+                <span className="rounded-full border border-white/40 bg-white/80 px-4 py-2 font-headline text-[10px] font-black uppercase tracking-[0.15em] text-primary backdrop-blur-xl">
+                  {typeLabel}
+                </span>
+                <span className="rounded-full border border-white/40 bg-white/80 px-4 py-2 font-headline text-[10px] font-black uppercase tracking-[0.15em] text-primary backdrop-blur-xl">
+                  {MODE_LABEL[listing.mode]}
+                </span>
+              </div>
             </div>
           </div>
 
-          {/* Hero + sidebar */}
-          <div className="mb-12 grid grid-cols-1 gap-10 lg:mb-16 lg:grid-cols-12">
-            <div className="group lg:col-span-8">
-              <div
-                className={`relative aspect-[16/9] overflow-hidden rounded-3xl bg-surface-container-lowest ${HERO_SHADOW} dark:bg-slate-900`}
-              >
-                <img
-                  src={imageUrl}
-                  alt=""
-                  className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent" />
-                <div className="absolute bottom-6 left-6 flex flex-wrap gap-2 sm:bottom-8 sm:left-8 sm:gap-3">
-                  <span className="rounded-full border border-white/40 bg-white/80 px-4 py-2 font-headline text-[10px] font-black uppercase tracking-[0.15em] text-primary backdrop-blur-xl dark:bg-slate-900/80">
-                    {typeLabel}
-                  </span>
-                  <span className="rounded-full border border-white/40 bg-white/80 px-4 py-2 font-headline text-[10px] font-black uppercase tracking-[0.15em] text-primary backdrop-blur-xl dark:bg-slate-900/80">
-                    {modeLabel}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="lg:col-span-4">
-              <div className="flex h-full flex-col justify-between rounded-3xl border border-outline-variant/15 bg-surface-container-lowest p-8 shadow-soft-lg dark:border-white/10 md:p-10">
-                <div>
-                  {listing.user ? (
-                    <button
-                      type="button"
-                      className={`mb-8 flex w-full items-center gap-5 text-left ${onUserClick ? 'cursor-pointer rounded-2xl transition-colors hover:bg-surface-container-low dark:hover:bg-slate-800/50' : ''}`}
-                      onClick={() => onUserClick?.(listing.user!.id)}
-                      disabled={!onUserClick}
-                    >
-                      <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-2xl bg-primary font-headline text-2xl font-black text-on-primary shadow-lg shadow-primary/20">
-                        {listing.user.avatar_url ? (
-                          <img
-                            src={listing.user.avatar_url}
-                            alt=""
-                            className="h-full w-full rounded-2xl object-cover"
-                          />
-                        ) : (
-                          listing.user.display_name?.[0]?.toUpperCase() ?? '?'
-                        )}
-                      </div>
-                      <div>
-                        <h3 className="font-headline text-xl font-black tracking-tight text-on-surface dark:text-white">
-                          {listing.user.display_name}
-                        </h3>
-                        <div className="mt-1 flex items-center gap-1.5">
-                          {listing.user.is_verified ? (
-                            <span
-                              className="material-symbols-outlined text-sm text-primary"
-                              style={{ fontVariationSettings: "'FILL' 1" }}
-                            >
-                              verified
-                            </span>
-                          ) : null}
-                          <span className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">
-                            {listing.user.is_verified ? 'Membre vérifié' : 'Membre'}
-                          </span>
-                        </div>
-                        {listing.user.rating_count > 0 ? (
-                          <p className="mt-1 text-xs font-semibold text-on-surface-variant">
-                            {listing.user.rating_avg.toFixed(1)} · {listing.user.rating_count} avis
-                          </p>
-                        ) : null}
-                      </div>
-                    </button>
-                  ) : null}
-
-                  <div className="mb-8 flex items-center gap-4 rounded-2xl border border-outline-variant/15 bg-surface-container-low p-5 dark:border-slate-700 dark:bg-slate-800/50">
-                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-primary/10">
-                      <span className="material-symbols-outlined text-primary">location_on</span>
+          <div className="lg:col-span-4">
+            <div className="flex h-full flex-col justify-between rounded-3xl border border-outline-variant/15 bg-surface-container-lowest p-8 shadow-soft-lg md:p-10">
+              <div>
+                {listing.user ? (
+                  <button
+                    type="button"
+                    className={`mb-8 flex w-full items-center gap-5 text-left ${
+                      onUserClick && !ownerDeleted ? 'cursor-pointer rounded-2xl transition-colors hover:bg-surface-container-low' : ''
+                    }`}
+                    onClick={() => onUserClick?.(listing.user!.id)}
+                    disabled={!onUserClick || ownerDeleted}
+                  >
+                    <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-2xl bg-primary font-headline text-2xl font-black text-on-primary shadow-lg shadow-primary/20">
+                      {listing.user.avatar_url ? (
+                        <img src={listing.user.avatar_url} alt="" className="h-full w-full rounded-2xl object-cover" />
+                      ) : (
+                        ownerName[0]?.toUpperCase() ?? '?'
+                      )}
                     </div>
                     <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/70">
-                        Localisation
-                      </p>
-                      <span className="font-bold text-on-surface dark:text-slate-100">{locationLabel}</span>
+                      <p className="font-headline text-xl font-black tracking-tight text-on-surface">{ownerName}</p>
+                      <div className="mt-1 flex items-center gap-1.5">
+                        {listing.user.is_verified ? (
+                          <span className="material-symbols-outlined text-sm text-primary" style={{ fontVariationSettings: "'FILL' 1" }} aria-hidden>
+                            verified
+                          </span>
+                        ) : null}
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">
+                          {listing.user.is_verified ? 'Membre vérifié' : 'Membre'}
+                        </span>
+                      </div>
+                      {listing.user.rating_count > 0 ? (
+                        <p className="mt-1 text-xs font-semibold text-on-surface-variant">
+                          {Number(listing.user.rating_avg).toFixed(1)} · {listing.user.rating_count} avis
+                        </p>
+                      ) : null}
                     </div>
+                  </button>
+                ) : null}
+
+                <div className="mb-8 flex items-center gap-4 rounded-2xl border border-outline-variant/15 bg-surface-container-low p-5">
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                    <span className="material-symbols-outlined text-primary" aria-hidden>
+                      location_on
+                    </span>
                   </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Localisation</p>
+                    <span className="font-bold text-on-surface">{locationLabel}</span>
+                  </div>
+                </div>
 
-                  {/* Actions / proposition */}
-                  {isOwnListing && !showProposalForm ? (
-                    <div className="space-y-4">
+                {isOwnListing && !showProposalForm ? (
+                  <div className="space-y-4">
+                    <button
+                      type="button"
+                      onClick={handleToggleEditMode}
+                      className="flex min-h-12 w-full items-center justify-center gap-3 rounded-full bg-primary py-5 font-headline text-sm font-black uppercase tracking-widest text-on-primary shadow-lg shadow-primary/20 transition-all hover:opacity-95 active:scale-[0.98]"
+                    >
+                      <span className="material-symbols-outlined text-lg" aria-hidden>
+                        edit_note
+                      </span>
+                      {editMode ? 'Fermer l’édition' : 'Modifier l’annonce'}
+                    </button>
+                    {isPublished ? (
                       <button
                         type="button"
-                        onClick={handleToggleEditMode}
-                        className="flex w-full items-center justify-center gap-3 rounded-full bg-primary py-5 font-headline text-sm font-black uppercase tracking-widest text-on-primary shadow-lg shadow-primary/20 transition-all hover:opacity-95 active:scale-[0.98]"
+                        onClick={handleArchiveListing}
+                        disabled={archiveLoading}
+                        className="flex min-h-12 w-full items-center justify-center gap-3 rounded-full border border-outline-variant/15 bg-surface-container-lowest py-5 font-headline text-sm font-black uppercase tracking-widest text-error transition-all hover:bg-error-container/20 active:scale-[0.98] disabled:opacity-50"
                       >
-                        <span className="material-symbols-outlined text-lg">edit_note</span>
-                        {editMode ? 'Fermer l’édition' : 'Modifier l’annonce'}
+                        <span className="material-symbols-outlined text-lg" aria-hidden>
+                          archive
+                        </span>
+                        {archiveLoading ? 'Retrait…' : 'Retirer l’annonce'}
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowDeleteConfirm(true);
-                          setEditError('');
-                        }}
-                        className="flex w-full items-center justify-center gap-3 rounded-full border border-outline-variant/15 bg-surface-container-lowest py-5 font-headline text-sm font-black uppercase tracking-widest text-error transition-all hover:bg-error-container/20 active:scale-[0.98] dark:border-slate-700 dark:bg-slate-900"
-                      >
-                        <span className="material-symbols-outlined text-lg">delete</span>
-                        Supprimer
-                      </button>
-                    </div>
-                  ) : null}
+                    ) : null}
+                  </div>
+                ) : null}
 
-                  {!isOwnListing && user && !showProposalForm ? (
-                    <div className="space-y-4">
+                {!isOwnListing && user && !showProposalForm ? (
+                  <div className="space-y-4">
+                    {existingProposalId ? (
+                      <div className="rounded-2xl border border-primary/20 bg-primary-fixed/30 p-4 text-sm text-on-primary-fixed">
+                        Vous avez déjà une proposition en cours sur cette annonce. Retrouvez-la dans « Mes propositions ».
+                      </div>
+                    ) : ownerDeleted || !isPublished ? (
+                      <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low p-4 text-sm text-on-surface-variant">
+                        Cette annonce n’accepte plus de proposition.
+                      </div>
+                    ) : (
                       <button
                         type="button"
                         onClick={() => setShowProposalForm(true)}
-                        className="flex w-full items-center justify-center gap-3 rounded-full bg-primary py-5 font-headline text-sm font-black uppercase tracking-widest text-on-primary shadow-lg shadow-primary/20 transition-all hover:opacity-95 active:scale-[0.98]"
+                        className="flex min-h-12 w-full items-center justify-center gap-3 rounded-full bg-primary py-5 font-headline text-sm font-black uppercase tracking-widest text-on-primary shadow-lg shadow-primary/20 transition-all hover:opacity-95 active:scale-[0.98]"
                       >
-                        <span className="material-symbols-outlined text-lg">handshake</span>
+                        <span className="material-symbols-outlined text-lg" aria-hidden>
+                          handshake
+                        </span>
                         Proposer un échange
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => setShowReportModal(true)}
-                        className="w-full py-2 text-center text-sm font-semibold text-on-surface-variant transition-colors hover:text-error"
-                      >
-                        Signaler cette annonce
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setShowReportModal((v) => !v)}
+                      className="min-h-10 w-full py-2 text-center text-sm font-semibold text-on-surface-variant transition-colors hover:text-error"
+                    >
+                      Signaler cette annonce
+                    </button>
+                  </div>
+                ) : null}
+
+                {!user ? (
+                  <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low p-4 text-center">
+                    <p className="mb-3 text-sm text-on-surface-variant">Connectez-vous pour proposer un échange</p>
+                    <button
+                      type="button"
+                      onClick={() => onRequestAuth?.('login')}
+                      className="min-h-11 w-full rounded-full bg-primary py-3 font-headline text-sm font-bold text-on-primary"
+                    >
+                      Se connecter
+                    </button>
+                  </div>
+                ) : null}
+
+                {!isOwnListing && user && showProposalForm ? (
+                  <form onSubmit={handleSubmitProposal} className="space-y-4">
+                    <h2 className="font-headline font-bold text-on-surface">Votre proposition</h2>
+                    <div>
+                      <label htmlFor="proposal-offer" className="mb-1 block text-xs font-bold uppercase tracking-wider text-outline">
+                        Ce que vous proposez en échange
+                      </label>
+                      <textarea
+                        id="proposal-offer"
+                        value={proposalOffer}
+                        onChange={(e) => setProposalOffer(e.target.value)}
+                        rows={4}
+                        required
+                        minLength={5}
+                        maxLength={2000}
+                        className="w-full resize-none rounded-2xl border border-outline-variant/30 bg-surface-container-lowest p-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        placeholder="Décrivez votre contrepartie…"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="proposal-message" className="mb-1 block text-xs font-bold uppercase tracking-wider text-outline">
+                        Message
+                      </label>
+                      <textarea
+                        id="proposal-message"
+                        value={proposalMessage}
+                        onChange={(e) => setProposalMessage(e.target.value)}
+                        rows={3}
+                        maxLength={2000}
+                        className="w-full resize-none rounded-2xl border border-outline-variant/30 bg-surface-container-lowest p-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        placeholder="Un mot pour vous présenter (facultatif)…"
+                      />
+                    </div>
+                    {proposalError ? (
+                      <p role="alert" className="text-sm text-error">
+                        {proposalError}
+                      </p>
+                    ) : null}
+                    <div className="flex flex-col gap-2">
+                      <button type="submit" disabled={proposalLoading} className="min-h-11 rounded-full bg-primary py-3 font-headline text-sm font-bold text-on-primary disabled:opacity-50">
+                        {proposalLoading ? 'Envoi…' : 'Envoyer la proposition'}
+                      </button>
+                      <button type="button" onClick={() => setShowProposalForm(false)} className="min-h-11 rounded-full bg-surface-container-high py-3 font-headline text-sm font-bold">
+                        Annuler
                       </button>
                     </div>
-                  ) : null}
-
-                  {!user ? (
-                    <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-low p-4 text-center dark:border-slate-700 dark:bg-slate-900/60">
-                      <p className="mb-3 text-sm text-on-surface-variant">Connectez-vous pour proposer un échange</p>
-                      <button
-                        type="button"
-                        onClick={() => onRequestAuth?.('login')}
-                        className="w-full rounded-full bg-primary py-3 font-headline text-sm font-bold text-on-primary"
-                      >
-                        Se connecter
-                      </button>
-                    </div>
-                  ) : null}
-
-                  {!isOwnListing && user && showProposalForm ? (
-                    <form onSubmit={handleSubmitProposal} className="space-y-4">
-                      <h4 className="font-headline font-bold text-on-surface">Votre proposition</h4>
-                      <div>
-                        <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-outline">
-                          Ce que vous proposez
-                        </label>
-                        <textarea
-                          value={proposalOffer}
-                          onChange={(e) => setProposalOffer(e.target.value)}
-                          rows={4}
-                          required
-                          className="w-full resize-none rounded-2xl border border-outline-variant/30 bg-surface-container-lowest p-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-slate-600 dark:bg-slate-900"
-                          placeholder="Décrivez votre contrepartie…"
-                        />
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-outline">
-                          Message
-                        </label>
-                        <textarea
-                          value={proposalMessage}
-                          onChange={(e) => setProposalMessage(e.target.value)}
-                          rows={3}
-                          required
-                          className="w-full resize-none rounded-2xl border border-outline-variant/30 bg-surface-container-lowest p-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-slate-600 dark:bg-slate-900"
-                          placeholder="Message personnalisé…"
-                        />
-                      </div>
-                      {proposalError ? (
-                        <p className="text-sm text-error">{proposalError}</p>
-                      ) : null}
-                      <div className="flex flex-col gap-2">
-                        <button
-                          type="submit"
-                          disabled={proposalLoading}
-                          className="rounded-full bg-primary py-3 font-headline text-sm font-bold text-on-primary disabled:opacity-50"
-                        >
-                          {proposalLoading ? 'Envoi…' : 'Envoyer'}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setShowProposalForm(false)}
-                          className="rounded-full bg-surface-container-high py-3 font-headline text-sm font-bold dark:bg-slate-700"
-                        >
-                          Annuler
-                        </button>
-                      </div>
-                    </form>
-                  ) : null}
-                </div>
+                  </form>
+                ) : null}
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Formulaire édition (propriétaire) */}
-          {isOwnListing && editMode ? (
-            <form
-              onSubmit={handleUpdateListing}
-              className="mb-12 space-y-4 rounded-3xl border border-outline-variant/15 bg-surface-container-lowest p-6 shadow-soft-lg dark:border-white/10 md:p-8"
-            >
-              <h3 className="font-headline text-lg font-black">Modifier l’annonce</h3>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div>
-                  <label className="mb-1 block text-sm font-medium">Type</label>
-                  <select
-                    value={editForm.type}
-                    onChange={(e) =>
-                      setEditForm({ ...editForm, type: e.target.value as 'service' | 'product' })
-                    }
-                    className="w-full rounded-2xl border border-outline-variant/30 px-3 py-2 dark:border-slate-600 dark:bg-slate-900"
-                  >
-                    <option value="service">Service</option>
-                    <option value="product">Produit</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium">Mode</label>
-                  <select
-                    value={editForm.mode}
-                    onChange={(e) =>
-                      setEditForm({
-                        ...editForm,
-                        mode: e.target.value as 'remote' | 'on_site' | 'both',
-                      })
-                    }
-                    className="w-full rounded-2xl border border-outline-variant/30 px-3 py-2 dark:border-slate-600 dark:bg-slate-900"
-                  >
-                    <option value="both">Présentiel & à distance</option>
-                    <option value="on_site">Présentiel</option>
-                    <option value="remote">À distance</option>
-                  </select>
-                </div>
+        {isOwnListing && editMode ? (
+          <form onSubmit={handleUpdateListing} className="mb-12 space-y-4 rounded-3xl border border-outline-variant/15 bg-surface-container-lowest p-6 shadow-soft-lg md:p-8">
+            <h2 className="font-headline text-lg font-black">Modifier l’annonce</h2>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label htmlFor="edit-type" className="mb-1 block text-sm font-medium">
+                  Type
+                </label>
+                <select id="edit-type" value={editForm.type} onChange={(e) => setEditForm({ ...editForm, type: e.target.value as 'service' | 'product' })} className={inputClass}>
+                  <option value="service">Service</option>
+                  <option value="product">Objet</option>
+                </select>
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium">Titre</label>
-                <input
-                  type="text"
-                  value={editForm.title}
-                  onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
-                  required
-                  className="w-full rounded-2xl border border-outline-variant/30 px-3 py-2 dark:border-slate-600 dark:bg-slate-900"
-                />
-              </div>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div>
-                  <label className="mb-1 block text-sm font-medium">Offre</label>
-                  <textarea
-                    value={editForm.description_offer}
-                    onChange={(e) => setEditForm({ ...editForm, description_offer: e.target.value })}
-                    rows={4}
-                    required
-                    className="w-full rounded-2xl border border-outline-variant/30 px-3 py-2 dark:border-slate-600 dark:bg-slate-900"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium">Recherche</label>
-                  <textarea
-                    value={editForm.desired_exchange_desc}
-                    onChange={(e) => setEditForm({ ...editForm, desired_exchange_desc: e.target.value })}
-                    rows={4}
-                    required
-                    className="w-full rounded-2xl border border-outline-variant/30 px-3 py-2 dark:border-slate-600 dark:bg-slate-900"
-                  />
-                </div>
-              </div>
-              <div className="rounded-2xl border border-outline-variant/30 p-4 dark:border-slate-600">
-                <p className="mb-2 text-sm font-medium">Photo</p>
-                <div className="flex flex-wrap gap-4">
-                  <div className="h-20 w-28 overflow-hidden rounded-xl bg-surface-container">
-                    <img
-                      src={newImageUrl || imageUrl}
-                      alt=""
-                      className="h-full w-full object-cover"
-                    />
-                  </div>
-                  <label className="cursor-pointer rounded-xl border border-outline-variant px-3 py-2 text-sm dark:border-slate-600">
-                    {uploadingImage ? 'Téléversement…' : 'Changer l’image'}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => handleUploadImage(e.target.files?.[0] ?? null)}
-                      disabled={uploadingImage}
-                    />
-                  </label>
-                  {newImageUrl ? (
-                    <button type="button" className="text-xs text-error" onClick={() => setNewImageUrl(null)}>
-                      Réinitialiser
-                    </button>
-                  ) : null}
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <input
-                  type="number"
-                  placeholder="Min (€)"
-                  value={editForm.estimation_min}
-                  onChange={(e) => setEditForm({ ...editForm, estimation_min: e.target.value })}
-                  className="rounded-2xl border border-outline-variant/30 px-3 py-2 dark:border-slate-600 dark:bg-slate-900"
-                />
-                <input
-                  type="number"
-                  placeholder="Max (€)"
-                  value={editForm.estimation_max}
-                  onChange={(e) => setEditForm({ ...editForm, estimation_max: e.target.value })}
-                  className="rounded-2xl border border-outline-variant/30 px-3 py-2 dark:border-slate-600 dark:bg-slate-900"
-                />
-              </div>
-              <div className="flex flex-wrap gap-3">
-                <button type="button" onClick={handleCancelEdit} className="rounded-full bg-surface-container-high px-6 py-2 font-bold dark:bg-slate-700">
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  disabled={editLoading}
-                  className="rounded-full bg-primary px-6 py-2 font-bold text-on-primary disabled:opacity-50"
-                >
-                  {editLoading ? 'Enregistrement…' : 'Enregistrer'}
-                </button>
-              </div>
-            </form>
-          ) : null}
-
-          {showDeleteConfirm && isOwnListing ? (
-            <div className="mb-10 rounded-2xl border border-error-container bg-error-container/20 p-4">
-              <p className="mb-3 text-sm text-on-error-container">Supprimer définitivement cette annonce ?</p>
-              <div className="flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  onClick={handleDeleteListing}
-                  disabled={deleteLoading}
-                  className="rounded-full bg-error px-4 py-2 text-sm font-bold text-on-error disabled:opacity-50"
-                >
-                  {deleteLoading ? '…' : 'Confirmer'}
-                </button>
-                <button type="button" onClick={() => setShowDeleteConfirm(false)} className="rounded-full bg-surface-container-high px-4 py-2 text-sm font-bold dark:bg-slate-700">
-                  Annuler
-                </button>
+                <label htmlFor="edit-mode" className="mb-1 block text-sm font-medium">
+                  Mode
+                </label>
+                <select id="edit-mode" value={editForm.mode} onChange={(e) => setEditForm({ ...editForm, mode: e.target.value as 'remote' | 'on_site' | 'both' })} className={inputClass}>
+                  <option value="both">Présentiel & à distance</option>
+                  <option value="on_site">Présentiel</option>
+                  <option value="remote">À distance</option>
+                </select>
               </div>
             </div>
-          ) : null}
-
-          {editError ? (
-            <div className="mb-8 rounded-xl border border-error-container bg-error-container/15 p-3 text-sm text-on-error-container">
-              {editError}
+            <div>
+              <label htmlFor="edit-title" className="mb-1 block text-sm font-medium">
+                Titre
+              </label>
+              <input id="edit-title" type="text" value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} required minLength={3} maxLength={120} className={inputClass} />
             </div>
-          ) : null}
-
-          {/* Grille détails */}
-          {!editMode && (
-            <div className="grid grid-cols-1 gap-10 md:grid-cols-2">
-              <div className="rounded-3xl border border-outline-variant/15 border-l-[6px] border-l-primary bg-surface-container-lowest p-8 shadow-soft-lg dark:border-white/10 md:p-10">
-                <div className="mb-8 flex items-center gap-4">
-                  <div className="rounded-2xl bg-primary/10 p-3">
-                    <span className="material-symbols-outlined text-2xl text-primary">handshake</span>
-                  </div>
-                  <h2 className="font-headline text-2xl font-black tracking-tight text-on-surface dark:text-white">
-                    Ce qui est proposé
-                  </h2>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label htmlFor="edit-offer" className="mb-1 block text-sm font-medium">
+                  Offre
+                </label>
+                <textarea id="edit-offer" value={editForm.description_offer} onChange={(e) => setEditForm({ ...editForm, description_offer: e.target.value })} rows={4} required maxLength={3000} className={inputClass} />
+              </div>
+              <div>
+                <label htmlFor="edit-wanted" className="mb-1 block text-sm font-medium">
+                  Recherche
+                </label>
+                <textarea id="edit-wanted" value={editForm.desired_exchange_desc} onChange={(e) => setEditForm({ ...editForm, desired_exchange_desc: e.target.value })} rows={4} maxLength={3000} className={inputClass} />
+              </div>
+            </div>
+            <div className="rounded-2xl border border-outline-variant/30 p-4">
+              <p className="mb-2 text-sm font-medium">Photo</p>
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="h-20 w-28 overflow-hidden rounded-xl bg-surface-container">
+                  {newImageUrl || imageUrl ? <img src={newImageUrl || imageUrl || ''} alt="" className="h-full w-full object-cover" /> : null}
                 </div>
-                <h1 className="mb-8 font-headline text-2xl font-black leading-[1.1] tracking-tight text-primary sm:text-3xl md:text-4xl">
-                  {listing.title}
-                </h1>
-                <div className="space-y-6">
-                  {bullets.map((point, i) => (
-                    <div key={i} className="flex items-start gap-4">
-                      <div className="mt-1 rounded-full bg-primary/10 p-1">
-                        <span className="material-symbols-outlined text-lg font-bold text-primary">check</span>
-                      </div>
-                      <p className="leading-relaxed text-on-surface-variant dark:text-slate-400">{point}</p>
+                <label className="btn-secondary min-h-11 cursor-pointer">
+                  {uploadingImage ? 'Téléversement…' : 'Changer la photo'}
+                  <input type="file" accept={IMAGE_ACCEPT} className="hidden" onChange={(e) => handleUploadImage(e.target.files?.[0] ?? null)} disabled={uploadingImage} />
+                </label>
+                {newImageUrl ? (
+                  <button
+                    type="button"
+                    className="min-h-10 text-xs text-error"
+                    onClick={() => {
+                      discardPendingImage(newImageUrl);
+                      setNewImageUrl(null);
+                    }}
+                  >
+                    Annuler la nouvelle photo
+                  </button>
+                ) : null}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="edit-min" className="sr-only">
+                  Valeur minimale
+                </label>
+                <input id="edit-min" type="number" min="0" step="0.01" placeholder="Min (€)" value={editForm.estimation_min} onChange={(e) => setEditForm({ ...editForm, estimation_min: e.target.value })} className={inputClass} />
+              </div>
+              <div>
+                <label htmlFor="edit-max" className="sr-only">
+                  Valeur maximale
+                </label>
+                <input id="edit-max" type="number" min="0" step="0.01" placeholder="Max (€)" value={editForm.estimation_max} onChange={(e) => setEditForm({ ...editForm, estimation_max: e.target.value })} className={inputClass} />
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <button type="button" onClick={handleCancelEdit} className="min-h-11 rounded-full bg-surface-container-high px-6 py-2 font-bold">
+                Annuler
+              </button>
+              <button type="submit" disabled={editLoading || uploadingImage} className="min-h-11 rounded-full bg-primary px-6 py-2 font-bold text-on-primary disabled:opacity-50">
+                {editLoading ? 'Enregistrement…' : 'Enregistrer'}
+              </button>
+            </div>
+          </form>
+        ) : null}
+
+        {editError ? (
+          <div role="alert" className="mb-8 rounded-xl border border-error-container bg-error-container/15 p-3 text-sm text-on-error-container">
+            {editError}
+          </div>
+        ) : null}
+
+        {!editMode && (
+          <div className="grid grid-cols-1 gap-10 md:grid-cols-2">
+            <section aria-labelledby="offer-title" className="rounded-3xl border border-outline-variant/15 border-l-[6px] border-l-primary bg-surface-container-lowest p-8 shadow-soft-lg md:p-10">
+              <div className="mb-8 flex items-center gap-4">
+                <div className="rounded-2xl bg-primary/10 p-3">
+                  <span className="material-symbols-outlined text-2xl text-primary" aria-hidden>
+                    handshake
+                  </span>
+                </div>
+                <h2 id="offer-title" className="font-headline text-2xl font-black tracking-tight text-on-surface">
+                  Ce qui est proposé
+                </h2>
+              </div>
+              <div className="space-y-6">
+                {bullets.map((point, i) => (
+                  <div key={i} className="flex items-start gap-4">
+                    <div className="mt-1 rounded-full bg-primary/10 p-1">
+                      <span className="material-symbols-outlined text-lg font-bold text-primary" aria-hidden>
+                        check
+                      </span>
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rounded-3xl border border-outline-variant/15 border-l-[6px] border-l-secondary-container bg-surface-container-lowest p-8 shadow-soft-lg dark:border-white/10 md:p-10">
-                <div className="mb-8 flex items-center gap-4">
-                  <div className="rounded-2xl bg-secondary-container/20 p-3">
-                    <span className="material-symbols-outlined text-2xl text-on-secondary-container">
-                      search_check
-                    </span>
+                    <p className="whitespace-pre-line leading-relaxed text-on-surface-variant">{point}</p>
                   </div>
-                  <h2 className="font-headline text-2xl font-black tracking-tight text-on-surface dark:text-white">
-                    Ce qui est recherché
-                  </h2>
+                ))}
+              </div>
+            </section>
+
+            <section aria-labelledby="wanted-title" className="rounded-3xl border border-outline-variant/15 border-l-[6px] border-l-secondary-container bg-surface-container-lowest p-8 shadow-soft-lg md:p-10">
+              <div className="mb-8 flex items-center gap-4">
+                <div className="rounded-2xl bg-secondary-container/20 p-3">
+                  <span className="material-symbols-outlined text-2xl text-on-secondary-container" aria-hidden>
+                    search_check
+                  </span>
                 </div>
-                <div className="grid grid-cols-1 gap-4">
+                <h2 id="wanted-title" className="font-headline text-2xl font-black tracking-tight text-on-surface">
+                  Ce qui est recherché
+                </h2>
+              </div>
+              {wanted.length === 0 ? (
+                <p className="text-on-surface-variant">Ouvert aux propositions : décrivez ce que vous pouvez offrir en échange.</p>
+              ) : (
+                <ul className="grid grid-cols-1 gap-4">
                   {wanted.map((item, i) => (
-                    <div
-                      key={i}
-                      className="group flex cursor-default items-center justify-between rounded-2xl border border-outline-variant/15 bg-surface-container-lowest p-5 transition-all hover:shadow-lg dark:border-slate-700 dark:bg-slate-900"
-                    >
+                    <li key={i} className="group flex items-center justify-between rounded-2xl border border-outline-variant/15 bg-surface-container-lowest p-5 transition-all hover:shadow-lg">
                       <div className="flex items-center gap-5">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-secondary-container/10 transition-colors group-hover:bg-secondary-container/25 dark:bg-yellow-900/20">
-                          <span className="material-symbols-outlined text-on-secondary-container">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-secondary-container/10 transition-colors group-hover:bg-secondary-container/25">
+                          <span className="material-symbols-outlined text-on-secondary-container" aria-hidden>
                             {WANTED_ICONS[i % WANTED_ICONS.length]}
                           </span>
                         </div>
-                        <span className="font-headline text-lg font-black text-on-surface dark:text-slate-100">
-                          {item}
-                        </span>
+                        <span className="font-headline text-lg font-black text-on-surface">{item}</span>
                       </div>
-                      <span className="material-symbols-outlined text-on-surface-variant/70 dark:text-slate-600">
-                        chevron_right
-                      </span>
-                    </div>
+                    </li>
                   ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Carte */}
-          {!editMode && (
-            <section className="mt-16 md:mt-20">
-              <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-                <h2 className="flex items-center gap-3 font-headline text-xl font-black text-on-surface dark:text-white">
-                  <span className="material-symbols-outlined text-primary">map</span>
-                  Localisation
-                </h2>
-                <p className="text-xs font-bold uppercase tracking-widest text-on-surface-variant/70">
-                  {mapCaption}
-                  {mapIsApproximate ? (
-                    <span className="mt-1 block font-inter text-[10px] font-semibold normal-case text-primary">
-                      Carte centrée sur la ville (GPS non renseigné)
-                    </span>
-                  ) : null}
-                </p>
-              </div>
-              <div
-                className={`relative h-[280px] w-full overflow-hidden rounded-3xl border border-outline-variant/15 bg-surface-container-lowest md:h-[400px] dark:border-slate-700 dark:bg-slate-900 ${HERO_SHADOW}`}
-              >
-                {geocodeLoading && !showMap ? (
-                  <div className="flex h-full flex-col items-center justify-center bg-surface-container dark:bg-slate-800">
-                    <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                    <p className="mt-3 text-sm font-medium text-on-surface-variant">Chargement de la carte…</p>
-                  </div>
-                ) : showMap ? (
-                  <LocationMap
-                    key={`${listing.id}-${mapLat}-${mapLng}`}
-                    lat={mapLat}
-                    lng={mapLng}
-                    zoom={mapIsApproximate ? 12 : 14}
-                    popupLabel={mapPopupLabel}
-                    className="z-[1] h-full min-h-[260px] w-full rounded-3xl"
-                  />
-                ) : (
-                  <div className="flex h-full flex-col items-center justify-center bg-surface-container px-6 text-center dark:bg-slate-800">
-                    <span className="material-symbols-outlined mb-2 text-4xl text-on-surface-variant/70">map</span>
-                    <p className="text-sm font-semibold text-on-surface-variant">
-                      {listing.user?.city
-                        ? `Zone : ${listing.user.city} (carte indisponible)`
-                        : 'Indiquez une ville sur le profil pour afficher la carte'}
-                    </p>
-                  </div>
-                )}
-              </div>
+                </ul>
+              )}
             </section>
-          )}
+          </div>
+        )}
 
-          {showReportModal ? (
-            <div className="mt-12 max-w-xl">
-              <ReportFormPanel
-                targetType="listing"
-                targetId={listing.id}
-                targetUserId={listing.user_id}
-                onDismiss={() => setShowReportModal(false)}
-              />
+        {!editMode && (
+          <section className="mt-16 md:mt-20" aria-labelledby="map-title">
+            <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+              <h2 id="map-title" className="flex items-center gap-3 font-headline text-xl font-black text-on-surface">
+                <span className="material-symbols-outlined text-primary" aria-hidden>
+                  map
+                </span>
+                Localisation
+              </h2>
+              <p className="text-xs font-bold uppercase tracking-widest text-on-surface-variant">
+                {mapCaption}
+                {mapIsApproximate ? <span className="mt-1 block font-inter text-[10px] font-semibold normal-case text-primary">Carte centrée sur la ville</span> : null}
+              </p>
             </div>
-          ) : null}
-        </div>
+            <div className={`relative h-[280px] w-full overflow-hidden rounded-3xl border border-outline-variant/15 bg-surface-container-lowest md:h-[400px] ${HERO_SHADOW}`}>
+              {geocodeLoading && !showMap ? (
+                <div className="flex h-full flex-col items-center justify-center bg-surface-container">
+                  <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  <p className="mt-3 text-sm font-medium text-on-surface-variant">Chargement de la carte…</p>
+                </div>
+              ) : showMap ? (
+                <LocationMap key={`${listing.id}-${mapLat}-${mapLng}`} lat={mapLat} lng={mapLng} zoom={mapIsApproximate ? 12 : 14} popupLabel={mapPopupLabel} className="z-[1] h-full min-h-[260px] w-full rounded-3xl" />
+              ) : (
+                <div className="flex h-full flex-col items-center justify-center bg-surface-container px-6 text-center">
+                  <span className="material-symbols-outlined mb-2 text-4xl text-on-surface-variant" aria-hidden>
+                    map
+                  </span>
+                  <p className="text-sm font-semibold text-on-surface-variant">
+                    {userCity ? `Zone : ${userCity} (carte indisponible)` : 'Le membre n’a pas indiqué de ville.'}
+                  </p>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        {showReportModal ? (
+          <div className="mt-12 max-w-xl">
+            <ReportFormPanel targetType="listing" targetId={listing.id} targetUserId={listing.user_id} onDismiss={() => setShowReportModal(false)} />
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

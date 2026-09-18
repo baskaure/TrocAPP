@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../lib/auth-context';
 import { supabase, Proposal } from '../../lib/supabase';
+import { PROPOSAL_STATUS_CLASS, PROPOSAL_STATUS_LABEL } from '../../lib/labels';
 import { PageBackRowSpacer } from '../layout/PageBackLink';
 
 type ProposalWithListing = Proposal & {
@@ -24,33 +25,6 @@ function formatMonthLabel(key: string) {
   return new Date(y, m - 1, 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
 }
 
-function statusBadgeClass(status: Proposal['status']) {
-  switch (status) {
-    case 'pending':
-      return 'bg-secondary-fixed text-on-secondary-fixed';
-    case 'accepted':
-      return 'bg-primary-container text-on-primary-container';
-    case 'refused':
-    case 'cancelled':
-      return 'bg-outline-variant text-on-surface-variant';
-    case 'countered':
-      return 'bg-secondary-container text-on-secondary-container';
-    default:
-      return 'bg-surface-container text-on-surface-variant';
-  }
-}
-
-function statusLabel(status: Proposal['status']) {
-  const m: Record<string, string> = {
-    pending: 'En attente',
-    countered: 'Contre-proposition',
-    accepted: 'Acceptée',
-    refused: 'Refusée',
-    cancelled: 'Annulée',
-  };
-  return m[status] ?? status;
-}
-
 export function ProposalsPortal({ onSelectProposal }: ProposalsPortalProps) {
   const { user } = useAuth();
   const [proposals, setProposals] = useState<ProposalWithListing[]>([]);
@@ -58,9 +32,11 @@ export function ProposalsPortal({ onSelectProposal }: ProposalsPortalProps) {
   const [filter, setFilter] = useState<'all' | 'sent' | 'received'>('all');
   const [monthKey, setMonthKey] = useState<string | null>(null);
 
+  const userId = user?.id;
   useEffect(() => {
-    if (user) loadProposals();
-  }, [user]);
+    if (userId) void loadProposals();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
   useEffect(() => {
     setMonthKey(null);
@@ -75,17 +51,18 @@ export function ProposalsPortal({ onSelectProposal }: ProposalsPortalProps) {
         .select(
           `
           *,
-          from_user:users!proposals_from_user_id_fkey(*),
-          to_user:users!proposals_to_user_id_fkey(*),
+          from_user:public_profiles!proposals_from_user_id_fkey(*),
+          to_user:public_profiles!proposals_to_user_id_fkey(*),
           listing:listings(
-            *,
-            media:listing_media(*),
+            id, user_id, type, title, description_offer, desired_exchange_desc, mode, status, created_at, updated_at, view_count,
+            media:listing_media(id, listing_id, url, type, sort_order),
             category:categories(name)
           )
         `,
         )
         .or(`from_user_id.eq.${user.id},to_user_id.eq.${user.id}`)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(200);
 
       if (error) throw error;
       setProposals((data as ProposalWithListing[]) || []);
@@ -161,7 +138,7 @@ export function ProposalsPortal({ onSelectProposal }: ProposalsPortalProps) {
               className={`inline-flex min-h-10 items-center whitespace-nowrap rounded-full px-4 font-headline text-sm font-bold transition-colors ${
                 active
                   ? 'bg-primary text-on-primary shadow-lg shadow-primary/20'
-                  : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'
+                  : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest '
               }`}
             >
               {tab.key === 'all'
@@ -177,7 +154,7 @@ export function ProposalsPortal({ onSelectProposal }: ProposalsPortalProps) {
               <div className="relative z-10">
                 <h2 className="mb-2 font-headline text-2xl font-bold tracking-tight text-on-surface md:text-3xl">
                   Bonjour{firstName ? `, ${firstName}` : ''}{' '}
-                  <span aria-hidden>👋</span>
+                  
                 </h2>
                 <p className="max-w-md font-inter text-base text-on-surface-variant opacity-90">
                   Voici un aperçu de l&apos;activité de vos propositions.
@@ -286,17 +263,17 @@ export function ProposalsPortal({ onSelectProposal }: ProposalsPortalProps) {
                       <div className="min-w-0 flex-1">
                         <div className="mb-1 flex flex-wrap items-center gap-2 md:gap-3">
                           <span
-                            className={`rounded px-2 py-0.5 text-[10px] font-black uppercase tracking-widest ${statusBadgeClass(proposal.status)}`}
+                            className={`rounded px-2 py-0.5 text-[10px] font-black uppercase tracking-widest ${PROPOSAL_STATUS_CLASS[proposal.status]}`}
                           >
-                            {statusLabel(proposal.status)}
+                            {PROPOSAL_STATUS_LABEL[proposal.status]}
                           </span>
                           <span className="text-xs font-bold uppercase tracking-wider text-outline">
                             {isSent ? 'Envoyée' : 'Reçue'}
                           </span>
                         </div>
-                        <h4 className="font-headline text-base font-bold leading-tight text-on-surface md:text-lg line-clamp-2">
+                        <h3 className="font-headline text-base font-bold leading-tight text-on-surface md:text-lg line-clamp-2">
                           {proposal.listing?.title ?? 'Sans titre'}
-                        </h4>
+                        </h3>
                         <div className="mt-2 flex flex-wrap gap-3 text-xs font-medium text-on-surface-variant md:gap-4">
                           <span className="flex items-center gap-1">
                             <span className="material-symbols-outlined text-[14px]">person</span>
@@ -324,18 +301,9 @@ export function ProposalsPortal({ onSelectProposal }: ProposalsPortalProps) {
                           <button
                             type="button"
                             onClick={() => onSelectProposal(proposal)}
-                            className="rounded-full p-2 text-error transition-colors hover:bg-error-container"
-                            aria-label="Refuser"
+                            className="min-h-10 rounded-full bg-primary px-4 py-2 text-xs font-bold text-on-primary transition-colors hover:opacity-95"
                           >
-                            <span className="material-symbols-outlined">close</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => onSelectProposal(proposal)}
-                            className="rounded-full p-2 text-primary transition-colors hover:bg-primary-fixed"
-                            aria-label="Accepter"
-                          >
-                            <span className="material-symbols-outlined">done</span>
+                            Répondre
                           </button>
                         </>
                       ) : proposal.status === 'accepted' ? (
@@ -343,17 +311,17 @@ export function ProposalsPortal({ onSelectProposal }: ProposalsPortalProps) {
                           <button
                             type="button"
                             onClick={() => onSelectProposal(proposal)}
-                            className="rounded-full bg-surface-container px-4 py-2 text-xs font-bold text-on-surface transition-colors hover:bg-surface-container-high"
+                            className="min-h-10 rounded-full bg-surface-container px-4 py-2 text-xs font-bold text-on-surface transition-colors hover:bg-surface-container-high"
                           >
                             Détails
                           </button>
                           <button
                             type="button"
                             onClick={() => onSelectProposal(proposal, { openChat: true })}
-                            className="rounded-full p-2 text-primary transition-colors hover:bg-primary-fixed"
-                            aria-label="Chat"
+                            className="flex h-10 w-10 items-center justify-center rounded-full text-primary transition-colors hover:bg-primary-fixed"
+                            aria-label="Ouvrir la discussion"
                           >
-                            <span className="material-symbols-outlined">chat</span>
+                            <span className="material-symbols-outlined" aria-hidden>chat</span>
                           </button>
                         </>
                       ) : null}

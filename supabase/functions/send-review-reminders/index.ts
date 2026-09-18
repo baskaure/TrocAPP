@@ -1,77 +1,20 @@
-import { serve } from 'https://deno.land/std@0.208.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.1';
+/**
+ * Rappels d'avis (cron quotidien). Appelable uniquement avec la clé service_role
+ * (Authorization: Bearer <service_role>), comme configuré dans le job pg_cron.
+ * Un échec d'envoi n'interrompt plus la tournée : chaque participant est traité isolément.
+ */
+import { adminClient, SERVICE_ROLE_KEY } from '../_shared/auth.ts';
+import { sendTemplateEmail } from '../_shared/email.ts';
 
-const supabaseUrl = Deno.env.get('SUPABASE_URL');
-const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+type Participant = { id: string; email: string; display_name: string };
 
-if (!supabaseUrl || !serviceRoleKey) {
-  throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables');
-}
-
-const supabase = createClient(supabaseUrl, serviceRoleKey);
-const projectRef = new URL(supabaseUrl).hostname.split('.')[0];
-const functionsBaseUrl = `https://${projectRef}.functions.supabase.co`;
-
-type Participant = {
-  id: string;
-  email: string;
-  display_name: string;
-};
-
-async function alreadyReviewed(exchangeId: string, reviewerId: string) {
-  const { data } = await supabase
-    .from('reviews')
-    .select('id')
-    .eq('exchange_id', exchangeId)
-    .eq('reviewer_id', reviewerId)
-    .maybeSingle();
-
-  return Boolean(data);
-}
-
-async function reminderExists(exchangeId: string, recipientId: string, reminderType: 'first' | 'second') {
-  const { data } = await supabase
-    .from('review_reminders')
-    .select('id')
-    .eq('exchange_id', exchangeId)
-    .eq('recipient_id', recipientId)
-    .eq('reminder_type', reminderType)
-    .maybeSingle();
-
-  return Boolean(data);
-}
-
-async function logReminder(exchangeId: string, recipientId: string, reminderType: 'first' | 'second') {
-  await supabase.from('review_reminders').insert({
-    exchange_id: exchangeId,
-    recipient_id: recipientId,
-    reminder_type: reminderType,
-    sent_at: new Date().toISOString(),
-  });
-}
-
-async function sendEmail(template: string, recipient: string, variables: Record<string, string>) {
-  const response = await fetch(`${functionsBaseUrl}/send-email`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${serviceRoleKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      template_name: template,
-      recipient,
-      variables,
-    }),
-  });
-
-  if (!response.ok) {
-    const text = await response.text();
-    console.error('Failed to send reminder email', text);
-    throw new Error(text);
+Deno.serve(async (req: Request) => {
+  const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '').trim();
+  if (!token || token !== SERVICE_ROLE_KEY) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
   }
-}
 
-serve(async () => {
+  const supabase = adminClient();
   const now = new Date();
   const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString();
 
@@ -84,8 +27,6 @@ serve(async () => {
       contract:contracts(
         proposal:proposals(
           id,
-          from_user_id,
-          to_user_id,
           listing:listings(title),
           from_user:users!proposals_from_user_id_fkey(id, email, display_name),
           to_user:users!proposals_to_user_id_fkey(id, email, display_name)
@@ -94,7 +35,9 @@ serve(async () => {
     `)
     .eq('status', 'confirmed')
     .not('confirmed_at', 'is', null)
-    .lte('confirmed_at', twoDaysAgo);
+    .lte('confirmed_at', twoDaysAgo)
+    .gte('confirmed_at', new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString())
+    .limit(500);
 
   if (error || !exchanges) {
     return new Response(JSON.stringify({ error: error?.message ?? 'No exchanges to process' }), {
@@ -104,38 +47,60 @@ serve(async () => {
   }
 
   let remindersSent = 0;
+  let failed = 0;
+  let skipped = 0;
 
   for (const exchange of exchanges) {
-    if (!exchange.contract?.proposal) continue;
-    const confirmedAt = new Date(exchange.confirmed_at);
-    const daysSinceConfirmation = Math.floor((now.getTime() - confirmedAt.getTime()) / (1000 * 60 * 60 * 24));
-
-    const participants: Participant[] = [
-      exchange.contract.proposal.from_user,
-      exchange.contract.proposal.to_user,
-    ].filter(Boolean) as Participant[];
+    const contract = exchange.contract as { proposal?: { listing?: { title?: string } | null; from_user?: Participant | null; to_user?: Participant | null } } | null;
+    const proposal = contract?.proposal;
+    if (!proposal) continue;
+    const confirmedAt = new Date(exchange.confirmed_at as string);
+    const daysSinceConfirmation = Math.floor((now.getTime() - confirmedAt.getTime()) / 86_400_000);
+    const reminderType: 'first' | 'second' = daysSinceConfirmation >= 7 ? 'second' : 'first';
+    const participants = [proposal.from_user, proposal.to_user].filter(Boolean) as Participant[];
 
     for (const participant of participants) {
-      if (!participant.email) continue;
-      const hasReview = await alreadyReviewed(exchange.id, participant.id);
-      if (hasReview) continue;
+      try {
+        const { count: reviewed } = await supabase
+          .from('reviews')
+          .select('id', { count: 'exact', head: true })
+          .eq('exchange_id', exchange.id)
+          .eq('reviewer_id', participant.id);
+        if ((reviewed ?? 0) > 0) { skipped++; continue; }
 
-      const reminderType = daysSinceConfirmation >= 7 ? 'second' : 'first';
-      const alreadySent = await reminderExists(exchange.id, participant.id, reminderType);
-      if (alreadySent) continue;
+        const { count: alreadySent } = await supabase
+          .from('review_reminders')
+          .select('id', { count: 'exact', head: true })
+          .eq('exchange_id', exchange.id)
+          .eq('recipient_id', participant.id)
+          .eq('reminder_type', reminderType);
+        if ((alreadySent ?? 0) > 0) { skipped++; continue; }
 
-      await sendEmail('review_reminder', participant.email, {
-        recipient_name: participant.display_name,
-        listing_title: exchange.contract.proposal.listing?.title ?? 'votre échange',
-      });
+        const result = await sendTemplateEmail(supabase, {
+          templateName: 'review_reminder',
+          recipientUserId: participant.id,
+          variables: { recipient_name: participant.display_name, listing_title: proposal.listing?.title ?? 'votre échange' },
+          actorUserId: null,
+        });
 
-      await logReminder(exchange.id, participant.id, reminderType);
-      remindersSent += 1;
+        // On journalise même un envoi ignoré (préférences) pour ne pas retenter chaque jour.
+        if (result.sent || result.skipped) {
+          await supabase.from('review_reminders').insert({
+            exchange_id: exchange.id,
+            recipient_id: participant.id,
+            reminder_type: reminderType,
+            sent_at: now.toISOString(),
+          });
+        }
+        if (result.sent) remindersSent += 1;
+        else if (result.error) failed += 1;
+        else skipped += 1;
+      } catch (e) {
+        failed += 1;
+        console.error('reminder failed for', participant.id, e);
+      }
     }
   }
 
-  return new Response(JSON.stringify({ remindersSent }), {
-    headers: { 'Content-Type': 'application/json' },
-  });
+  return new Response(JSON.stringify({ remindersSent, failed, skipped }), { headers: { 'Content-Type': 'application/json' } });
 });
-

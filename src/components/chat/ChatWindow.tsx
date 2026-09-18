@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { Send, AlertTriangle } from 'lucide-react';
-import { supabase, ChatMessage } from '../../lib/supabase';
+import { supabase, errorMessage, type ChatMessage, type PublicProfile } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth-context';
 import { sendTransactionalEmail } from '../../lib/notifications';
 import { checkContent } from '../../lib/moderation';
@@ -12,178 +12,154 @@ type ChatWindowProps = {
   variant?: 'card' | 'immersive';
 };
 
+type Participant = Pick<PublicProfile, 'id' | 'display_name' | 'avatar_url'>;
+
+const HISTORY_LIMIT = 100;
+const MESSAGE_SELECT = `*, sender:public_profiles!chat_messages_sender_id_fkey(id, display_name, avatar_url)`;
+
 export function ChatWindow({ proposalId, onUserClick, variant = 'card' }: ChatWindowProps) {
   const { user } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [chatId, setChatId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [recipientInfo, setRecipientInfo] = useState<{ email?: string; displayName?: string } | null>(null);
+  const [loadError, setLoadError] = useState('');
+  const [participants, setParticipants] = useState<Record<string, Participant>>({});
+  const [counterpart, setCounterpart] = useState<Participant | null>(null);
   const [contentWarning, setContentWarning] = useState<string | null>(null);
-  const [counterpartAvatar, setCounterpartAvatar] = useState<string | null>(null);
-  const [counterpartName, setCounterpartName] = useState<string>('');
+  const messagesEndRef = useRef<HTMLLIElement>(null);
+  const participantsRef = useRef(participants);
+  participantsRef.current = participants;
 
-  useEffect(() => {
-    loadChat();
-    loadProposalParticipants();
-  }, [proposalId, user?.id]);
-
-  useEffect(() => {
-    if (chatId) {
-      loadMessages();
-      const subscription = supabase
-        .channel(`chat:${chatId}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'chat_messages',
-            filter: `chat_id=eq.${chatId}`,
-          },
-          () => {
-            loadMessages();
-          },
-        )
-        .subscribe();
-
-      return () => {
-        subscription.unsubscribe();
-      };
+  const loadChat = useCallback(async () => {
+    setLoadError('');
+    const { data } = await supabase.from('chats').select('id').eq('proposal_id', proposalId).limit(1);
+    if (data && data.length > 0) {
+      setChatId(data[0].id);
+      return;
     }
-  }, [chatId]);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  async function loadChat() {
-    const { data } = await supabase.from('chats').select('id').eq('proposal_id', proposalId).maybeSingle();
-
-    if (data) {
-      setChatId(data.id);
-    } else {
-      const { data: newChat, error } = await supabase
-        .from('chats')
-        .insert({ proposal_id: proposalId })
-        .select('id')
-        .single();
-
-      if (!error && newChat) {
-        setChatId(newChat.id);
-      }
+    const { data: created, error } = await supabase.from('chats').insert({ proposal_id: proposalId }).select('id').single();
+    if (!error && created) {
+      setChatId(created.id);
+      return;
     }
-  }
+    // Créé en parallèle par l'autre partie : on relit.
+    const { data: again } = await supabase.from('chats').select('id').eq('proposal_id', proposalId).limit(1);
+    if (again && again.length > 0) setChatId(again[0].id);
+    else setLoadError(errorMessage(error, 'Conversation indisponible'));
+  }, [proposalId]);
 
-  async function loadProposalParticipants() {
+  const loadParticipants = useCallback(async () => {
     if (!user) return;
-
     const { data } = await supabase
       .from('proposals')
       .select(
-        `
-        from_user_id,
-        to_user_id,
-        from_user:users!proposals_from_user_id_fkey(display_name, email, avatar_url),
-        to_user:users!proposals_to_user_id_fkey(display_name, email, avatar_url)
-      `,
+        `from_user_id, to_user_id,
+         from_user:public_profiles!proposals_from_user_id_fkey(id, display_name, avatar_url),
+         to_user:public_profiles!proposals_to_user_id_fkey(id, display_name, avatar_url)`,
       )
       .eq('id', proposalId)
       .maybeSingle();
-
     if (!data) return;
+    const fromU = data.from_user as unknown as Participant | null;
+    const toU = data.to_user as unknown as Participant | null;
+    const map: Record<string, Participant> = {};
+    if (fromU) map[fromU.id] = fromU;
+    if (toU) map[toU.id] = toU;
+    setParticipants(map);
+    setCounterpart(data.from_user_id === user.id ? toU : fromU);
+  }, [proposalId, user]);
 
-    const fromU = data.from_user as { display_name?: string; email?: string; avatar_url?: string } | null;
-    const toU = data.to_user as { display_name?: string; email?: string; avatar_url?: string } | null;
-
-    const counterpart = data.from_user_id === user.id ? toU : fromU;
-
-    setRecipientInfo({
-      email: counterpart?.email || undefined,
-      displayName: counterpart?.display_name || undefined,
-    });
-    setCounterpartName(counterpart?.display_name ?? '');
-    setCounterpartAvatar(counterpart?.avatar_url ?? null);
-  }
-
-  async function loadMessages() {
+  const loadMessages = useCallback(async () => {
     if (!chatId) return;
-
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('chat_messages')
-      .select(
-        `
-        *,
-        sender:users!chat_messages_sender_id_fkey(*)
-      `,
-      )
+      .select(MESSAGE_SELECT)
       .eq('chat_id', chatId)
-      .order('created_at', { ascending: true });
-
-    if (data) {
-      setMessages(data);
+      .order('created_at', { ascending: false })
+      .limit(HISTORY_LIMIT);
+    if (error) {
+      setLoadError(errorMessage(error, 'Messages indisponibles'));
+      return;
     }
-  }
+    setMessages(((data as unknown as ChatMessage[]) || []).slice().reverse());
+  }, [chatId]);
 
-  const handleSend = async (e: React.FormEvent) => {
+  useEffect(() => {
+    void loadChat();
+    void loadParticipants();
+  }, [loadChat, loadParticipants]);
+
+  useEffect(() => {
+    if (!chatId) return;
+    void loadMessages();
+    const channel = supabase
+      .channel(`chat:${chatId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `chat_id=eq.${chatId}` },
+        (payload) => {
+          const row = payload.new as ChatMessage;
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === row.id)) return prev;
+            return [...prev, { ...row, sender: participantsRef.current[row.sender_id] ?? null }];
+          });
+        },
+      )
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [chatId, loadMessages]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: messages.length > 1 ? 'smooth' : 'auto', block: 'end' });
+  }, [messages.length]);
+
+  const handleSend = async (e: FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || !chatId || !user) return;
 
-    const messageToSend = newMessage.trim();
+    const messageToSend = newMessage.trim().slice(0, 2000);
     setContentWarning(null);
 
     const { hasWarning, hasBlock, warningWords, blockWords } = await checkContent(messageToSend, user.id);
-
     if (hasBlock && blockWords.length > 0) {
       setContentWarning(`Ce message contient un terme interdit (${blockWords.join(', ')}). Envoi bloqué.`);
       return;
     }
-
     if (hasWarning && warningWords.length > 0) {
-      setContentWarning(
-        `Attention : votre message contient des termes sensibles (${warningWords.join(', ')}). Restez vigilant face aux arnaques.`,
-      );
+      setContentWarning(`Attention : votre message contient des termes sensibles (${warningWords.join(', ')}). Restez vigilant face aux arnaques.`);
     }
 
     setLoading(true);
     setNewMessage('');
-
     try {
-      const { error } = await supabase.from('chat_messages').insert({
-        chat_id: chatId,
-        sender_id: user.id,
-        body: messageToSend,
-      });
-
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .insert({ chat_id: chatId, sender_id: user.id, body: messageToSend })
+        .select(MESSAGE_SELECT)
+        .single();
       if (error) throw error;
+      const inserted = data as unknown as ChatMessage;
+      setMessages((prev) => (prev.some((m) => m.id === inserted.id) ? prev : [...prev, inserted]));
 
-      await loadMessages();
-
-      if (recipientInfo?.email) {
-        sendTransactionalEmail('new_chat_message', recipientInfo.email, {
+      if (counterpart?.id) {
+        void sendTransactionalEmail('new_chat_message', counterpart.id, {
           proposal_id: proposalId,
           sender_name: user.display_name,
-          recipient_name: recipientInfo.displayName,
+          recipient_name: counterpart.display_name,
         });
       }
     } catch (error) {
-      console.error('Error sending message:', error);
+      setContentWarning(errorMessage(error, 'Message non envoyé'));
       setNewMessage(messageToSend);
     } finally {
       setLoading(false);
     }
   };
 
-  const formatTime = (date: string) =>
-    new Date(date).toLocaleTimeString('fr-FR', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+  const formatTime = (date: string) => new Date(date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
   const isToday = (date: string) => {
     const d = new Date(date);
@@ -191,188 +167,154 @@ export function ChatWindow({ proposalId, onUserClick, variant = 'card' }: ChatWi
     return d.getDate() === t.getDate() && d.getMonth() === t.getMonth() && d.getFullYear() === t.getFullYear();
   };
 
+  const senderName = (m: ChatMessage) => m.sender?.display_name ?? participants[m.sender_id]?.display_name ?? 'Membre';
+  const senderAvatar = (m: ChatMessage) => m.sender?.avatar_url ?? participants[m.sender_id]?.avatar_url ?? null;
+
   const messagesBody = (
     <>
-      {messages.length === 0 ? (
-        <p className="py-12 text-center text-on-surface-variant">
-          Aucun message pour le moment — écrivez pour lancer la discussion.
+      {loadError ? (
+        <p role="alert" className="py-8 text-center text-sm text-error">
+          {loadError}
         </p>
+      ) : messages.length === 0 ? (
+        <p className="py-12 text-center text-on-surface-variant">Aucun message pour le moment. Écrivez pour lancer la discussion.</p>
       ) : (
-        <div className="space-y-6">
+        <ol className="space-y-6" aria-label="Messages">
           {messages[0] && isToday(messages[0].created_at) ? (
-            <div className="flex justify-center">
-              <span className="rounded-full bg-surface-container px-4 py-1 text-[10px] font-bold uppercase tracking-widest text-outline">
-                Aujourd&apos;hui
-              </span>
-            </div>
+            <li className="flex justify-center">
+              <span className="rounded-full bg-surface-container px-4 py-1 text-[10px] font-bold uppercase tracking-widest text-outline">Aujourd&apos;hui</span>
+            </li>
           ) : null}
           {messages.map((message) => {
             const isOwn = message.sender_id === user?.id;
             return (
-              <div
-                key={message.id}
-                className={`flex max-w-[85%] items-end gap-3 md:max-w-[80%] ${isOwn ? 'ml-auto flex-row-reverse' : ''}`}
-              >
+              <li key={message.id} className={`flex max-w-[85%] items-end gap-3 md:max-w-[80%] ${isOwn ? 'ml-auto flex-row-reverse' : ''}`}>
                 {!isOwn ? (
-                  message.sender?.avatar_url ? (
-                    <img src={message.sender.avatar_url} alt="" className="h-8 w-8 flex-shrink-0 rounded-full object-cover" />
+                  senderAvatar(message) ? (
+                    <img src={senderAvatar(message)!} alt="" className="h-8 w-8 flex-shrink-0 rounded-full object-cover" />
                   ) : (
-                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-surface-container-high text-xs font-bold text-primary">
-                      {(message.sender?.display_name?.[0] ?? '?').toUpperCase()}
+                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-surface-container-high text-xs font-bold text-primary" aria-hidden>
+                      {(senderName(message)[0] ?? '?').toUpperCase()}
                     </div>
                   )
                 ) : null}
                 <div className={`min-w-0 space-y-1 ${isOwn ? 'text-right' : ''}`}>
                   <div
-                    className={`rounded-2xl px-5 py-3 text-sm text-on-surface ${
-                      isOwn
-                        ? 'rounded-br-none bg-primary text-on-primary shadow-lg shadow-primary/20'
-                        : 'rounded-bl-none bg-surface-container-highest'
+                    className={`rounded-2xl px-5 py-3 text-sm ${
+                      isOwn ? 'rounded-br-none bg-primary text-on-primary shadow-lg shadow-primary/20' : 'rounded-bl-none bg-surface-container-highest text-on-surface'
                     }`}
                   >
                     {!isOwn && (
                       <button
                         type="button"
-                        onClick={() => message.sender_id && onUserClick?.(message.sender_id)}
-                        className={`mb-1 block text-left text-xs font-medium text-outline ${onUserClick && message.sender_id ? 'cursor-pointer hover:text-primary' : ''}`}
+                        onClick={() => onUserClick?.(message.sender_id)}
+                        disabled={!onUserClick}
+                        className={`mb-1 block text-left text-xs font-medium text-outline ${onUserClick ? 'cursor-pointer hover:text-primary' : ''}`}
                       >
-                        {message.sender?.display_name}
+                        {senderName(message)}
                       </button>
                     )}
                     <p className="whitespace-pre-wrap break-words">{message.body}</p>
                   </div>
                   <span className="block px-1 text-[10px] text-outline">{formatTime(message.created_at)}</span>
                 </div>
-              </div>
+              </li>
             );
           })}
-          <div ref={messagesEndRef} />
-        </div>
+          <li ref={messagesEndRef} aria-hidden />
+        </ol>
       )}
     </>
   );
 
+  const composer = (compact: boolean) => (
+    <form onSubmit={handleSend} className={compact ? 'flex space-x-2' : 'relative flex items-center'}>
+      <label htmlFor={`chat-input-${proposalId}`} className="sr-only">
+        Votre message
+      </label>
+      <input
+        id={`chat-input-${proposalId}`}
+        type="text"
+        value={newMessage}
+        onChange={(e) => setNewMessage(e.target.value)}
+        placeholder="Écrivez votre message…"
+        maxLength={2000}
+        autoComplete="off"
+        className={
+          compact
+            ? 'flex-1 rounded-full border border-outline-variant/30 bg-surface-container-lowest px-4 py-2 text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20'
+            : 'w-full rounded-full border-0 bg-surface-container-lowest py-4 pl-5 pr-16 text-sm text-on-surface placeholder:text-outline focus:ring-2 focus:ring-primary/20'
+        }
+        disabled={loading || !chatId}
+      />
+      <button
+        type="submit"
+        disabled={loading || !newMessage.trim() || !chatId}
+        aria-label="Envoyer le message"
+        className={
+          compact
+            ? 'btn-primary flex h-10 w-10 items-center justify-center rounded-full p-2 disabled:cursor-not-allowed disabled:opacity-50'
+            : 'absolute right-2 flex h-10 w-10 items-center justify-center rounded-full bg-primary text-on-primary shadow-lg shadow-primary/30 transition-transform active:scale-90 disabled:opacity-40'
+        }
+      >
+        <Send className="h-5 w-5" aria-hidden />
+      </button>
+    </form>
+  );
+
   if (variant === 'immersive') {
     return (
-      <div className="flex h-full min-h-[420px] flex-col overflow-hidden rounded-3xl border border-outline-variant/15 bg-surface-container-lowest shadow-soft-lg md:min-h-[700px]">
+      <section aria-label="Discussion" className="flex h-full min-h-[420px] flex-col overflow-hidden rounded-3xl border border-outline-variant/15 bg-surface-container-lowest shadow-soft-lg md:min-h-[700px]">
         <div className="flex items-center justify-between border-b border-outline-variant/10 px-4 py-4 md:px-6">
           <div className="flex min-w-0 items-center gap-4">
             <div className="relative flex-shrink-0">
-              {counterpartAvatar ? (
-                <img src={counterpartAvatar} alt="" className="h-10 w-10 rounded-full object-cover" />
+              {counterpart?.avatar_url ? (
+                <img src={counterpart.avatar_url} alt="" className="h-10 w-10 rounded-full object-cover" />
               ) : (
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-container-high font-bold text-primary">
-                  {(counterpartName[0] ?? '?').toUpperCase()}
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-container-high font-bold text-primary" aria-hidden>
+                  {(counterpart?.display_name?.[0] ?? '?').toUpperCase()}
                 </div>
               )}
             </div>
             <div className="min-w-0">
-              <h4 className="truncate text-sm font-bold text-on-surface">{counterpartName || 'Contrepartie'}</h4>
+              <h2 className="truncate text-sm font-bold text-on-surface">{counterpart?.display_name || 'Contrepartie'}</h2>
               <p className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Discussion</p>
             </div>
           </div>
         </div>
 
         <div className="flex flex-1 flex-col overflow-hidden bg-[radial-gradient(circle_at_top_right,rgba(45,141,191,0.03),transparent_40%)]">
-          <div className="flex-1 overflow-y-auto p-4 md:p-6">{messagesBody}</div>
+          <div className="flex-1 overflow-y-auto p-4 md:p-6" aria-live="polite">
+            {messagesBody}
+          </div>
 
           {contentWarning ? (
-            <div className="mx-4 mb-2 flex items-start gap-2 rounded-xl border border-secondary-container/40 bg-secondary-container/10 p-3 text-sm text-on-secondary-container md:mx-6">
-              <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+            <div role="alert" className="mx-4 mb-2 flex items-start gap-2 rounded-xl border border-secondary-container/40 bg-secondary-container/10 p-3 text-sm text-on-secondary-container md:mx-6">
+              <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden />
               <span>{contentWarning}</span>
             </div>
           ) : null}
 
-          <div className="border-t border-outline-variant/10 bg-surface-container-low p-4 md:p-6">
-            <form onSubmit={handleSend} className="relative flex items-center">
-              <input
-                type="text"
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                placeholder="Écrivez votre message..."
-                className="w-full rounded-full border-0 bg-surface-container-lowest py-4 pl-5 pr-16 text-sm text-on-surface placeholder:text-outline/50 focus:ring-2 focus:ring-primary/20"
-                disabled={loading}
-              />
-              <button
-                type="submit"
-                disabled={loading || !newMessage.trim()}
-                className="absolute right-2 flex h-10 w-10 items-center justify-center rounded-full bg-primary text-on-primary shadow-lg shadow-primary/30 transition-transform active:scale-90 disabled:opacity-40"
-                aria-label="Envoyer"
-              >
-                <Send className="h-5 w-5" />
-              </button>
-            </form>
-          </div>
+          <div className="border-t border-outline-variant/10 bg-surface-container-low p-4 md:p-6">{composer(false)}</div>
         </div>
-      </div>
+      </section>
     );
   }
 
   return (
     <div className="mt-4 border-t border-outline-variant/20 pt-4">
-      <div className="mb-4 max-h-96 overflow-y-auto rounded-2xl bg-surface-container-low p-4">
-        {messages.length === 0 ? (
-          <p className="py-8 text-center text-on-surface-variant">Aucun message pour le moment</p>
-        ) : (
-          <div className="space-y-4">
-            {messages.map((message) => {
-              const isOwn = message.sender_id === user?.id;
-              return (
-                <div key={message.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
-                  <div
-                    className={`max-w-[70%] rounded-2xl px-4 py-2 ${
-                      isOwn
-                        ? 'bg-primary text-on-primary'
-                        : 'border border-outline-variant/15 bg-surface-container-lowest text-on-surface'
-                    }`}
-                  >
-                    {!isOwn && (
-                      <button
-                        type="button"
-                        onClick={() => message.sender_id && onUserClick?.(message.sender_id)}
-                        className={`mb-1 text-xs font-medium opacity-75 ${onUserClick && message.sender_id ? 'cursor-pointer hover:text-primary' : ''}`}
-                      >
-                        {message.sender?.display_name}
-                      </button>
-                    )}
-                    <p className="whitespace-pre-wrap break-words">{message.body}</p>
-                    <p className={`mt-1 text-xs ${isOwn ? 'text-on-primary/75' : 'text-on-surface-variant'}`}>
-                      {formatTime(message.created_at)}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-            <div ref={messagesEndRef} />
-          </div>
-        )}
+      <div className="mb-4 max-h-96 overflow-y-auto rounded-2xl bg-surface-container-low p-4" aria-live="polite">
+        {messagesBody}
       </div>
 
       {contentWarning && (
-        <div className="mb-2 flex items-start gap-2 rounded-xl border border-secondary-container bg-secondary-container/20 p-3 text-sm text-on-secondary-container">
-          <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+        <div role="alert" className="mb-2 flex items-start gap-2 rounded-xl border border-secondary-container bg-secondary-container/20 p-3 text-sm text-on-secondary-container">
+          <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden />
           <span>{contentWarning}</span>
         </div>
       )}
 
-      <form onSubmit={handleSend} className="flex space-x-2">
-        <input
-          type="text"
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
-          placeholder="Écrivez votre message..."
-          className="flex-1 rounded-full border border-outline-variant/30 bg-surface-container-lowest px-4 py-2 text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-          disabled={loading}
-        />
-        <button
-          type="submit"
-          disabled={loading || !newMessage.trim()}
-          aria-label="Envoyer le message"
-          className="btn-primary flex h-10 w-10 items-center justify-center rounded-full p-2 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <Send className="h-5 w-5" />
-        </button>
-      </form>
+      {composer(true)}
     </div>
   );
 }

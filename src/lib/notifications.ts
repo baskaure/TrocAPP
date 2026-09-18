@@ -2,31 +2,38 @@ import { supabase } from './supabase';
 
 type EmailVariables = Record<string, string | number | undefined | null>;
 
-const sanitizeVariables = (variables: EmailVariables) => {
-  return Object.entries(variables).reduce<Record<string, string>>((acc, [key, value]) => {
+const sanitizeVariables = (variables: EmailVariables) =>
+  Object.entries(variables).reduce<Record<string, string>>((acc, [key, value]) => {
     if (value === undefined || value === null) return acc;
-    acc[key] = String(value);
+    acc[key] = String(value).slice(0, 500);
     return acc;
   }, {});
-};
 
+/**
+ * Demande l'envoi d'un e-mail transactionnel. Le destinataire est identifié par son id :
+ * l'Edge Function résout l'adresse, vérifie que l'appelant est bien lié au destinataire et
+ * applique ses préférences de notification. Ne bloque jamais l'action utilisateur.
+ */
 export async function sendTransactionalEmail(
-  templateName: string,
-  recipient: string | undefined,
-  variables: EmailVariables = {}
-) {
-  if (!recipient) return;
-
+  templateName: 'welcome' | 'new_proposal' | 'counter_proposal' | 'new_chat_message' | 'new_review',
+  recipientUserId: string | undefined | null,
+  variables: EmailVariables = {},
+): Promise<void> {
+  if (!recipientUserId) return;
   try {
-    await supabase.functions.invoke('send-email', {
+    const { data, error } = await supabase.functions.invoke('send-email', {
       body: {
         template_name: templateName,
-        recipient,
+        recipient_user_id: recipientUserId,
         variables: sanitizeVariables(variables),
       },
     });
-  } catch (error) {
-    console.error(`Erreur lors de l'envoi de l'email ${templateName}`, error);
+    if (error) {
+      console.warn(`E-mail ${templateName} non envoyé :`, error.message ?? error);
+    } else if (data && data.success === false && data.error) {
+      console.warn(`E-mail ${templateName} en échec :`, data.error);
+    }
+  } catch (err) {
+    console.warn(`E-mail ${templateName} : appel impossible`, err);
   }
 }
-

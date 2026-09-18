@@ -1,0 +1,14 @@
+{
+  "name": "BonTroc — Troc en ligne",
+  "short_name": "BonTroc",
+  "description": "Échangez services et produits en toute confiance : chat, contrat, suivi et avis.",
+  "lang": "fr",
+  "start_url": "/annonces",
+  "display": "standalone",
+  "background_color": "#f8f9fa",
+  "theme_color": "#2D8DBF",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

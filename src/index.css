@@ -16,12 +16,26 @@
 
   h1,
   h2,
-  h3 {
+  h3,
+  h4 {
     font-family: Manrope, system-ui, sans-serif;
   }
 
-  h4 {
-    @apply font-heading;
+  /* Focus clavier visible partout, cohérent avec la couleur primaire */
+  :focus-visible {
+    outline: 2px solid #2d8dbf;
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
@@ -40,6 +54,13 @@
     word-wrap: normal;
     direction: ltr;
     font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    /* Tant que la police n'est pas chargée, le nom de l'icône reste invisible */
+    overflow: hidden;
+    color: inherit;
+  }
+
+  .fonts-loading .material-symbols-outlined {
+    visibility: hidden;
   }
 
   .glass-card,
@@ -50,7 +71,14 @@
   }
 
   .hero-gradient {
-    background: linear-gradient(135deg, #2D8DBF 0%, #5BB8DC 100%);
+    background: linear-gradient(135deg, #2d8dbf 0%, #5bb8dc 100%);
+  }
+
+  .skip-link {
+    @apply sr-only;
+  }
+  .skip-link:focus {
+    @apply not-sr-only fixed left-4 top-4 z-[100] rounded-full bg-primary px-4 py-2 text-sm font-semibold text-on-primary shadow-soft-lg;
   }
 
   /* Marqueur Leaflet personnalisé (pas de cadre blanc par défaut) */
@@ -72,6 +100,31 @@
 
   .leaflet-popup-content {
     @apply m-3 font-inter text-sm;
+  }
+
+  /* Corps HTML des contrats générés (contenu assaini) */
+  .contract-body h1,
+  .contract-body h2,
+  .contract-body h3 {
+    @apply mb-3 mt-6 font-headline font-bold text-on-surface;
+  }
+  .contract-body h1 { @apply text-2xl; }
+  .contract-body h2 { @apply text-xl; }
+  .contract-body h3 { @apply text-lg; }
+  .contract-body p,
+  .contract-body li {
+    @apply mb-2 text-sm leading-relaxed text-on-surface;
+  }
+  .contract-body ul,
+  .contract-body ol {
+    @apply mb-4 list-disc pl-6;
+  }
+  .contract-body table {
+    @apply mb-4 w-full text-sm;
+  }
+  .contract-body td,
+  .contract-body th {
+    @apply border border-outline-variant/30 px-3 py-2 align-top;
   }
 }
 
@@ -103,10 +156,6 @@
   .anim-delay-2 { animation-delay: 0.16s; }
   .anim-delay-3 { animation-delay: 0.24s; }
   .anim-delay-4 { animation-delay: 0.32s; }
-
-  .bg-grid-slate {
-    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-  }
 
   .btn-primary {
     @apply inline-flex items-center justify-center px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-soft-lg hover:brightness-95 transition-colors disabled:opacity-50 disabled:cursor-not-allowed;

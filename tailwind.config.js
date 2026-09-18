@@ -54,9 +54,9 @@ export default {
         'secondary-container': '#fdd400',
       },
       fontFamily: {
-        heading: ['Montserrat', 'system-ui', 'sans-serif'],
+        heading: ['Manrope', 'system-ui', 'sans-serif'],
         headline: ['Manrope', 'system-ui', 'sans-serif'],
-        body: ['"Open Sans"', 'system-ui', 'sans-serif'],
+        body: ['Inter', 'system-ui', 'sans-serif'],
         manrope: ['Manrope', 'system-ui', 'sans-serif'],
         inter: ['Inter', 'system-ui', 'sans-serif'],
       },

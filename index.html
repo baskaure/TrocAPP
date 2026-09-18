@@ -2,45 +2,89 @@
 <html lang="fr" class="light">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/logo/4.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>BonTroc — Troc en ligne : services, produits &amp; échanges</title>
+    <title>BonTroc — Troc en ligne : services, objets et échanges</title>
     <meta
       name="description"
-      content="BonTroc est la plateforme de troc moderne pour échanger services et biens en toute confiance : chat, contrat PDF, suivi et avis vérifiés. Mobile-first."
+      content="BonTroc est la plateforme de troc pour échanger services et objets sans argent : annonces, messagerie, contrat d'échange signé en un clic, suivi et avis. Gratuit."
     />
+    <meta name="theme-color" content="#2D8DBF" />
+    <meta name="color-scheme" content="light" />
+    <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png" />
+    <link rel="icon" href="/icons/icon-192.png" sizes="192x192" type="image/png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="canonical" href="https://bontroc.fr/" />
+
     <!-- Open Graph -->
-    <meta property="og:title" content="BonTroc — Le troc pro et mobile" />
+    <meta property="og:site_name" content="BonTroc" />
+    <meta property="og:title" content="BonTroc — Troc en ligne : services, objets et échanges" />
     <meta
       property="og:description"
-      content="Échangez services et produits avec chat intégré, contrat PDF, suivi et avis — la plateforme de troc pensée mobile-first."
+      content="Échangez services et objets sans argent : annonces, messagerie, contrat d'échange, suivi et avis. Gratuit, sans commission."
     />
     <meta property="og:url" content="https://bontroc.fr/" />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://bontroc.fr/logo/screen.png" />
+    <meta property="og:image" content="https://bontroc.fr/og-image.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="BonTroc, la plateforme de troc" />
     <meta property="og:locale" content="fr_FR" />
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="BonTroc — Le troc pro et mobile" />
-    <meta
-      name="twitter:description"
-      content="Échangez services et produits avec chat, contrat PDF, suivi et avis vérifiés."
-    />
-    <meta name="twitter:image" content="https://bontroc.fr/logo/screen.png" />
-    <link rel="canonical" href="https://bontroc.fr/" />
+    <meta name="twitter:title" content="BonTroc — Troc en ligne : services, objets et échanges" />
+    <meta name="twitter:description" content="Échangez services et objets sans argent : annonces, messagerie, contrat d'échange, suivi et avis." />
+    <meta name="twitter:image" content="https://bontroc.fr/og-image.jpg" />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://cuxypeejwglisqidxwfj.supabase.co" />
     <link
-      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Inter:wght@400;500;600&family=Montserrat:wght@600;700;800&family=Open+Sans:wght@300;400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
+    <!-- Police d'icônes limitée aux glyphes réellement utilisés (icon_names) ; display=block évite l'affichage des noms d'icônes en texte -->
     <link
-      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0&icon_names=add,add_circle,archive,arrow_back,build,calendar_month,calendar_today,call,category,chair,chat,check,check_circle,checkroom,cleaning_services,close,code,computer,contract,description,devices,directions_bike,download,dynamic_feed,east,eco,edit,edit_note,error,expand_more,explore,face,forum,gavel,handshake,handyman,help_outline,history_edu,home,hourglass_empty,image,info,inventory_2,lightbulb,local_shipping,location_on,mail,map,monitoring,music_note,notifications,palette,panorama,pending,person,person_pin_circle,photo_camera,play_arrow,potted_plant,public,report_problem,reviews,schedule,school,search,search_check,settings,share,shield,star,star_half,support_agent,swap_horiz,sync,tag,translate,trending_up,tune,verified,verified_user,visibility,visibility_off,yard&display=block"
       rel="stylesheet"
     />
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://bontroc.fr/#organization",
+          "name": "BonTroc",
+          "url": "https://bontroc.fr/",
+          "logo": "https://bontroc.fr/icons/icon-512.png",
+          "contactPoint": { "@type": "ContactPoint", "email": "contact@bontroc.fr", "contactType": "customer support", "availableLanguage": "fr" }
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://bontroc.fr/#website",
+          "url": "https://bontroc.fr/",
+          "name": "BonTroc",
+          "inLanguage": "fr-FR",
+          "publisher": { "@id": "https://bontroc.fr/#organization" },
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": { "@type": "EntryPoint", "urlTemplate": "https://bontroc.fr/annonces?q={search_term_string}" },
+            "query-input": "required name=search_term_string"
+          }
+        }
+      ]
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <p style="font-family: system-ui, sans-serif; padding: 24px; text-align: center">
+        BonTroc a besoin de JavaScript pour fonctionner. Activez-le dans votre navigateur puis rechargez la page.
+      </p>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

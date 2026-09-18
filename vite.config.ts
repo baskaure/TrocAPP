@@ -4,10 +4,12 @@ import react from '@vitejs/plugin-react';
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  optimizeDeps: {
-    exclude: ['lucide-react'],
+  esbuild: {
+    // Les console.log/debug/info sont retirés du bundle de production ; warn/error sont conservés.
+    pure: ['console.log', 'console.debug', 'console.info'],
   },
   build: {
+    sourcemap: false,
     rollupOptions: {
       output: {
         manualChunks(id) {

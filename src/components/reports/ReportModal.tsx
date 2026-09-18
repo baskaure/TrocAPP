@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { AlertTriangle, Loader2 } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { supabase, errorMessage } from '../../lib/supabase';
 import { useAuth } from '../../lib/auth-context';
 
 type ReportTarget = {
@@ -57,7 +57,8 @@ export function ReportFormPanel({ targetType, targetId, targetUserId, onDismiss 
       const reportData: Record<string, string | undefined> = {
         reporter_id: user.id,
         reason,
-        details: details || undefined,
+        details: details.trim().slice(0, 2000) || undefined,
+        status: 'pending',
       };
 
       if (targetUserId) {
@@ -86,16 +87,14 @@ export function ReportFormPanel({ targetType, targetId, targetUserId, onDismiss 
         setDetails('');
       }, 2000);
     } catch (err: unknown) {
-      console.error('Error submitting report:', err);
-      const msg = err && typeof err === 'object' && 'message' in err ? String((err as Error).message) : "Erreur lors de l'envoi du signalement";
-      setError(msg);
+      setError(errorMessage(err, "Erreur lors de l'envoi du signalement"));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-lowest p-6 shadow-soft-lg dark:border-slate-700 dark:bg-slate-900">
+    <div className="rounded-2xl border border-outline-variant/15 bg-surface-container-lowest p-6 shadow-soft-lg" role="region" aria-label={getTitle()}>
       <div className="mb-4 flex items-center gap-2 text-error">
         <AlertTriangle className="h-5 w-5 shrink-0" />
         <h2 className="font-headline text-xl font-bold tracking-tight text-on-surface">{getTitle()}</h2>
@@ -103,19 +102,19 @@ export function ReportFormPanel({ targetType, targetId, targetUserId, onDismiss 
 
       {success ? (
         <div className="py-8 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/40">
-            <AlertTriangle className="h-8 w-8 text-green-700 dark:text-green-400" />
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary-container">
+            <span className="material-symbols-outlined text-3xl text-on-primary-container" aria-hidden>check_circle</span>
           </div>
-          <p className="font-medium text-green-700 dark:text-green-400">Signalement envoyé !</p>
+          <p className="font-medium text-on-surface">Signalement envoyé.</p>
           <p className="mt-1 text-sm text-on-surface-variant">Merci pour votre vigilance</p>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="mb-2 block text-sm font-medium text-on-surface-variant">Motif du signalement *</label>
+          <fieldset>
+            <legend className="mb-2 block text-sm font-medium text-on-surface-variant">Motif du signalement *</legend>
             <div className="space-y-2">
               {REPORT_REASONS.map((r) => (
-                <label key={r.value} className="flex cursor-pointer items-center gap-2">
+                <label key={r.value} className="flex min-h-10 cursor-pointer items-center gap-2">
                   <input
                     type="radio"
                     name="reason"
@@ -128,33 +127,35 @@ export function ReportFormPanel({ targetType, targetId, targetUserId, onDismiss 
                 </label>
               ))}
             </div>
-          </div>
+          </fieldset>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-on-surface-variant">Détails (optionnel)</label>
+            <label htmlFor="report-details" className="mb-1 block text-sm font-medium text-on-surface-variant">Détails (optionnel)</label>
             <textarea
+              id="report-details"
+              maxLength={2000}
               value={details}
               onChange={(e) => setDetails(e.target.value)}
               rows={3}
-              className="w-full rounded-xl border border-outline-variant/30 bg-surface-container-low px-3 py-2 text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 dark:bg-slate-800"
+              className="w-full rounded-xl border border-outline-variant/30 bg-surface-container-low px-3 py-2 text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30"
               placeholder="Décrivez le problème..."
             />
           </div>
 
-          {error ? <p className="text-sm text-error">{error}</p> : null}
+          {error ? <p role="alert" className="text-sm text-error">{error}</p> : null}
 
           <div className="flex gap-3">
             <button
               type="button"
               onClick={onDismiss}
-              className="flex-1 rounded-full border border-outline-variant/30 px-4 py-2 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-high"
+              className="min-h-11 flex-1 rounded-full border border-outline-variant/30 px-4 py-2 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-high"
             >
               Annuler
             </button>
             <button
               type="submit"
               disabled={!reason || loading}
-              className="flex flex-1 items-center justify-center gap-2 rounded-full bg-error px-4 py-2 text-sm font-semibold text-on-error disabled:opacity-50"
+              className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-full bg-error px-4 py-2 text-sm font-semibold text-on-error disabled:opacity-50"
             >
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               Signaler

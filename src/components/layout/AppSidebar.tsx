@@ -46,11 +46,12 @@ export function AppSidebar({
 
   return (
     <aside
+      aria-label="Menu de l’espace membre"
       aria-hidden={!visible}
       className={`fixed left-0 top-0 z-40 mt-20 hidden h-[calc(100dvh-5rem)] w-64 flex-col rounded-r-xl bg-surface-container-low p-8 pb-6 shadow-[12px_0_32px_rgba(0,0,0,0.04)] transition-[transform,opacity] duration-200 ease-out will-change-transform dark:bg-slate-950 lg:flex ${visibilityClass}`}
     >
       <div className="mb-8">
-        <h4 className="mb-1 font-headline text-xl font-extrabold text-primary">Mon espace</h4>
+        <p className="mb-1 font-headline text-xl font-extrabold text-primary">Mon espace</p>
         <p className="text-xs text-on-surface-variant/70 dark:text-slate-500">Navigation</p>
       </div>
 
@@ -82,15 +83,6 @@ export function AppSidebar({
           </button>
         ) : null}
 
-        <button
-          type="button"
-          disabled
-          title="Bientôt disponible"
-          className="flex cursor-not-allowed items-center gap-4 rounded-full px-4 py-3 font-headline text-sm font-bold text-on-surface-variant/70 opacity-60 dark:text-slate-600"
-        >
-          <span className="material-symbols-outlined text-[22px]">favorite</span>
-          <span>Favoris</span>
-        </button>
       </nav>
 
       <div className="mt-4 shrink-0 space-y-3 border-t border-outline-variant/15 pt-5 dark:border-slate-800">

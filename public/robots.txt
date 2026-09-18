@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /parametres
+Disallow: /propositions
+Disallow: /echanges
+
+Sitemap: https://bontroc.fr/sitemap.xml

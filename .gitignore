@@ -24,3 +24,9 @@ dist-ssr
 
 CLAUDE.md
 .claude/
+
+# Supabase CLI local state
+supabase/.temp/
+
+# Documents de portfolio hors projet
+preuves/

@@ -5,14 +5,17 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "tsc --noEmit -p tsconfig.app.json && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit -p tsconfig.app.json"
+    "typecheck": "tsc --noEmit -p tsconfig.app.json",
+    "check": "npm run typecheck && npm run lint",
+    "functions:deploy": "supabase functions deploy send-email accept-proposal delete-account send-review-reminders process-esign-requests generate-contract-pdf"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",
     "clsx": "^2.1.1",
+    "dompurify": "^3.4.15",
     "framer-motion": "^12.40.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.344.0",
@@ -37,5 +40,8 @@
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.62.1",
     "vite": "^7.2.4"
+  },
+  "engines": {
+    "node": ">=22.12"
   }
 }
