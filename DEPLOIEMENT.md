@@ -74,18 +74,51 @@ et la committer.
 
 - Buckets attendus : `listing-media` (public), `profile-media` (public), `verification-documents` (privé). La migration crée ce dernier s'il manque et fixe les types et tailles autorisés.
 - Vérifier dans Storage → Policies que seules les policies `media: …` et `verification docs: …` restent sur ces buckets.
+- Contrôle dans le SQL Editor (les trois buckets, dont un seul public) :
+  ```sql
+  SELECT id, public, file_size_limit, allowed_mime_types FROM storage.buckets ORDER BY id;
+  ```
+  `verification-documents` doit avoir `public = false`. Depuis le navigateur, l'URL publique d'un document de vérification doit répondre « Bucket not found » : c'est le comportement attendu d'un bucket privé.
 
 ## 3. Edge Functions (Supabase → Edge Functions)
 
-Secrets à définir (Edge Functions → Secrets) : `RESEND_API_KEY`, et facultativement `EMAIL_FROM` (`BonTroc <noreply@bontroc.fr>`). `SUPABASE_URL`, `SUPABASE_ANON_KEY` et `SUPABASE_SERVICE_ROLE_KEY` sont fournis automatiquement.
+**C'est l'étape la plus urgente.** Tant qu'elle n'est pas faite :
 
-Déployer :
+- l'ancienne `send-email` reste en ligne **sans aucune authentification** : n'importe qui peut faire expédier un e-mail aux couleurs de BonTroc à l'adresse de son choix (vérifié le 18/09/2026) ;
+- l'ancienne `generate-contract-pdf` permet de générer un contrat sur la proposition d'autrui ;
+- `accept-proposal` et `delete-account` n'existent pas encore, donc **le nouveau front ne doit pas être mis en ligne avant** : accepter une proposition et supprimer son compte échoueraient.
+
+Ordre à respecter : les fonctions d'abord, Netlify ensuite.
+
+1. Secrets (Edge Functions → Secrets) : `RESEND_API_KEY`, et facultativement `EMAIL_FROM` (`BonTroc <noreply@bontroc.fr>`). `SUPABASE_URL`, `SUPABASE_ANON_KEY` et `SUPABASE_SERVICE_ROLE_KEY` sont fournis automatiquement.
+   À ce jour la clé Resend n'est pas définie : aucun e-mail transactionnel n'est jamais parti.
+2. Se connecter à la CLI, une seule fois (un navigateur s'ouvre) :
+   ```bash
+   npm run functions:login
+   ```
+3. Déployer les six fonctions :
+   ```bash
+   npm run functions:deploy
+   ```
+4. Supprimer l'ancienne fonction de contrat, désormais inutile :
+   ```bash
+   npx --yes supabase@latest functions delete generate-contract-pdf
+   ```
+
+Contrôle depuis un terminal, avec la clé anon. Les trois réponses attendues prouvent que les nouvelles versions sont en place :
+
 ```bash
-npm run functions:deploy
-```
-puis supprimer l'ancienne fonction non authentifiée une fois `accept-proposal` en place :
-```bash
-npx supabase functions delete generate-contract-pdf
+URL=https://cuxypeejwglisqidxwfj.supabase.co
+KEY=<clé anon>
+# Doit répondre « Modèle non autorisé » (403) et non plus rendre le modèle demandé
+curl -s -X POST "$URL/functions/v1/send-email" -H "apikey: $KEY" -H "Authorization: Bearer $KEY" \
+  -H 'Content-Type: application/json' -d '{"template_name":"welcome","recipient":"x@example.com"}'
+# Doit répondre « Authentification requise » (401)
+curl -s -X POST "$URL/functions/v1/accept-proposal" -H "apikey: $KEY" -H "Authorization: Bearer $KEY" \
+  -H 'Content-Type: application/json' -d '{}'
+# Doit répondre « Authentification requise » (401)
+curl -s -X POST "$URL/functions/v1/delete-account" -H "apikey: $KEY" -H "Authorization: Bearer $KEY" \
+  -H 'Content-Type: application/json' -d '{}'
 ```
 
 Resend : domaine `bontroc.fr` vérifié (SPF, DKIM, DMARC) pour l'expéditeur `noreply@bontroc.fr`.

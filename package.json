@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
     "check": "npm run typecheck && npm run lint",
-    "functions:deploy": "supabase functions deploy send-email accept-proposal delete-account send-review-reminders process-esign-requests generate-contract-pdf"
+    "functions:deploy": "npx --yes supabase@latest functions deploy send-email accept-proposal delete-account send-review-reminders process-esign-requests generate-contract-pdf",
+    "functions:login": "npx --yes supabase@latest login && npx --yes supabase@latest link --project-ref cuxypeejwglisqidxwfj"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",
