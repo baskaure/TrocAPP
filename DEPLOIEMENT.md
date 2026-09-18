@@ -18,7 +18,8 @@ Pour chaque fichier ci-dessous : l'ouvrir dans l'éditeur de code, **copier son 
    ```sql
    SELECT vault.create_secret('<SERVICE_ROLE_KEY>', 'service_role_key', 'Clé service_role pour pg_cron');
    ```
-   puis lancer `supabase/migrations/20260917103000_review_reminders_cron.sql`. Activer avant cela les extensions `pg_cron` et `pg_net` dans Database → Extensions ; sinon le script s'arrête avec un `NOTICE` explicite et ne planifie rien.
+   puis lancer `supabase/migrations/20260917103000_review_reminders_cron.sql`. Activer avant cela les extensions `pg_cron` et `pg_net` dans Database → Extensions.
+   Le script termine par un tableau de quatre lignes : les quatre doivent afficher `OK`, la dernière sous la forme `OK — 0 7 * * * (actif)`. Toute ligne `MANQUANT` indique le prérequis à corriger avant de rejouer le fichier. Ce tableau existe parce que le SQL Editor de Supabase n'affiche pas les messages `NOTICE` : « Success. No rows returned » ne voulait donc rien dire sur la réussite réelle.
 
 Chaque script est idempotent : il peut être rejoué sans dégât. Lire les `NOTICE` affichés à la fin : ils signalent les données existantes qui empêchent une contrainte (avis en double, proposition à soi-même, annonces avec une URL d'image externe) et les policies supprimées.
 
