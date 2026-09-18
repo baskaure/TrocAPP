@@ -110,4 +110,4 @@ CREATE POLICY "base anon reviews" ON public.reviews FOR SELECT TO anon USING (tr
 -- Reproduit le bug live : catégories invisibles pour anon (policy uniquement authenticated ci-dessus).
 GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
 GRANT ALL ON ALL TABLES IN SCHEMA storage TO anon, authenticated, service_role;
-INSERT INTO public.categories (name, slug, sort_order) VALUES ('Informatique', 'informatique', 1), ('Services', 'services', 2);
+-- Les catégories réelles sont insérées par la migration 20260918100000.

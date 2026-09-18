@@ -6,7 +6,7 @@ export const LISTING_SELECT = `
   location_lat, location_lng, status, view_count, created_at, updated_at,
   user:public_profiles(${PUBLIC_PROFILE_COLS}),
   media:listing_media(id, listing_id, url, type, sort_order),
-  category:categories(name)
+  category:categories(name, slug)
 `;
 
 export const PROPOSAL_SELECT = `
@@ -14,5 +14,5 @@ export const PROPOSAL_SELECT = `
   from_user:public_profiles!proposals_from_user_id_fkey(*),
   to_user:public_profiles!proposals_to_user_id_fkey(*),
   listing:listings(id, user_id, type, title, description_offer, desired_exchange_desc, mode, status, created_at, updated_at, view_count,
-    media:listing_media(id, listing_id, url, type, sort_order), category:categories(name))
+    media:listing_media(id, listing_id, url, type, sort_order), category:categories(name, slug))
 `;

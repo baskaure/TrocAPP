@@ -56,7 +56,7 @@ export function ProposalsPortal({ onSelectProposal }: ProposalsPortalProps) {
           listing:listings(
             id, user_id, type, title, description_offer, desired_exchange_desc, mode, status, created_at, updated_at, view_count,
             media:listing_media(id, listing_id, url, type, sort_order),
-            category:categories(name)
+            category:categories(name, slug)
           )
         `,
         )

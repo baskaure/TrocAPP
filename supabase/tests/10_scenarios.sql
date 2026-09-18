@@ -31,7 +31,7 @@ BEGIN;
 SET LOCAL ROLE anon;
 SELECT t_assert((SELECT count(*) FROM public.users) = 0, 'anon ne lit plus users');
 SELECT t_assert((SELECT count(*) FROM public.public_profiles) = 4, 'anon lit public_profiles');
-SELECT t_assert((SELECT count(*) FROM public.categories) = 2, 'anon lit les catégories');
+SELECT t_assert((SELECT count(*) FROM public.categories) = 12, 'anon lit les 12 catégories');
 SELECT t_expect_error($q$SELECT public.sign_contract('00000000-0000-0000-0000-000000000000')$q$, 'sign_contract interdit à anon');
 COMMIT;
 

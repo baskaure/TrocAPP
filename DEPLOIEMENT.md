@@ -13,7 +13,8 @@ Pour chaque fichier ci-dessous : l'ouvrir dans l'éditeur de code, **copier son 
 3. `supabase/migrations/20260917100000_production_hardening.sql`
 4. `supabase/migrations/20260917101000_business_rules.sql`
 5. `supabase/migrations/20260917102000_email_templates.sql`
-6. Créer le secret Vault (une seule fois, avec la vraie clé `service_role` du projet) :
+6. `supabase/migrations/20260918100000_categories_seed.sql` — la table `categories` est vide en production : sans elle, le filtre par catégorie et le menu déroulant de publication restent vides. Le script affiche les douze catégories créées.
+7. Créer le secret Vault (une seule fois, avec la vraie clé `service_role` du projet) :
    ```sql
    SELECT vault.create_secret('<SERVICE_ROLE_KEY>', 'service_role_key', 'Clé service_role pour pg_cron');
    ```
@@ -38,6 +39,9 @@ SELECT public.is_staff('00000000-0000-0000-0000-000000000000');
 
 -- 4. Les modèles d'e-mails sont chargés (attendu : 8)
 SELECT count(*) FROM public.email_templates WHERE is_active;
+
+-- 5. Les catégories sont créées et lisibles (attendu : 12)
+SELECT count(*) FROM public.categories;
 ```
 
 Un tableau d'une seule colonne `count` valant `8` est bien le résultat attendu de la quatrième requête : les huit modèles (bienvenue, nouvelle proposition, contre-proposition, nouveau message, contrat prêt, nouvel avis, rappel d'avis, rappel d'échange) sont actifs.
@@ -49,7 +53,7 @@ URL=https://cuxypeejwglisqidxwfj.supabase.co
 KEY=<clé anon>
 curl -s "$URL/rest/v1/users?select=email&limit=1"            -H "apikey: $KEY" -H "Authorization: Bearer $KEY"  # []
 curl -s "$URL/rest/v1/public_profiles?select=display_name&limit=1" -H "apikey: $KEY" -H "Authorization: Bearer $KEY"  # un profil
-curl -s "$URL/rest/v1/categories?select=name&limit=1"        -H "apikey: $KEY" -H "Authorization: Bearer $KEY"  # une catégorie
+curl -s "$URL/rest/v1/categories?select=name&limit=3"        -H "apikey: $KEY" -H "Authorization: Bearer $KEY"  # trois catégories
 ```
 
 Tant que ces migrations ne sont pas passées, l'application affiche « Impossible de charger les annonces » : le front interroge `public_profiles`, qui n'existe pas encore.
