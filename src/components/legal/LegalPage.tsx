@@ -8,12 +8,14 @@ type LegalPageProps = {
 };
 
 /*
-  Textes à compléter avant la mise en ligne : chaque champ entre crochets [À COMPLÉTER]
-  doit être remplacé par l'information réelle de l'éditeur. Les mentions d'hébergement
-  correspondent à l'infrastructure actuelle (Netlify pour le site, Supabase en Irlande
-  pour les données, Resend pour les e-mails).
+  Éditeur : KINGDOM ADS (SAS, RCS Montpellier 914 723 044), données issues du registre.
+  Restent deux champs marqués [À COMPLÉTER] : le numéro de téléphone, exigé par l'article
+  6 III-1 de la LCEN, et le médiateur de la consommation, obligatoire pour une plateforme
+  ouverte aux particuliers (article L. 612-1 du code de la consommation).
+  Les mentions d'hébergement correspondent à l'infrastructure réelle : Netlify pour le
+  site, Supabase en Irlande pour les données, Resend pour les e-mails.
 */
-const LAST_UPDATE = '17 septembre 2026';
+const LAST_UPDATE = '18 septembre 2026';
 
 const TABS: { section: LegalSection; label: string }[] = [
   { section: 'mentions-legales', label: 'Mentions légales' },
@@ -38,16 +40,23 @@ function MentionsLegales() {
     <>
       <H2>Éditeur du site</H2>
       <P>
-        Le site bontroc.fr est édité par <Placeholder>dénomination sociale ou nom et prénom</Placeholder>,{' '}
-        <Placeholder>forme juridique et capital, ou « entrepreneur individuel »</Placeholder>, dont le siège est situé{' '}
-        <Placeholder>adresse complète</Placeholder>, immatriculée sous le numéro <Placeholder>SIREN / RCS</Placeholder>.
+        Le site bontroc.fr est édité par <strong className="text-on-surface">KINGDOM ADS</strong>, société par actions
+        simplifiée au capital de 1 000 €, dont le siège social est situé 199 rue Hélène Boucher, 34170
+        Castelnau-le-Lez, France.
       </P>
+      <ul className="mb-4 list-disc space-y-1 pl-6 text-base leading-relaxed text-on-surface-variant">
+        <li>SIREN : 914 723 044</li>
+        <li>SIRET (siège) : 914 723 044 00014</li>
+        <li>RCS : 914 723 044 R.C.S. Montpellier, immatriculée le 21 juin 2022</li>
+        <li>Numéro de TVA intracommunautaire : FR53914723044</li>
+        <li>Code APE : 73.11Z — activités des agences de publicité</li>
+      </ul>
       <P>
-        Directeur de la publication : <Placeholder>nom du responsable</Placeholder>. Contact :{' '}
+        Directeur de la publication : William Adamsha, président. Contact :{' '}
         <a href="mailto:contact@bontroc.fr" className="font-semibold text-primary hover:underline">
           contact@bontroc.fr
         </a>
-        , <Placeholder>numéro de téléphone</Placeholder>.
+        , téléphone <Placeholder>numéro de téléphone</Placeholder>.
       </P>
 
       <H2>Hébergement</H2>
@@ -59,9 +68,9 @@ function MentionsLegales() {
 
       <H2>Propriété intellectuelle</H2>
       <P>
-        La marque BonTroc, le logo, la charte graphique et le code de la plateforme appartiennent à l’éditeur. Les contenus publiés
-        par les membres (textes, photos) restent leur propriété ; en les publiant, ils autorisent BonTroc à les afficher sur le
-        site le temps de la publication.
+        La marque BonTroc, le logo, la charte graphique et le code de la plateforme appartiennent à KINGDOM ADS. Les contenus
+        publiés par les membres (textes, photos) restent leur propriété ; en les publiant, ils autorisent BonTroc à les afficher
+        sur le site le temps de la publication.
       </P>
 
       <H2>Cartes</H2>
@@ -78,7 +87,11 @@ function Confidentialite() {
     <>
       <P>
         Cette page explique quelles données BonTroc collecte, pourquoi, combien de temps elles sont gardées et comment exercer
-        vos droits. Le responsable du traitement est l’éditeur du site, indiqué dans les mentions légales.
+        vos droits. Le responsable du traitement est KINGDOM ADS, 199 rue Hélène Boucher, 34170 Castelnau-le-Lez, joignable à{' '}
+        <a href="mailto:contact@bontroc.fr" className="font-semibold text-primary hover:underline">
+          contact@bontroc.fr
+        </a>
+        .
       </P>
 
       <H2>Ce que nous collectons</H2>
@@ -187,8 +200,16 @@ function Cgu() {
       <H2>Litiges entre membres</H2>
       <P>
         En cas de désaccord, ouvrez un litige depuis le suivi de l’échange. L’équipe BonTroc peut proposer une médiation, mais ne
-        rend pas de décision qui s’imposerait aux parties : chacun conserve ses recours de droit commun. Pour les
-        consommateurs, un médiateur de la consommation peut être saisi : <Placeholder>coordonnées du médiateur</Placeholder>.
+        rend pas de décision qui s’imposerait aux parties : chacun conserve ses recours de droit commun.
+      </P>
+      <P>
+        Si vous êtes consommateur et que notre réponse ne vous satisfait pas, vous pouvez saisir gratuitement un médiateur de la
+        consommation : <Placeholder>nom et coordonnées du médiateur auquel KINGDOM ADS adhère</Placeholder>. La plateforme
+        européenne de règlement en ligne des litiges reste accessible à l’adresse{' '}
+        <a href="https://ec.europa.eu/consumers/odr" className="font-semibold text-primary hover:underline" rel="noopener noreferrer" target="_blank">
+          ec.europa.eu/consumers/odr
+        </a>
+        .
       </P>
 
       <H2>Obligations fiscales et légales</H2>
@@ -213,7 +234,8 @@ function Cgu() {
 
       <H2>Droit applicable</H2>
       <P>
-        Ces conditions sont soumises au droit français. À défaut d’accord amiable, les tribunaux français sont compétents.
+        Ces conditions sont soumises au droit français. À défaut d’accord amiable, les tribunaux français sont compétents. Pour
+        un membre consommateur, la juridiction de son lieu de résidence reste compétente.
       </P>
     </>
   );
