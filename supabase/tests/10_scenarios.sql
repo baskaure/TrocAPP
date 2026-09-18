@@ -182,6 +182,10 @@ SELECT t_assert((SELECT count(*) FROM storage.objects WHERE bucket_id = 'verific
 COMMIT;
 
 -- 10. Bannissement et suppression
+SELECT t_assert(
+  EXISTS (SELECT 1 FROM pg_enum e JOIN pg_type t ON t.oid = e.enumtypid WHERE t.typname = 'user_role' AND e.enumlabel = 'banned'),
+  'la valeur « banned » a bien été ajoutée à l''enum user_role'
+);
 BEGIN;
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claims', '{"sub":"44444444-4444-4444-4444-444444444444"}', true);

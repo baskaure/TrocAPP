@@ -44,6 +44,10 @@ DECLARE _parts text[]; BEGIN SELECT string_to_array(name, '/') INTO _parts; RETU
 INSERT INTO storage.buckets (id, name, public) VALUES ('listing-media', 'listing-media', true), ('profile-media', 'profile-media', true);
 
 -- Schéma applicatif de base (non versionné dans le dépôt) reconstitué d'après les types et les colonnes live.
+-- Reproduit la production : `role` est un enum qui ne contient PAS encore 'banned'
+-- (la migration 20260917099000 l'ajoute).
+CREATE TYPE public.user_role AS ENUM ('user', 'moderator', 'admin');
+
 CREATE TABLE public.users (
   id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email text UNIQUE NOT NULL,
@@ -54,7 +58,7 @@ CREATE TABLE public.users (
   languages text[] DEFAULT '{}', skills text[] DEFAULT '{}', search_radius_km int DEFAULT 50,
   rating_avg numeric DEFAULT 0, rating_count int DEFAULT 0,
   is_verified boolean DEFAULT false,
-  role text DEFAULT 'user' CHECK (role IN ('user','moderator','admin','banned')),
+  role public.user_role DEFAULT 'user',
   verification_status text DEFAULT 'none', verification_document_url text, verification_notes text, verification_reviewed_at timestamptz, verification_submitted_at timestamptz,
   last_login_at timestamptz, created_at timestamptz DEFAULT now(), updated_at timestamptz DEFAULT now()
 );

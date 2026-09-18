@@ -4,27 +4,59 @@ Procédure à suivre dans l'ordre. Tout ce qui est marqué « manuel » se fait 
 
 ## 1. Base de données (Supabase → SQL Editor)
 
-Exécuter, dans cet ordre, le contenu de chaque fichier :
+Pour chaque fichier ci-dessous : l'ouvrir dans l'éditeur de code, **copier son contenu** (pas son chemin) dans une nouvelle requête du SQL Editor, puis « Run ». Un fichier à la fois, dans cet ordre.
 
-1. `supabase/migrations/20260706120000_add_missing_columns.sql` (non appliquée en production au 17/09/2026 : la colonne `users.status` manquait)
-2. `supabase/migrations/20260917100000_production_hardening.sql`
-3. `supabase/migrations/20260917101000_business_rules.sql`
-4. `supabase/migrations/20260917102000_email_templates.sql`
-5. Créer le secret Vault (une seule fois, avec la vraie clé `service_role` du projet) :
+1. `supabase/migrations/20260917099000_user_role_banned.sql` — **à lancer seul, en premier.**
+   `users.role` est un enum `user_role` qui ne contient pas `banned` : le bannissement d'un membre échoue aujourd'hui avec `invalid input value for enum user_role: "banned"`. PostgreSQL interdit d'utiliser une valeur d'enum ajoutée dans la même transaction, et le SQL Editor exécute tout un script en une transaction : ce fichier ne doit donc pas être collé avec un autre.
+   Résultat attendu, affiché par le script : `user, moderator, admin, banned`.
+2. `supabase/migrations/20260706120000_add_missing_columns.sql` — ajoute `users.status`, `reports.moderator_id`… (si vous l'avez déjà passée, elle ne fait rien).
+3. `supabase/migrations/20260917100000_production_hardening.sql`
+4. `supabase/migrations/20260917101000_business_rules.sql`
+5. `supabase/migrations/20260917102000_email_templates.sql`
+6. Créer le secret Vault (une seule fois, avec la vraie clé `service_role` du projet) :
    ```sql
    SELECT vault.create_secret('<SERVICE_ROLE_KEY>', 'service_role_key', 'Clé service_role pour pg_cron');
    ```
-   puis exécuter `supabase/migrations/20260917103000_review_reminders_cron.sql` (extensions `pg_cron` et `pg_net` activées dans Database → Extensions).
+   puis lancer `supabase/migrations/20260917103000_review_reminders_cron.sql`. Activer avant cela les extensions `pg_cron` et `pg_net` dans Database → Extensions ; sinon le script s'arrête avec un `NOTICE` explicite et ne planifie rien.
 
-Chaque script est idempotent : il peut être rejoué. Lire les `NOTICE` affichés : ils signalent les données existantes qui empêcheraient une contrainte (doublons d'avis, propositions à soi-même…) et les policies héritées du schéma initial à vérifier.
+Chaque script est idempotent : il peut être rejoué sans dégât. Lire les `NOTICE` affichés à la fin : ils signalent les données existantes qui empêchent une contrainte (avis en double, proposition à soi-même, annonces avec une URL d'image externe) et les policies supprimées.
 
-Vérifications rapides après exécution :
+### Vérifier que tout est en place
+
+Les quatre requêtes se collent ensemble ; le SQL Editor n'affiche que le résultat de la dernière, alors lancez-les **une par une** si vous voulez voir chaque réponse.
+
 ```sql
-select * from public.public_profiles limit 1;          -- la vue existe
-select public.is_staff('00000000-0000-0000-0000-000000000000');  -- false
-select count(*) from public.email_templates where is_active;     -- 8
+-- 1. La valeur manquante de l'enum a bien été ajoutée (attendu : user, moderator, admin, banned)
+SELECT string_agg(enumlabel::text, ', ' ORDER BY enumsortorder)
+FROM pg_enum e JOIN pg_type t ON t.oid = e.enumtypid WHERE t.typname = 'user_role';
+
+-- 2. La vue publique existe et ne contient ni email ni téléphone (attendu : une ligne de profil)
+SELECT * FROM public.public_profiles LIMIT 1;
+
+-- 3. Un identifiant inconnu n'est pas membre de l'équipe (attendu : false)
+SELECT public.is_staff('00000000-0000-0000-0000-000000000000');
+
+-- 4. Les modèles d'e-mails sont chargés (attendu : 8)
+SELECT count(*) FROM public.email_templates WHERE is_active;
 ```
-Avec la clé anon, `GET /rest/v1/users?select=email` doit maintenant renvoyer une liste vide.
+
+Un tableau d'une seule colonne `count` valant `8` est bien le résultat attendu de la quatrième requête : les huit modèles (bienvenue, nouvelle proposition, contre-proposition, nouveau message, contrat prêt, nouvel avis, rappel d'avis, rappel d'échange) sont actifs.
+
+Enfin, le contrôle qui compte, depuis un terminal : avec la clé anon, la table `users` ne doit plus rien renvoyer, alors que la vue publique répond.
+
+```bash
+URL=https://cuxypeejwglisqidxwfj.supabase.co
+KEY=<clé anon>
+curl -s "$URL/rest/v1/users?select=email&limit=1"            -H "apikey: $KEY" -H "Authorization: Bearer $KEY"  # []
+curl -s "$URL/rest/v1/public_profiles?select=display_name&limit=1" -H "apikey: $KEY" -H "Authorization: Bearer $KEY"  # un profil
+curl -s "$URL/rest/v1/categories?select=name&limit=1"        -H "apikey: $KEY" -H "Authorization: Bearer $KEY"  # une catégorie
+```
+
+Tant que ces migrations ne sont pas passées, l'application affiche « Impossible de charger les annonces » : le front interroge `public_profiles`, qui n'existe pas encore.
+
+### Répéter la manœuvre hors production
+
+`./supabase/tests/run.sh` monte un PostgreSQL 17 dans Docker, reconstitue le schéma, applique toutes les migrations dans l'ordre et rejoue 70 scénarios métier. À lancer avant chaque nouvelle migration.
 
 **Sauvegarde du schéma** : le schéma initial (tables `users`, `listings`, `proposals`, `contracts`, `exchanges`, `reviews`, `chats`, `chat_messages`, `reports`, `moderation_logs`, `categories`, `user_settings` et leurs policies) n'est pas versionné. Générer une référence avec la CLI :
 ```bash

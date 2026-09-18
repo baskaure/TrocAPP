@@ -103,7 +103,8 @@ supabase/
 │   ├── send-review-reminders/       # cron quotidien (service_role)
 │   ├── process-esign-requests/      # staff uniquement (fonction désactivée côté produit)
 │   └── generate-contract-pdf/       # stub 410, à supprimer après déploiement
-├── migrations/                      # 2025… + 20260917100000/101000/102000/103000 (durcissement)
+├── migrations/                      # 2025… + 20260917099000 (enum) et 100000/101000/102000/103000 (durcissement)
+├── tests/                           # run.sh : Postgres 17 en Docker, migrations + 70 scénarios métier
 └── scripts/                         # SQL de debug et sources CSV (non exécutés)
 ```
 
@@ -133,7 +134,9 @@ Seul accès aux profils des autres membres (`users` est lisible uniquement par s
 - Contract : `awaiting_signatures | active | completed | cancelled`
 - Dispute : `open | in_review | resolved | dismissed`
 - Report : `pending | resolved | dismissed`
-- User role : `user | moderator | admin | banned` ; `users.status` : `active | deleted`
+- User role : `user | moderator | admin | banned` (enum `user_role` ; `banned` ajouté par la migration `20260917099000`, à exécuter seule) ; `users.status` : `active | deleted`
+
+Plusieurs colonnes de statut sont des enums PostgreSQL : comparer une valeur absente de l'enum fait échouer la requête, et même la création d'une fonction SQL. Dans les migrations, les comparaisons de rôle passent donc par `role::text`.
 
 ---
 
@@ -171,7 +174,7 @@ Edge Functions (secrets Supabase) : `RESEND_API_KEY`, `EMAIL_FROM` (optionnel). 
 
 1. **Langue** : tout l'UI est en français.
 2. **Navigation** : passer par `navigate({ view, ... })` dans `App.tsx` (jamais `window.location`).
-3. **Pas de tests automatisés** : `npm run check` + `npm run build` avant tout commit ; captures via `npm run preview`.
+3. **Tests** : `./supabase/tests/run.sh` pour les règles serveur (Docker requis) ; `npm run check` + `npm run build` avant tout commit ; captures via `npm run preview`. Aucun test de composant React.
 4. **Profils** : ne jamais embarquer `users(*)` dans une requête client ; utiliser `public_profiles`. L'e-mail d'un autre membre n'est jamais disponible côté client.
 5. **E-mails** : `sendTransactionalEmail(template, recipientUserId, variables)` ; templates autorisés depuis le client : `welcome`, `new_proposal`, `counter_proposal`, `new_chat_message`, `new_review`. Les autres partent des Edge Functions. Modèles = migration `20260917102000_email_templates.sql`.
 6. **Images** : toujours `prepareImage()` avant `storage.upload` ; chemins `images|avatars|banners/<user_id>-<timestamp>.<ext>` (policies de stockage).

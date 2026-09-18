@@ -22,12 +22,14 @@
 -- ---------------------------------------------------------------------------
 -- 0. Utilitaires
 -- ---------------------------------------------------------------------------
+-- `role::text` plutôt que le littéral : la fonction se crée et s'exécute quelle que soit la
+-- liste de valeurs de l'enum `user_role` (voir la migration 20260917099000).
 CREATE OR REPLACE FUNCTION public.is_active_member(uid uuid)
 RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
 AS $$
   SELECT COALESCE(
-    (SELECT role <> 'banned' AND status = 'active' FROM public.users WHERE id = uid),
+    (SELECT role::text <> 'banned' AND status = 'active' FROM public.users WHERE id = uid),
     false
   );
 $$;
@@ -569,7 +571,7 @@ BEGIN
       AND l.id = p.listing_id
       AND l.type = 'product'
       AND l.status = 'archived'
-      AND EXISTS (SELECT 1 FROM public.users u WHERE u.id = l.user_id AND u.role <> 'banned' AND u.status = 'active');
+      AND EXISTS (SELECT 1 FROM public.users u WHERE u.id = l.user_id AND u.role::text <> 'banned' AND u.status = 'active');
     PERFORM set_config('bontroc.bypass_guard', 'off', true);
     RETURN NEW;
   END IF;
@@ -604,7 +606,7 @@ RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
 AS $$
 BEGIN
-  IF NEW.role = 'banned' AND OLD.role IS DISTINCT FROM 'banned' THEN
+  IF NEW.role::text = 'banned' AND OLD.role::text IS DISTINCT FROM 'banned' THEN
     UPDATE public.listings SET status = 'suspended', updated_at = now()
       WHERE user_id = NEW.id AND status IN ('published', 'draft');
   END IF;
@@ -613,7 +615,7 @@ BEGIN
       WHERE user_id = NEW.id AND status IN ('published', 'draft', 'suspended');
   END IF;
   IF (NEW.status = 'deleted' AND OLD.status IS DISTINCT FROM 'deleted')
-     OR (NEW.role = 'banned' AND OLD.role IS DISTINCT FROM 'banned') THEN
+     OR (NEW.role::text = 'banned' AND OLD.role::text IS DISTINCT FROM 'banned') THEN
     UPDATE public.proposals SET status = 'cancelled', updated_at = now()
       WHERE (from_user_id = NEW.id OR to_user_id = NEW.id) AND status IN ('pending', 'countered');
   END IF;

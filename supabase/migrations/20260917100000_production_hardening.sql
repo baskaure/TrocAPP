@@ -33,14 +33,14 @@ CREATE OR REPLACE FUNCTION public.is_admin(uid uuid)
 RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
 AS $$
-  SELECT COALESCE((SELECT role = 'admin' FROM public.users WHERE id = uid), false);
+  SELECT COALESCE((SELECT role::text = 'admin' FROM public.users WHERE id = uid), false);
 $$;
 
 CREATE OR REPLACE FUNCTION public.is_staff(uid uuid)
 RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
 AS $$
-  SELECT COALESCE((SELECT role IN ('admin', 'moderator') FROM public.users WHERE id = uid), false);
+  SELECT COALESCE((SELECT role::text IN ('admin', 'moderator') FROM public.users WHERE id = uid), false);
 $$;
 
 -- ---------------------------------------------------------------------------
@@ -408,7 +408,7 @@ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
 AS $$
 BEGIN
   IF (NEW.status = 'deleted' AND OLD.status IS DISTINCT FROM 'deleted')
-     OR (NEW.role = 'banned' AND OLD.role IS DISTINCT FROM 'banned') THEN
+     OR (NEW.role::text = 'banned' AND OLD.role::text IS DISTINCT FROM 'banned') THEN
     UPDATE public.listings SET status = 'archived', updated_at = now()
       WHERE user_id = NEW.id AND status IN ('published', 'draft');
     UPDATE public.proposals SET status = 'cancelled', updated_at = now()

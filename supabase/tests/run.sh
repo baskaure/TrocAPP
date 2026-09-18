@@ -13,6 +13,8 @@ $PSQL -d bontroc_test -v ON_ERROR_STOP=1 -q < supabase/tests/00_stub_supabase.sq
 # Toutes les migrations horodatées sauf celles qui dépendent de pg_cron / vault.
 for f in $(ls supabase/migrations/*.sql | sort); do
   case "$f" in *review_reminders*) continue ;; esac
+  # 20260917099000 ajoute une valeur d'enum : elle doit être validée avant d'être utilisée,
+  # d'où une exécution isolée (c'est aussi la consigne de DEPLOIEMENT.md).
   printf "%-70s" "$(basename "$f")"
   if $PSQL -d bontroc_test -v ON_ERROR_STOP=1 -q < "$f" > /tmp/bontroc_mig.log 2>&1; then echo OK; else echo "ÉCHEC"; tail -5 /tmp/bontroc_mig.log; exit 1; fi
 done
